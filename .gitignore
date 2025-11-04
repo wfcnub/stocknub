@@ -8,7 +8,10 @@ catboost_info/
 
 .DS_Store
 
+# secret recipe datas
 database/developedModels
 database/modelDevelopmentsLog
 database/forecastedStocks
 database/modelPerformances
+
+data/stock/historical
