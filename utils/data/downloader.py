@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 from curl_cffi import requests
 
 
@@ -40,7 +40,7 @@ def download_stock_data(emiten: str, start_date: str, end_date: str) -> pd.DataF
 
     try:
         data["Date"] = data["Date"].dt.date
-    except:
+    except Exception:
         pass
 
     return data
@@ -59,3 +59,36 @@ def append_df_to_csv(df: pd.DataFrame, csv_file_path: str):
         df.to_csv(csv_file_path, index=False)
     else:
         df.to_csv(csv_file_path, mode="a", header=False, index=False)
+
+
+def get_last_date_from_csv(csv_file_path: str) -> str:
+    """
+    (Internal Helper) Reads the last date from a CSV file.
+
+    Args:
+        csv_file_path (str): The path to the CSV file
+
+    Returns:
+        str: The last date in 'YYYY-MM-DD' format, or empty string if file doesn't exist
+             or has no data. Returns the day after the last date to avoid duplicates.
+    """
+    if not os.path.isfile(csv_file_path):
+        return ""
+
+    try:
+        # Read only the last line of the CSV for efficiency
+        df = pd.read_csv(csv_file_path)
+        if df.empty:
+            return ""
+
+        # Get the last date
+        last_date_str = str(df.iloc[-1]["Date"])
+
+        # Parse and add one day to avoid duplicate entries
+        last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
+        next_date = last_date + timedelta(days=1)
+
+        return next_date.strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"Warning: Could not read last date from {csv_file_path}: {str(e)}")
+        return ""
