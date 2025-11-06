@@ -209,6 +209,12 @@ def main():
         action="store_true",
         help="Force reprocess all tickers even if up to date",
     )
+    parser.add_argument(
+        "--tickers",
+        type=str,
+        default="",
+        help="Comma-separated list of specific tickers to process (e.g., 'BBCA,BBRI,TLKM'). If not provided, all tickers will be processed.",
+    )
 
     args = parser.parse_args()
 
@@ -216,11 +222,29 @@ def main():
     Path(args.technical_folder).mkdir(parents=True, exist_ok=True)
 
     # Get list of all tickers from historical folder
-    historical_files = [
+    all_historical_files = [
         f.replace(".csv", "")
         for f in os.listdir(args.historical_folder)
         if f.endswith(".csv")
     ]
+
+    # Filter by specific tickers if provided
+    if args.tickers:
+        specified_tickers = [t.strip().upper() for t in args.tickers.split(",")]
+        historical_files = [t for t in all_historical_files if t in specified_tickers]
+
+        # Check if any specified tickers were not found
+        missing_tickers = set(specified_tickers) - set(historical_files)
+        if missing_tickers:
+            print(
+                f"⚠️  Warning: The following tickers were not found: {', '.join(missing_tickers)}"
+            )
+
+        if not historical_files:
+            print(f"❌ None of the specified tickers found in {args.historical_folder}")
+            return
+    else:
+        historical_files = all_historical_files
 
     if not historical_files:
         print(f"❌ No CSV files found in {args.historical_folder}")
@@ -230,6 +254,8 @@ def main():
     print("PIPELINE STEP 1: GENERATE TECHNICAL INDICATORS")
     print("=" * 80)
     print(f"Found {len(historical_files)} tickers to process")
+    if args.tickers:
+        print(f"Processing specific tickers: {', '.join(historical_files)}")
     print(f"Historical data folder: {args.historical_folder}")
     print(f"Technical indicators folder: {args.technical_folder}")
     print(f"Workers: {args.workers}")

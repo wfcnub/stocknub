@@ -64,6 +64,12 @@ python -m pipeline.01_prepare_technical_indicators --workers 10
 # Force reprocess all (ignore existing data)
 python -m pipeline.01_prepare_technical_indicators --force --workers 10
 
+# Process specific tickers only (comma-separated)
+python -m pipeline.01_prepare_technical_indicators --tickers "BBCA,BBRI,TLKM" --workers 4
+
+# Process specific tickers with force reprocess
+python -m pipeline.01_prepare_technical_indicators --tickers "BBCA,BBRI" --force
+
 # Custom input/output folders
 python -m pipeline.01_prepare_technical_indicators \
     --historical_folder data/stock/00_historical \
@@ -77,6 +83,7 @@ python -m pipeline.01_prepare_technical_indicators \
 - `--technical_folder` - Output folder (default: `data/stock/01_technical`)
 - `--workers` - Number of parallel workers (default: 10)
 - `--force` - Force reprocess all tickers, ignore existing data
+- `--tickers` - Comma-separated list of specific tickers to process (e.g., `"BBCA,BBRI,TLKM"`). If not provided, all tickers will be processed
 
 #### Technical Indicators Generated
 
@@ -257,9 +264,12 @@ python pipeline_orchestrator.py --update-run
 
 ### Out of memory errors
 - Reduce `--workers` count
+- Use `--tickers` to process specific stocks instead of all at once
 - Process tickers in batches using a custom emiten list
 
-### Slow performance
+### Slow performance on technical indicators
+- Use `--tickers` to process only the stocks you need
+- Example: `python -m pipeline.01_prepare_technical_indicators --tickers "BBCA,BBRI,TLKM"`
 - Increase `--workers` if you have CPU/RAM capacity
 - For updates, ensure you're using incremental mode (not `--force`)
 - Check disk I/O speed (SSD recommended)
