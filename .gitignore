@@ -14,4 +14,4 @@ database/modelDevelopmentsLog
 database/forecastedStocks
 database/modelPerformances
 
-data/stock/historical
+data/stock/*
