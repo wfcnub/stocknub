@@ -2,7 +2,10 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 
-def identify_historical_trends(data, column, rolling_window, make_bool_up=None, make_bool_down=None):
+
+def identify_historical_trends(
+    data, column, rolling_window, make_bool_up=None, make_bool_down=None
+):
     """
     (Internal Helper) Identifies the historical trend of a data column using linear regression.
 
@@ -18,13 +21,25 @@ def identify_historical_trends(data, column, rolling_window, make_bool_up=None, 
     Returns:
         np.array: An array of the classified trends for each period.
     """
-    linreg_gradients = np.array([np.nan if i < rolling_window else _retrieve_linreg_gradients(data[column].values[i-rolling_window:i]) for i in range(len(data))])
-    
+    linreg_gradients = np.array(
+        [
+            np.nan
+            if i < rolling_window
+            else _retrieve_linreg_gradients(data[column].values[i - rolling_window : i])
+            for i in range(len(data))
+        ]
+    )
+
     if make_bool_up:
-        return np.array([np.nan if np.isnan(val) else val > 0 for val in linreg_gradients]).astype(int)
+        return np.array(
+            [np.nan if np.isnan(val) else float(val > 0) for val in linreg_gradients]
+        )
     elif make_bool_down:
-        return np.array([np.nan if np.isnan(val) else val < 0 for val in linreg_gradients]).astype(int)
+        return np.array(
+            [np.nan if np.isnan(val) else float(val < 0) for val in linreg_gradients]
+        )
     return linreg_gradients
+
 
 def _retrieve_linreg_gradients(target_data):
     """
@@ -42,19 +57,20 @@ def _retrieve_linreg_gradients(target_data):
                if there are not enough data points to calculate a trend.
     """
     target_data = target_data[~np.isnan(target_data)]
-    
+
     if len(target_data) > 1:
         scaler = MinMaxScaler()
-        
+
         X = np.linspace(0, len(target_data), len(target_data)).reshape(-1, 1)
         y = scaler.fit_transform(target_data.reshape(-1, 1))
-        
+
         model = LinearRegression()
         model.fit(X, y)
-    
+
         return model.coef_[0, 0]
     else:
         return 0
+
 
 def backfill_inf_values(data, column):
     """
@@ -71,7 +87,7 @@ def backfill_inf_values(data, column):
         pd.DataFrame: The DataFrame with infinite values replaced.
     """
     inf_index = data.loc[data[column].isin([np.inf, -np.inf]), :].index.tolist()
-    
+
     for index in inf_index:
         if data.loc[index, column] < 0:
             data.loc[index, column] = np.min(data[column][:index])
@@ -81,6 +97,7 @@ def backfill_inf_values(data, column):
     assert not data[column].isin([np.inf, -np.inf]).any()
 
     return data
+
 
 def scale_indicators(data, column):
     """
@@ -94,8 +111,9 @@ def scale_indicators(data, column):
         np.array: An array of the scaled values.
     """
     scaler = MinMaxScaler()
-    
+
     return scaler.fit_transform(data[column].values.reshape(-1, 1)).T[0]
+
 
 def group_trends(trends, threshold):
     """
@@ -112,18 +130,19 @@ def group_trends(trends, threshold):
         return 0
     else:
         return np.abs(trends) / trends
-    
+
+
 def get_all_technical_indicators():
     """
     Load the saved and generated stock's technical indicators
     Args:
         None
-    
+
     Returns:
         list: A list containing all feature names for the technical indicators
     """
-    feature_file = 'database/stocksInformation/technical_indicator_features.txt'
+    feature_file = "database/stocksInformation/technical_indicator_features.txt"
     with open(feature_file, "r") as file:
         feature_columns = [line.strip() for line in file]
-    
+
     return feature_columns

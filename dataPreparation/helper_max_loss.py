@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
 
-def _generate_max_loss(data: pd.DataFrame, target_column: str, rolling_window: int) -> (np.array, float):
+
+def _generate_max_loss(
+    data: pd.DataFrame, target_column: str, rolling_window: int
+) -> (np.array, float):
     """
     (Internal Helper) Calculates the max loss of a target column based on a rolling window
 
@@ -15,10 +18,18 @@ def _generate_max_loss(data: pd.DataFrame, target_column: str, rolling_window: i
         float: The threshold for the quantile 0.6
     """
     min_close = data[target_column].rolling(rolling_window).min()
-    max_loss = 100 * (min_close - data[target_column].values) / data[target_column].values
-    threshold = np.nanquantile(max_loss, 0.6)
-    
+    max_loss = (
+        100 * (min_close - data[target_column].values) / data[target_column].values
+    )
+
+    # Handle case where all values are NaN (e.g., insufficient data)
+    if np.isnan(max_loss).all():
+        threshold = np.nan
+    else:
+        threshold = np.nanquantile(max_loss, 0.6)
+
     return (max_loss, threshold)
+
 
 def _bin_max_loss(threshold: float, val: float) -> str:
     """
@@ -27,18 +38,21 @@ def _bin_max_loss(threshold: float, val: float) -> str:
     Args:
         threshold (float): The threshold for the quantile 0.6
         val (float): The max loss based on a rolling window for the label
-        
+
     Returns:
         str: Labels for developing the model
     """
     if np.isnan(val):
         return val
     if val >= threshold:
-        return 'Low Risk'
+        return "Low Risk"
     else:
-        return 'High Risk'
+        return "High Risk"
 
-def _generate_all_max_loss(data: pd.DataFrame, target_column: str, rolling_window: int) -> pd.DataFrame:
+
+def _generate_all_max_loss(
+    data: pd.DataFrame, target_column: str, rolling_window: int
+) -> pd.DataFrame:
     """
     (Internal Helper) Generates a max loss label for each day based on a rolling window
 
@@ -50,9 +64,9 @@ def _generate_all_max_loss(data: pd.DataFrame, target_column: str, rolling_windo
     Returns:
         pd.DataFrame: The DataFrame with the new future max loss column added
     """
-    column_name = f'Max Loss {rolling_window}dd'
+    column_name = f"Max Loss {rolling_window}dd"
     max_loss, threshold = _generate_max_loss(data, target_column, rolling_window)
     data[column_name] = [_bin_max_loss(threshold, val) for val in max_loss]
-    data['Threshold ' + column_name] = threshold
-    
+    data["Threshold " + column_name] = threshold
+
     return data
