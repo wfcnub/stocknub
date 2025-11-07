@@ -211,25 +211,268 @@ When run without `--force`:
 
 ---
 
+### Step 3: Train Models
+
+**Module:** `pipeline.03_train_models`
+
+Trains machine learning models for stock prediction using multiprocessing for faster parallel execution.
+
+#### Usage
+
+```bash
+# Train with defaults (median_gain and max_loss for 5, 10, 20 days, auto workers)
+python -m pipeline.03_train_models
+
+# Train with specific label types and windows
+python -m pipeline.03_train_models --label_types median_gain,max_loss --windows 5,10,20
+
+# Specify number of parallel workers
+python -m pipeline.03_train_models --workers 10
+
+# Train all label types with custom workers
+python -m pipeline.03_train_models --label_types linear_trend,median_gain,max_loss --windows 5,10,20 --workers 8
+
+# Train only one label type and window
+python -m pipeline.03_train_models --label_types median_gain --windows 10 --workers 4
+```
+
+#### Arguments
+
+- `--label_types` - Comma-separated label types to train models for (default: `median_gain,max_loss`)
+  - Options: `linear_trend`, `median_gain`, `max_loss`
+- `--windows` - Comma-separated rolling windows in days (default: `5,10,20`)
+- `--workers` - Number of parallel workers (default: CPU count - 1)
+
+#### Model Training
+
+The script uses multiprocessing to train multiple stocks in parallel:
+- Each worker processes one stock at a time
+- For each stock, trains models for all specified label types and windows
+- Default workers: automatically detects CPU cores and uses (cores - 1)
+- Progress bar shows real-time processing status
+
+For each combination of stock, label type, and window, the script:
+1. Loads data from `data/stock/02_label/{TICKER}.csv`
+2. Uses all technical indicators as features
+3. Trains a model using the specified label as the target
+4. Splits data into train/test sets with temporal ordering
+5. Evaluates model performance (Gini, AUC, Accuracy, etc.)
+6. Saves the trained model and performance metrics
+
+#### Output
+
+**Trained Models:**
+- `data/stock/03_model/MedianGain/{TICKER}-5dd.pkl`
+- `data/stock/03_model/MedianGain/{TICKER}-10dd.pkl`
+- `data/stock/03_model/MaxLoss/{TICKER}-5dd.pkl`
+- `data/stock/03_model/LinearTrend/{TICKER}-20dd.pkl`
+
+**Performance Metrics:**
+- `data/stock/03_model/performance/MedianGain/5dd.csv` - All stocks' performance for median gain 5-day models
+- `data/stock/03_model/performance/MaxLoss/10dd.csv` - All stocks' performance for max loss 10-day models
+
+Each performance CSV contains:
+- `Kode` - Stock ticker
+- `Train - Gini`, `Train - AUC`, `Train - Accuracy`, etc. - Training set metrics
+- `Test - Gini`, `Test - AUC`, `Test - Accuracy`, etc. - Test set metrics
+- `Threshold` - Classification threshold used
+
+#### Data Requirements
+
+- Stocks with < 100 clean data points (after removing NaNs) are automatically skipped
+- All technical indicators must be present in the input files
+- Label columns must match the specified label types and windows
+
+#### Progress & Error Handling
+
+- Uses multiprocessing Pool for parallel execution
+- Shows progress bar with `tqdm` for all stocks being processed
+- Each worker processes stocks independently
+- Continues processing if individual models fail
+- Reports summary of failed trainings at the end
+- Automatically skips stocks missing required label columns
+
+#### Example Output
+
+```
+Found 847 stocks to process
+Label types: median_gain, max_loss
+Rolling windows: 5, 10, 20 days
+Workers: 7
+
+Processing stocks: 100%|██████████| 847/847 [18:45<00:00,  1.33s/it]
+
+============================================================
+Training complete! Total stocks: 847
+
+Failed trainings (5):
+  - ARMY (median_gain 5dd): Insufficient positive samples
+  - BOBA (max_loss 10dd): Insufficient negative samples
+  ...
+
+============================================================
+```
+
+---
+
+### Step 4: Generate Forecasts
+
+**Module:** `pipeline.04_forecast`
+
+Generates forecasts using trained models from step 3. For each stock and model combination, it prepares the latest technical indicators and generates probability predictions for the target labels.
+
+#### Usage
+
+```bash
+# Forecast with default settings (median_gain and max_loss, Gini >= 0.3)
+python -m pipeline.04_forecast --windows 5,10,20 --label_types median_gain,max_loss --min_test_gini 0.3 --workers 10
+
+# Forecast without Gini filter (use all available models)
+python -m pipeline.04_forecast --windows 5,10,20 --label_types median_gain,max_loss --workers 10
+
+# Forecast specific tickers only
+python -m pipeline.04_forecast --tickers "BBCA,BBRI,TLKM" --windows 5,10 --label_types median_gain --workers 4
+
+# Forecast single label type and window
+python -m pipeline.04_forecast --label_types median_gain --windows 10 --min_test_gini 0.35 --workers 8
+```
+
+#### Arguments
+
+- `--label_types` - Comma-separated label types (default: `median_gain,max_loss`)
+  - Options: `linear_trend`, `median_gain`, `max_loss`
+- `--windows` - Comma-separated forecast windows in days (default: `5,10,20`)
+- `--min_test_gini` - Minimum test Gini coefficient for model filtering (default: `None`)
+  - If specified, only uses models with `Test - Gini >= min_test_gini`
+  - If `None`, uses all available models
+  - Example: `0.3` will only use models with good predictive power
+- `--tickers` - Comma-separated list of specific tickers to forecast (default: all models that meet criteria)
+  - Example: `"BBCA,BBRI,TLKM"`
+- `--workers` - Number of parallel workers (default: `10`)
+
+#### How It Works
+
+1. **Model Selection**:
+   - If `--tickers` specified: Uses those specific tickers
+   - Otherwise: Filters models based on `min_test_gini` from performance CSVs
+   - Takes intersection of emiten that have models meeting criteria for all label types and windows
+
+2. **Data Preparation**:
+   - For each selected stock, reads latest technical indicators from step 1 output
+   - Takes the most recent row (tail) with all calculated features
+   - No need to download data or recalculate indicators
+
+3. **Prediction**:
+   - Loads trained model for each label type and window
+   - Generates probability prediction for positive class
+   - Saves forecast with ticker code, date, and probability
+
+4. **Output**:
+   - Clears old forecast files to avoid duplicates
+   - Collects all results from parallel workers
+   - Writes all forecasts in batch to CSV files
+   - Organized by label type and window
+
+#### Output
+
+**Forecast Files:**
+- `data/stock/04_forecast/MedianGain/5dd.csv` - High gain probability forecasts for 5-day window
+- `data/stock/04_forecast/MedianGain/10dd.csv` - High gain probability forecasts for 10-day window
+- `data/stock/04_forecast/MaxLoss/5dd.csv` - Low risk probability forecasts for 5-day window
+- `data/stock/04_forecast/LinearTrend/20dd.csv` - Up trend probability forecasts for 20-day window
+
+Each forecast CSV contains:
+- `Kode` - Stock ticker
+- `Date` - Forecast date (most recent date with available data)
+- `Forecast {Label} {Window}dd` - Probability prediction (0.0 to 1.0)
+  - For `median_gain`: Probability of "High Gain"
+  - For `max_loss`: Probability of "Low Risk"
+  - For `linear_trend`: Probability of "Up Trend"
+
+#### Quality Control
+
+The script automatically:
+- Skips models that don't exist
+- Validates that all required features are present
+- Handles missing or incomplete data gracefully
+- Reports failures with descriptive messages
+
+#### Example Output
+
+```
+📊 Using 127 technical indicators as features
+
+🔍 Finding emiten with models meeting criteria...
+   Min Test Gini: 0.3
+✅ Found 245 emiten meeting criteria
+
+🚀 Starting forecasts for 245 emiten × 2 label types × 3 windows = 1470 tasks
+⚙️  Using 10 parallel workers
+
+Generating forecasts: 100%|██████████| 1470/1470 [05:23<00:00,  4.54it/s]
+
+================================================================================
+FORECAST SUMMARY
+================================================================================
+❌ ABDA (median_gain, 5dd): Model not found: data/stock/03_model/MedianGain/ABDA-5dd.pkl
+❌ ARMY (max_loss, 10dd): Failed to prepare data: Insufficient data
+   ... and 8 more failures
+
+✅ Successful: 1460/1470
+❌ Failed: 10/1470
+
+📁 Forecasts saved to: data/stock/04_forecast/{label_type}/{window}dd.csv
+
+================================================================================
+```
+
+#### Best Practices
+
+1. **Use Gini Filtering**: Set `--min_test_gini` to focus on well-performing models
+   - `0.2` - Liberal threshold, includes most models
+   - `0.3` - Moderate threshold, good balance
+   - `0.4` - Conservative threshold, only strong models
+
+2. **Targeted Forecasting**: Use `--tickers` when you only need specific stocks
+   - Faster execution
+   - Lower resource usage
+
+3. **Regular Updates**: Run daily to get fresh forecasts with latest data
+   - Ensure Steps 0-1 are run first to have up-to-date technical indicators
+   - Forecasts use the most recent date available in technical indicators CSV
+   - Old forecast files are automatically cleared to prevent duplicates
+
+4. **Model Performance**: Review performance CSVs before forecasting
+   - Check `data/stock/03_model/performance/{label_type}/{window}dd.csv`
+   - Verify models have acceptable Gini coefficients
+
+---
+
 ## Running Scripts in Sequence
 
 To manually run the full pipeline:
 
 ```bash
 # Step 0: Fetch historical data
-python pipeline/00_fetch_historical_data.py --start_date 2021-01-01 --workers 10
+python -m pipeline.00_fetch_historical_data --start_date 2021-01-01 --workers 10
 
 # Step 1: Generate technical indicators
-python pipeline/01_prepare_technical_indicators.py --workers 10
+python -m pipeline.01_prepare_technical_indicators --workers 10
 
 # Step 2: Generate labels
-python pipeline/02_generate_labels.py --workers 10
+python -m pipeline.02_generate_labels --workers 10
+
+# Step 3: Train models
+python -m pipeline.03_train_models --label_types median_gain,max_loss --windows 5,10,20 --workers 10
+
+# Step 4: Generate forecasts
+python -m pipeline.04_forecast --label_types median_gain,max_loss --windows 5,10,20 --min_test_gini 0.3 --workers 10
 ```
 
 Or use the orchestrator (recommended):
 
 ```bash
-# Full run
+# Full run (includes model training)
 python pipeline_orchestrator.py --full
 
 # Incremental update
@@ -239,16 +482,26 @@ python pipeline_orchestrator.py --update-run
 ## Performance Tips
 
 1. **Workers:** Adjust based on your CPU cores and RAM
-   - More workers = faster, but uses more memory
-   - Recommended: 10-20 workers for most systems
+   - **Steps 0-2:** More workers = faster, but uses more memory (default: 10-20 workers)
+   - **Step 3:** Parallel model training (default: CPU count - 1)
+   - Recommended: Start with defaults, adjust if memory issues occur
+   - Example: `--workers 8` for 8-core CPU with limited RAM
 
-2. **Incremental Updates:** Always use incremental mode for daily updates
+2. **Incremental Updates:** Always use incremental mode for daily updates (Steps 0-2)
    - Much faster than reprocessing everything
    - Only use `--force` when data quality issues occur
+   - Step 3 always trains from scratch on full datasets
 
 3. **Data Quality:** If indicators look wrong:
    - Use `--force` on step 1 to recalculate from scratch
    - Check for gaps in historical data
+
+4. **Model Training Speed:** 
+   - Training speed scales with worker count (8 workers ≈ 8x faster)
+   - More workers = higher CPU and memory usage
+   - Reduce workers if system becomes unresponsive
+   - Can take 15-60 minutes for 800+ stocks depending on worker count
+   - Focus on specific label types/windows if you don't need all combinations
 
 ## Troubleshooting
 
@@ -273,3 +526,15 @@ python pipeline_orchestrator.py --update-run
 - Increase `--workers` if you have CPU/RAM capacity
 - For updates, ensure you're using incremental mode (not `--force`)
 - Check disk I/O speed (SSD recommended)
+
+### Model training takes too long
+- Train only the label types and windows you need
+- Example: `python -m pipeline.03_train_models --label_types median_gain --windows 10`
+- Consider training in batches by manually selecting stocks
+- Training time scales linearly with number of stocks × label types × windows
+
+### Models failing to train
+- Check if label columns exist in `data/stock/02_label/` files
+- Ensure stocks have sufficient data (>100 rows after NaN removal)
+- Review error messages in the summary report
+- Common issues: class imbalance, insufficient data, missing features

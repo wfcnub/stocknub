@@ -45,6 +45,16 @@ PIPELINE_STEPS = {
         "module": "pipeline.02_generate_labels",
         "description": "Create target labels for model training",
     },
+    3: {
+        "name": "Train Models",
+        "module": "pipeline.03_train_models",
+        "description": "Train machine learning models for stock prediction",
+    },
+    4: {
+        "name": "Generate Forecasts",
+        "module": "pipeline.04_forecast",
+        "description": "Generate forecasts using trained models",
+    },
 }
 
 
@@ -88,6 +98,22 @@ def run_step(step_num, args):
             cmd.extend(["--target_column", args.target_column])
         if args.force:
             cmd.append("--force")
+
+    elif step_num == 3:
+        # Model training arguments
+        if args.label_types:
+            cmd.extend(["--label_types", args.label_types])
+        if args.windows:
+            cmd.extend(["--windows", args.windows])
+
+    elif step_num == 4:
+        # Forecast generation arguments
+        if args.label_types:
+            cmd.extend(["--label_types", args.label_types])
+        if args.windows:
+            cmd.extend(["--windows", args.windows])
+        if args.min_test_gini is not None:
+            cmd.extend(["--min_test_gini", str(args.min_test_gini)])
 
     # Execute the step
     try:
@@ -165,17 +191,25 @@ def main():
     parser.add_argument(
         "--label_types",
         type=str,
-        help="Comma-separated label types (Step 2 only, e.g., median_gain,max_loss)",
+        help="Comma-separated label types (Steps 2, 3, 4, e.g., median_gain,max_loss)",
     )
     parser.add_argument(
         "--windows",
         type=str,
-        help="Comma-separated rolling windows (Step 2 only, e.g., 5,10,20)",
+        help="Comma-separated rolling windows (Steps 2, 3, 4, e.g., 5,10,20)",
     )
     parser.add_argument(
         "--target_column",
         type=str,
         help="Target column for labels (Step 2 only, default: Close)",
+    )
+
+    # Step 4 (Forecast) specific arguments
+    parser.add_argument(
+        "--min_test_gini",
+        type=float,
+        default=None,
+        help="Minimum test Gini coefficient for model filtering (Step 4 only)",
     )
 
     args = parser.parse_args()
@@ -184,6 +218,8 @@ def main():
     Path("data/stock/00_historical").mkdir(parents=True, exist_ok=True)
     Path("data/stock/01_technical").mkdir(parents=True, exist_ok=True)
     Path("data/stock/02_label").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/03_model").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/04_forecast").mkdir(parents=True, exist_ok=True)
 
     # Determine which steps to run
     if args.full:
