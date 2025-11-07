@@ -111,14 +111,12 @@ def process_single_ticker(args_tuple):
                 return (emiten, True, f"No new data to process for {emiten}", 0)
 
             # Need to include some historical context for technical indicators calculation
-            # Get last 200 rows from existing technical data to ensure proper indicator calculation
-            context_rows = 200
             if len(existing_technical_df) > 0:
                 # Get the last N dates from existing technical data
                 existing_technical_df["Date"] = pd.to_datetime(
                     existing_technical_df["Date"]
                 )
-                last_n_dates = existing_technical_df["Date"].tail(context_rows)
+                last_n_dates = existing_technical_df["Date"]
 
                 # Get corresponding rows from historical data
                 context_df = historical_df[historical_df["Date"].isin(last_n_dates)]
