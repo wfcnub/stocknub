@@ -71,6 +71,19 @@ def process_single_ticker(args_tuple):
         if historical_df.empty:
             return (emiten, False, f"Historical data is empty for {emiten}", 0)
 
+        # Check for price variation (suspended/delisted stocks)
+        if "Close" in historical_df.columns:
+            import numpy as np
+
+            close_variance = np.var(historical_df["Close"].values)
+            if close_variance < 1e-10:
+                return (
+                    emiten,
+                    False,
+                    f"{emiten} - No price variation (likely suspended/delisted, variance={close_variance:.2e})",
+                    0,
+                )
+
         # Check if we need to process (incremental update logic)
         if not force_reprocess and os.path.exists(technical_path):
             last_technical_date = get_last_date_from_csv(technical_path)
@@ -285,6 +298,7 @@ def main():
     print("=" * 80)
 
     success_count = 0
+    successful_tickers = []
     failed_tickers = []
     total_new_rows = 0
 
@@ -292,16 +306,49 @@ def main():
         if success:
             success_count += 1
             total_new_rows += num_new_rows
+            successful_tickers.append((ticker, message, num_new_rows))
         else:
             failed_tickers.append((ticker, message))
 
     print(f"Successfully processed: {success_count}/{len(historical_files)} tickers")
     print(f"Total new rows generated: {total_new_rows}")
 
+    # Show successful tickers if using --tickers flag
+    if args.tickers and successful_tickers:
+        ticker_names = [ticker for ticker, _, _ in successful_tickers]
+        print(f"\nSuccessful ({len(successful_tickers)} tickers):")
+        print(f"Tickers: {', '.join(ticker_names)}")
+        for ticker, msg, rows in successful_tickers:
+            if rows > 0:
+                print(f"  - {msg}")
+
     if failed_tickers:
         print(f"\nFailed: {len(failed_tickers)} tickers")
+        print("-" * 80)
+
+        # Categorize failures
+        suspended_delisted = []
+        other_errors = []
+
         for ticker, message in failed_tickers:
-            print(f"  - {message}")
+            if "No price variation" in message or "suspended/delisted" in message:
+                suspended_delisted.append((ticker, message))
+            else:
+                other_errors.append((ticker, message))
+
+        if suspended_delisted:
+            ticker_names = [ticker for ticker, _ in suspended_delisted]
+            print(f"\nSuspended/Delisted ({len(suspended_delisted)} tickers):")
+            print(f"Tickers: {', '.join(ticker_names)}")
+            for ticker, msg in suspended_delisted:
+                print(f"  - {msg}")
+
+        if other_errors:
+            ticker_names = [ticker for ticker, _ in other_errors]
+            print(f"\nOther Errors ({len(other_errors)} tickers):")
+            print(f"Tickers: {', '.join(ticker_names)}")
+            for ticker, msg in other_errors:
+                print(f"  - {msg}")
 
     print("=" * 80)
 

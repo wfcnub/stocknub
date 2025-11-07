@@ -77,13 +77,26 @@ def process_single_ticker(args_tuple):
 
         # Check if technical data exists
         if not os.path.exists(technical_path):
-            return (emiten, False, f"Technical data not found for {emiten}", 0)
+            return (emiten, False, f"{emiten} - Technical file not found", 0)
 
         # Read technical data
         technical_df = pd.read_csv(technical_path)
 
         if technical_df.empty:
-            return (emiten, False, f"Technical data is empty for {emiten}", 0)
+            return (emiten, False, f"{emiten} - Technical data file is empty", 0)
+
+        # Check for price variation (suspended/delisted stocks)
+        if "Close" in technical_df.columns:
+            import numpy as np
+
+            close_variance = np.var(technical_df["Close"].values)
+            if close_variance < 1e-10:
+                return (
+                    emiten,
+                    False,
+                    f"{emiten} - No price variation (likely suspended/delisted, variance={close_variance:.2e})",
+                    0,
+                )
 
         # Check if we need to process (incremental update logic)
         if not force_reprocess and os.path.exists(labels_path):
@@ -162,9 +175,28 @@ def process_single_ticker(args_tuple):
                 technical_df, target_column, rolling_windows, label_types
             )
 
+            # Check if label generation resulted in empty dataframe
+            if labels_df is None or labels_df.empty:
+                return (
+                    emiten,
+                    False,
+                    f"{emiten} - Label generation returned empty dataframe (data quality issue: check for NaN/Inf values)",
+                    0,
+                )
+
             # Save to file
             labels_df.to_csv(labels_path, index=False)
             num_rows = len(labels_df)
+
+            # Warn if input data was limited
+            if len(technical_df) < 220:
+                return (
+                    emiten,
+                    True,
+                    f"Generated {num_rows} rows of labels for {emiten} (warning: only {len(technical_df)} input rows)",
+                    num_rows,
+                )
+
             return (
                 emiten,
                 True,
@@ -173,7 +205,7 @@ def process_single_ticker(args_tuple):
             )
 
     except Exception as e:
-        return (emiten, False, f"Error processing {emiten}: {str(e)}", 0)
+        return (emiten, False, f"{emiten} - Exception: {str(e)}", 0)
 
 
 def main():
@@ -239,7 +271,7 @@ def main():
     ]
 
     if not technical_files:
-        print(f"❌ No CSV files found in {args.technical_folder}")
+        print(f"No CSV files found in {args.technical_folder}")
         return
 
     print("=" * 80)
@@ -287,22 +319,80 @@ def main():
 
     success_count = 0
     failed_tickers = []
+    limited_data_tickers = []
     total_new_rows = 0
 
     for ticker, success, message, num_new_rows in results:
         if success:
             success_count += 1
             total_new_rows += num_new_rows
+            # Check for limited data warning
+            if "warning: only" in message:
+                limited_data_tickers.append((ticker, message))
         else:
             failed_tickers.append((ticker, message))
 
     print(f"Successfully processed: {success_count}/{len(technical_files)} tickers")
     print(f"Total new rows generated: {total_new_rows}")
 
+    # Show limited data warnings
+    if limited_data_tickers:
+        print(
+            f"\nWarning: {len(limited_data_tickers)} tickers with limited data (< 220 rows)"
+        )
+        print("-" * 80)
+        ticker_names = [ticker for ticker, _ in limited_data_tickers]
+        for ticker, message in limited_data_tickers:
+            print(f"  - {message}")
+        print(f"Tickers: {','.join(ticker_names)}")
+
     if failed_tickers:
         print(f"\nFailed: {len(failed_tickers)} tickers")
+        print("-" * 80)
+
+        # Categorize failures
+        insufficient_data = []
+        suspended_delisted = []
+        generation_errors = []
+        other_errors = []
+
         for ticker, message in failed_tickers:
-            print(f"  - {message}")
+            if "Insufficient data" in message:
+                insufficient_data.append((ticker, message))
+            elif "No price variation" in message or "suspended/delisted" in message:
+                suspended_delisted.append((ticker, message))
+            elif "empty dataframe" in message or "data quality" in message:
+                generation_errors.append((ticker, message))
+            else:
+                other_errors.append((ticker, message))
+
+        if insufficient_data:
+            ticker_names = [ticker for ticker, _ in insufficient_data]
+            print(f"\nInsufficient Data ({len(insufficient_data)} tickers):")
+            for ticker, msg in insufficient_data:
+                print(f"  - {msg}")
+            print(f"Tickers: {','.join(ticker_names)}")
+
+        if suspended_delisted:
+            ticker_names = [ticker for ticker, _ in suspended_delisted]
+            print(f"\nSuspended/Delisted ({len(suspended_delisted)} tickers):")
+            for ticker, msg in suspended_delisted:
+                print(f"  - {msg}")
+            print(f"Tickers: {','.join(ticker_names)}")
+
+        if generation_errors:
+            ticker_names = [ticker for ticker, _ in generation_errors]
+            print(f"\nData Quality Issues ({len(generation_errors)} tickers):")
+            for ticker, msg in generation_errors:
+                print(f"  - {msg}")
+            print(f"Tickers: {','.join(ticker_names)}")
+
+        if other_errors:
+            ticker_names = [ticker for ticker, _ in other_errors]
+            print(f"\nOther Errors ({len(other_errors)} tickers):")
+            for ticker, msg in other_errors:
+                print(f"  - {msg}")
+            print(f"Tickers: {','.join(ticker_names)}")
 
     print("=" * 80)
 
