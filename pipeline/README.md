@@ -146,6 +146,12 @@ python -m pipeline.02_generate_labels \
     --windows 5,10,20 \
     --workers 10
 
+# Process specific tickers only (comma-separated)
+python -m pipeline.02_generate_labels --tickers BBCA,BBRI,TLKM --workers 4
+
+# Process specific tickers with force reprocess
+python -m pipeline.02_generate_labels --tickers BBCA,BBRI --force
+
 # Custom target column (default is Close)
 python -m pipeline.02_generate_labels \
     --target_column High \
@@ -166,6 +172,7 @@ python -m pipeline.02_generate_labels --force --workers 10
 - `--windows` - Comma-separated rolling windows in days (default: `5,10,20`)
 - `--workers` - Number of parallel workers (default: 10)
 - `--force` - Force reprocess all tickers, ignore existing data
+- `--tickers` - Comma-separated list of specific tickers to process (e.g., `BBCA,BBRI,TLKM`). If not provided, all tickers will be processed
 
 #### Label Types
 
@@ -229,6 +236,12 @@ python -m pipeline.03_train_models --label_types median_gain,max_loss --windows 
 # Specify number of parallel workers
 python -m pipeline.03_train_models --workers 10
 
+# Train specific tickers only (comma-separated)
+python -m pipeline.03_train_models --tickers BBCA,BBRI,TLKM --workers 4
+
+# Train specific tickers with specific label types
+python -m pipeline.03_train_models --tickers BBCA,BBRI --label_types median_gain --windows 10
+
 # Train all label types with custom workers
 python -m pipeline.03_train_models --label_types linear_trend,median_gain,max_loss --windows 5,10,20 --workers 8
 
@@ -242,6 +255,7 @@ python -m pipeline.03_train_models --label_types median_gain --windows 10 --work
   - Options: `linear_trend`, `median_gain`, `max_loss`
 - `--windows` - Comma-separated rolling windows in days (default: `5,10,20`)
 - `--workers` - Number of parallel workers (default: CPU count - 1)
+- `--tickers` - Comma-separated list of specific tickers to process (e.g., `BBCA,BBRI,TLKM`). If not provided, all tickers will be processed
 
 #### Model Training
 
@@ -400,28 +414,28 @@ The script automatically:
 #### Example Output
 
 ```
-📊 Using 127 technical indicators as features
+Using 127 technical indicators as features
 
-🔍 Finding emiten with models meeting criteria...
-   Min Test Gini: 0.3
-✅ Found 245 emiten meeting criteria
+Finding emiten with models meeting criteria...
+Min Test Gini: 0.3
+Found 245 emiten meeting criteria
 
-🚀 Starting forecasts for 245 emiten × 2 label types × 3 windows = 1470 tasks
-⚙️  Using 10 parallel workers
+Starting forecasts for 245 emiten × 2 label types × 3 windows = 1470 tasks
+Using 10 parallel workers
 
 Generating forecasts: 100%|██████████| 1470/1470 [05:23<00:00,  4.54it/s]
 
 ================================================================================
 FORECAST SUMMARY
 ================================================================================
-❌ ABDA (median_gain, 5dd): Model not found: data/stock/03_model/MedianGain/ABDA-5dd.pkl
-❌ ARMY (max_loss, 10dd): Failed to prepare data: Insufficient data
+ABDA (median_gain, 5dd): Model not found: data/stock/03_model/MedianGain/ABDA-5dd.pkl
+ARMY (max_loss, 10dd): Failed to prepare data: Insufficient data
    ... and 8 more failures
 
-✅ Successful: 1460/1470
-❌ Failed: 10/1470
+Successful: 1460/1470
+Failed: 10/1470
 
-📁 Forecasts saved to: data/stock/04_forecast/{label_type}/{window}dd.csv
+Forecasts saved to: data/stock/04_forecast/{label_type}/{window}dd.csv
 
 ================================================================================
 ```

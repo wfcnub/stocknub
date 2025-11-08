@@ -227,17 +227,19 @@ def main():
         missing_tickers = set(specified_tickers) - set(historical_files)
         if missing_tickers:
             print(
-                f"⚠️  Warning: The following tickers were not found: {', '.join(missing_tickers)}"
+                f"Warning: The following tickers were not found: {', '.join(missing_tickers)}"
             )
 
         if not historical_files:
-            print(f"❌ None of the specified tickers found in {args.historical_folder}")
+            print(
+                f"Error: None of the specified tickers found in {args.historical_folder}"
+            )
             return
     else:
         historical_files = all_historical_files
 
     if not historical_files:
-        print(f"❌ No CSV files found in {args.historical_folder}")
+        print(f"Error: No CSV files found in {args.historical_folder}")
         return
 
     print("=" * 80)

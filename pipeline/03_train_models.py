@@ -10,6 +10,7 @@ Usage:
     python -m pipeline.03_train_models
     python -m pipeline.03_train_models --label_types median_gain,max_loss --windows 5,10,20
     python -m pipeline.03_train_models --workers 10
+    python -m pipeline.03_train_models --tickers BBCA,BBRI,TLKM
 """
 
 import argparse
@@ -45,17 +46,6 @@ def save_model(model, label_type, emiten, window):
     filepath = f"data/stock/03_model/{camel_label}/{emiten}-{window}dd.pkl"
     with open(filepath, "wb") as f:
         pickle.dump(model, f)
-
-
-def save_performance(metrics_df, label_type, window):
-    """Save or append performance metrics to CSV."""
-    camel_label = to_camel(label_type)
-    filepath = f"data/stock/03_model/performance/{camel_label}/{window}dd.csv"
-
-    if Path(filepath).exists():
-        metrics_df.to_csv(filepath, mode="a", index=False, header=False)
-    else:
-        metrics_df.to_csv(filepath, index=False)
 
 
 def combine_metrics(emiten, train_metrics, test_metrics, threshold):
@@ -127,12 +117,34 @@ def train_models(label_types, rolling_windows, workers=None, tickers=""):
     ensure_directories_exist(label_types)
 
     label_dir = Path("data/stock/02_label")
-    label_files = sorted(label_dir.glob("*.csv"))
+    all_label_files = sorted(label_dir.glob("*.csv"))
+
+    # Filter by specific tickers if provided
+    if tickers:
+        specified_tickers = [t.strip().upper() for t in tickers.split(",")]
+        label_files = [f for f in all_label_files if f.stem in specified_tickers]
+
+        # Check if any specified tickers were not found
+        missing_tickers = set(specified_tickers) - set([f.stem for f in label_files])
+        if missing_tickers:
+            print(
+                f"Warning: The following tickers were not found: {', '.join(missing_tickers)}"
+            )
+
+        if not label_files:
+            print(f"Error: None of the specified tickers found in {label_dir}")
+            return
+    else:
+        label_files = all_label_files
 
     if workers is None:
         workers = max(1, cpu_count() - 1)
 
     print(f"Found {len(label_files)} stocks to process")
+    if tickers:
+        print(
+            f"Processing specific tickers: {', '.join([f.stem for f in label_files])}"
+        )
     print(f"Label types: {', '.join(label_types)}")
     print(f"Rolling windows: {', '.join(map(str, rolling_windows))} days")
     print(f"Workers: {workers}\n")
@@ -190,7 +202,7 @@ def train_models(label_types, rolling_windows, workers=None, tickers=""):
         if len(all_failed_stocks) > 10:
             print(f"  ... and {len(all_failed_stocks) - 10} more")
     else:
-        print("\n✅ All trainings successful!")
+        print("\nAll trainings successful!")
 
     print(f"{'=' * 60}")
 
@@ -219,6 +231,13 @@ def main():
         help="Number of parallel workers (default: CPU count - 1)",
     )
 
+    parser.add_argument(
+        "--tickers",
+        type=str,
+        default="",
+        help="Comma-separated list of specific tickers to process (e.g., 'BBCA,BBRI,TLKM'). If not provided, all tickers will be processed.",
+    )
+
     args = parser.parse_args()
 
     label_types = [lt.strip() for lt in args.label_types.split(",")]
@@ -227,10 +246,12 @@ def main():
     valid_label_types = ["linear_trend", "median_gain", "max_loss"]
     for label_type in label_types:
         if label_type not in valid_label_types:
-            print(f"❌ Invalid label type: {label_type}")
+            print(f"Error: Invalid label type: {label_type}")
             return
 
-    train_models(label_types, rolling_windows, workers=args.workers)
+    train_models(
+        label_types, rolling_windows, workers=args.workers, tickers=args.tickers
+    )
 
 
 if __name__ == "__main__":

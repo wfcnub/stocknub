@@ -16,6 +16,9 @@ Usage:
 
     # Force regenerate all labels
     python -m pipeline.02_generate_labels --force --workers 10
+
+    # Process specific tickers
+    python -m pipeline.02_generate_labels --tickers BBCA,BBRI,TLKM
 """
 
 import os
@@ -232,6 +235,12 @@ def main():
         action="store_true",
         help="Force reprocess all tickers even if up to date",
     )
+    parser.add_argument(
+        "--tickers",
+        type=str,
+        default="",
+        help="Comma-separated list of specific tickers to process (e.g., 'BBCA,BBRI,TLKM'). If not provided, all tickers will be processed.",
+    )
 
     args = parser.parse_args()
 
@@ -243,20 +252,42 @@ def main():
     Path(args.labels_folder).mkdir(parents=True, exist_ok=True)
 
     # Get list of all tickers from technical folder
-    technical_files = [
+    all_technical_files = [
         f.replace(".csv", "")
         for f in os.listdir(args.technical_folder)
         if f.endswith(".csv")
     ]
 
+    # Filter by specific tickers if provided
+    if args.tickers:
+        specified_tickers = [t.strip().upper() for t in args.tickers.split(",")]
+        technical_files = [t for t in all_technical_files if t in specified_tickers]
+
+        # Check if any specified tickers were not found
+        missing_tickers = set(specified_tickers) - set(technical_files)
+        if missing_tickers:
+            print(
+                f"Warning: The following tickers were not found: {', '.join(missing_tickers)}"
+            )
+
+        if not technical_files:
+            print(
+                f"Error: None of the specified tickers found in {args.technical_folder}"
+            )
+            return
+    else:
+        technical_files = all_technical_files
+
     if not technical_files:
-        print(f"No CSV files found in {args.technical_folder}")
+        print(f"Error: No CSV files found in {args.technical_folder}")
         return
 
     print("=" * 80)
     print("PIPELINE STEP 2: GENERATE TARGET LABELS")
     print("=" * 80)
     print(f"Found {len(technical_files)} tickers to process")
+    if args.tickers:
+        print(f"Processing specific tickers: {', '.join(technical_files)}")
     print(f"Technical data folder: {args.technical_folder}")
     print(f"Labels folder: {args.labels_folder}")
     print(f"Target column: {args.target_column}")
