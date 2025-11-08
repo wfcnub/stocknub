@@ -20,28 +20,7 @@ from multiprocessing import Pool
 from tqdm import tqdm
 
 from technicalIndicators.main import generate_all_technical_indicators
-
-
-def get_last_date_from_csv(csv_file_path: str) -> str:
-    """
-    Get the last date from a CSV file.
-
-    Args:
-        csv_file_path (str): Path to the CSV file
-
-    Returns:
-        str: Last date in 'YYYY-MM-DD' format, or empty string if file doesn't exist
-    """
-    if not os.path.isfile(csv_file_path):
-        return ""
-
-    try:
-        df = pd.read_csv(csv_file_path)
-        if df.empty:
-            return ""
-        return str(df.iloc[-1]["Date"])
-    except Exception:
-        return ""
+from utils.io import get_last_date_from_csv
 
 
 def process_single_ticker(args_tuple):

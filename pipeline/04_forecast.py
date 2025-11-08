@@ -31,37 +31,11 @@ from camel_converter import to_camel
 from multiprocessing import Pool
 
 from technicalIndicators.helper import get_all_technical_indicators
+from utils.pipeline import get_label_config
 
 from warnings import simplefilter
 
 simplefilter(action="ignore")
-
-
-def get_label_config(label_type, window):
-    """Get configuration for a specific label type and window."""
-    if label_type == "linear_trend":
-        return (
-            f"Linear Trend {window}dd",
-            f"Threshold Linear Trend {window}dd",
-            "Up Trend",
-            "Down Trend",
-        )
-    elif label_type == "median_gain":
-        return (
-            f"Median Gain {window}dd",
-            f"Threshold Median Gain {window}dd",
-            "High Gain",
-            "Low Gain",
-        )
-    elif label_type == "max_loss":
-        return (
-            f"Max Loss {window}dd",
-            f"Threshold Max Loss {window}dd",
-            "Low Risk",
-            "High Risk",
-        )
-    else:
-        raise ValueError(f"Unknown label type: {label_type}")
 
 
 def ensure_directories_exist(label_types, windows):

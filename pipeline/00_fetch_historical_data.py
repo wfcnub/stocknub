@@ -25,11 +25,9 @@ from pathlib import Path
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from tqdm import tqdm
-from utils.data.downloader import (
-    download_stock_data,
-    append_df_to_csv,
-    get_last_date_from_csv,
-)
+
+from utils.data_fetcher import download_stock_data
+from utils.io import append_df_to_csv, get_last_date_from_csv
 
 
 def get_yesterday_date():
@@ -62,7 +60,10 @@ def fetch_emiten_data(args_tuple):
         if update_mode:
             last_date = get_last_date_from_csv(csv_file_path)
             if last_date:
-                start_date = last_date
+                # Add one day to avoid re-downloading the same date
+                last_date_dt = datetime.strptime(last_date, "%Y-%m-%d")
+                next_date = last_date_dt + timedelta(days=1)
+                start_date = next_date.strftime("%Y-%m-%d")
             # If no last date found (file doesn't exist or is empty), use provided start_date
 
         df = download_stock_data(emiten, start_date=start_date, end_date=end_date)
