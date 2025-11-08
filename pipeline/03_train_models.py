@@ -78,6 +78,7 @@ def process_single_stock(args_tuple):
     label_file, label_types, rolling_windows, feature_columns = args_tuple
     emiten = label_file.stem
     failed_stocks = []
+    metrics_list = []  # Store metrics instead of saving directly
 
     try:
         data = pd.read_csv(label_file)
@@ -108,7 +109,9 @@ def process_single_stock(args_tuple):
                     metrics_df = combine_metrics(
                         emiten, train_metrics, test_metrics, threshold_value
                     )
-                    save_performance(metrics_df, label_type, window)
+
+                    # Store metrics with label_type and window info for batch saving
+                    metrics_list.append((label_type, window, metrics_df))
 
                 except Exception as e:
                     failed_stocks.append((emiten, label_type, window, str(e)))
@@ -116,10 +119,10 @@ def process_single_stock(args_tuple):
     except Exception as e:
         failed_stocks.append((emiten, "all", "all", str(e)))
 
-    return failed_stocks
+    return failed_stocks, metrics_list
 
 
-def train_models(label_types, rolling_windows, workers=None):
+def train_models(label_types, rolling_windows, workers=None, tickers=""):
     """Train models for all stocks in data/stock/02_label."""
     ensure_directories_exist(label_types)
 
@@ -144,6 +147,8 @@ def train_models(label_types, rolling_windows, workers=None):
 
     # Process stocks in parallel
     all_failed_stocks = []
+    all_metrics = {}  # Group metrics by (label_type, window)
+
     with Pool(processes=workers) as pool:
         results = list(
             tqdm(
@@ -152,8 +157,28 @@ def train_models(label_types, rolling_windows, workers=None):
                 desc="Processing stocks",
             )
         )
-        for failed_stocks in results:
+
+        # Collect results
+        for failed_stocks, metrics_list in results:
             all_failed_stocks.extend(failed_stocks)
+
+            # Group metrics by label_type and window
+            for label_type, window, metrics_df in metrics_list:
+                key = (label_type, window)
+                if key not in all_metrics:
+                    all_metrics[key] = []
+                all_metrics[key].append(metrics_df)
+
+    # Save all metrics at once (avoids race conditions)
+    if all_metrics:
+        print("\nSaving performance metrics...")
+        for (label_type, window), metrics_dfs in all_metrics.items():
+            camel_label = to_camel(label_type)
+            filepath = f"data/stock/03_model/performance/{camel_label}/{window}dd.csv"
+
+            # Concatenate all metrics and save once
+            combined_metrics = pd.concat(metrics_dfs, ignore_index=True)
+            combined_metrics.to_csv(filepath, index=False)
 
     print(f"\n{'=' * 60}")
     print(f"Training complete! Total stocks: {len(label_files)}")
