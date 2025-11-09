@@ -197,10 +197,8 @@ def train_models(label_types, rolling_windows, workers=None, tickers=""):
 
     if all_failed_stocks:
         print(f"\nFailed trainings ({len(all_failed_stocks)}):")
-        for emiten, label_type, window, error in all_failed_stocks[:10]:
+        for emiten, label_type, window, error in all_failed_stocks:
             print(f"  - {emiten} ({label_type} {window}dd): {error}")
-        if len(all_failed_stocks) > 10:
-            print(f"  ... and {len(all_failed_stocks) - 10} more")
     else:
         print("\nAll trainings successful!")
 
