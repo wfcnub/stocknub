@@ -3,9 +3,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 
 
-def identify_historical_trends(
-    data, column, rolling_window, make_bool_up=None, make_bool_down=None
-):
+def identify_historical_trends(data, column, rolling_window, make_bool_up=None, make_bool_down=None):
     """
     (Internal Helper) Identifies the historical trend of a data column using linear regression.
 
@@ -141,7 +139,7 @@ def get_all_technical_indicators():
     Returns:
         list: A list containing all feature names for the technical indicators
     """
-    feature_file = "database/stocksInformation/technical_indicator_features.txt"
+    feature_file = "data/technical_indicator_features.txt"
     with open(feature_file, "r") as file:
         feature_columns = [line.strip() for line in file]
 

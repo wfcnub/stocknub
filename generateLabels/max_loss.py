@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-
 def _generate_max_loss(
     data: pd.DataFrame, target_column: str, rolling_window: int
 ) -> (np.array, float):
@@ -17,12 +16,11 @@ def _generate_max_loss(
         np.array: A collection of max loss based on a rolling window
         float: The threshold for the quantile 0.6
     """
-    min_close = data[target_column].rolling(rolling_window).min()
+    min_close = data[target_column][::-1].rolling(rolling_window, closed='left').min()[::-1]
     max_loss = (
         100 * (min_close - data[target_column].values) / data[target_column].values
     )
 
-    # Handle case where all values are NaN (e.g., insufficient data)
     if np.isnan(max_loss).all():
         threshold = np.nan
     else:
