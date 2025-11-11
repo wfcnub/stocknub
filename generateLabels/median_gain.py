@@ -12,7 +12,7 @@ def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window
 
     Returns:
         np.array: The median gain for all target data
-        float: The threshold for the quantile 0.9
+        float: The threshold for the quantile 0.8
     """
     median_close = data[target_column][::-1].rolling(rolling_window, closed='left').quantile(0.4)[::-1]
     median_gain = (100 * (median_close - data[target_column].values) / data[target_column].values)

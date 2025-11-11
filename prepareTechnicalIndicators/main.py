@@ -6,8 +6,7 @@ from prepareTechnicalIndicators.all_technical_indicators import generate_all_tec
 
 def process_single_ticker(args_tuple):
     """
-    Process a single ticker: read historical data, generate technical indicators,
-    and save to technical indicators folder.
+    Read historical data, generate technical indicators, and save to technical indicators folder.
 
     Args:
         args_tuple: Tuple containing (emiten, historical_folder, technical_folder)

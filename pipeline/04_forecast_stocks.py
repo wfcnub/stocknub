@@ -24,12 +24,17 @@ Usage:
 
 import argparse
 import pandas as pd
+from tqdm import tqdm
+from pathlib import Path
+from multiprocessing import Pool
 
 from warnings import simplefilter
 simplefilter(action="ignore")
 
-from forecastStocks.main import forecast_stocks
-from forecastStocks.helper import _save_forecast
+from forecastStocks.main import process_single_ticker
+from prepareTechnicalIndicators.helper import get_all_technical_indicators
+from forecastStocks.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_emiten_list, _save_forecast
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -77,7 +82,62 @@ def main():
     label_types = [lt.strip() for lt in args.label_types.split(",")]
     windows = [int(w.strip()) for w in args.windows.split(",")]
 
-    results, successful, failed, total_tasks = forecast_stocks(label_types, windows, args.min_test_gini, args.workers, args.tickers)
+    valid_label_types = ["linear_trend", "median_gain", "max_loss"]
+    for label_type in label_types:
+        if label_type not in valid_label_types:
+            print(f"ERROR: Invalid label type: {label_type}")
+            print(f"   Valid types: {', '.join(valid_label_types)}")
+            return
+
+    _ensure_directories_exist(label_types, windows)
+
+    print("\nClearing old forecast files...")
+    _clear_forecast_files(label_types, windows)
+
+    feature_columns = get_all_technical_indicators()
+    print(f"Using {len(feature_columns)} technical indicators as features")
+
+    if args.tickers:
+        emiten_list = [ticker.strip() for ticker in args.tickers.split(",")]
+        print(f"\nForecasting specified tickers: {', '.join(emiten_list)}")
+    else:
+        print("\nFinding emiten with models meeting criteria...")
+        if args.min_test_gini is not None:
+            print(f"   Min Test Gini: {args.min_test_gini}")
+        else:
+            print("   Min Test Gini: None (using all available models)")
+
+        emiten_list = _get_filtered_emiten_list(label_types, windows, args.min_test_gini)
+
+        if not emiten_list:
+            print("ERROR: No emiten found meeting the criteria")
+            return
+
+        print(f"Found {len(emiten_list)} emiten meeting criteria")
+
+    forecast_tasks = []
+    for emiten in emiten_list:
+        for label_type in label_types:
+            for window in windows:
+                forecast_tasks.append((emiten, label_type, window, feature_columns))
+
+    total_tasks = len(forecast_tasks)
+    print(
+        f"\nStarting forecasts for {len(emiten_list)} emiten × {len(label_types)} label types × {len(windows)} windows = {total_tasks} tasks"
+    )
+    print(f"Using {args.workers} parallel workers\n")
+
+    successful = 0
+    failed = 0
+
+    with Pool(processes=args.workers) as pool:
+        results = list(
+            tqdm(
+                pool.imap(process_single_ticker, forecast_tasks),
+                total=total_tasks,
+                desc="Generating forecasts",
+            )
+        )
 
     print("\n" + "=" * 80)
     print("FORECAST SUMMARY")

@@ -35,8 +35,8 @@ def fetch_emiten_data(args_tuple):
                 True,
                 f"Data for {emiten} {date_range} saved to {csv_file_path}.",
             )
-        else:
-            return (emiten, False, f"No data found for {emiten}.")
+        
+        return (emiten, False, f"No data found for {emiten}.")
             
     except Exception as e:
         return (emiten, False, f"Error fetching {emiten}: {str(e)}")

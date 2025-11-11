@@ -6,7 +6,7 @@ from generateLabels.helper import _generate_labels_based_on_label_type
 
 def process_single_ticker(args_tuple):
     """
-    Process a single ticker: read technical data, generate labels, and save.
+    Read technical data, generate labels, and save to label folder.
 
     Args:
         args_tuple: Tuple containing (emiten, technical_folder, labels_folder,
@@ -66,4 +66,9 @@ def process_single_ticker(args_tuple):
         )
 
     except Exception as e:
-        return (emiten, False, f"{emiten} - Exception: {str(e)}", 0)
+        return (
+            emiten, 
+            False, 
+            f"{emiten} - Exception: {str(e)}", 
+            0
+        )

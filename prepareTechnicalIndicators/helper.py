@@ -2,7 +2,6 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 
-
 def identify_historical_trends(data, column, rolling_window, make_bool_up=None, make_bool_down=None):
     """
     (Internal Helper) Identifies the historical trend of a data column using linear regression.

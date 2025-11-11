@@ -36,7 +36,7 @@ def main():
     parser.add_argument(
         "--workers",
         type=int,
-        default=10,
+        default=8,
         help="Number of parallel workers (default: 10)",
     )
     parser.add_argument(
@@ -152,7 +152,6 @@ def main():
                 print(f"  - {msg}")
 
     print("=" * 80)
-
 
 if __name__ == "__main__":
     main()

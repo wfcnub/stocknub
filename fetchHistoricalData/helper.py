@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 
 def _get_yesterday_date():
     """
-    Get yesterday's date in YYYY-MM-DD format.
+    (Internal Helper) Get yesterday's date in YYYY-MM-DD format.
 
-    Returns:s
+    Returns:
         str: Yesterday's date in 'YYYY-MM-DD' format
     """
     yesterday = datetime.now() - timedelta(days=1)
