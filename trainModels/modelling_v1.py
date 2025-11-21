@@ -31,7 +31,7 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
                - predefined_split_index (PredefinedSplit): An index for cross-validation
                  that designates the recent days worth 10% of the overall training data as the validation set
     """
-    test_length = np.ceil(len(data) * 0.1).astype(int)
+    test_length = np.ceil(len(data) * 0.075).astype(int)
     test_data = data.tail(test_length)
     train_length = len(data) - test_length
     train_data = data.head(train_length)
@@ -84,7 +84,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=25,
+        n_iter=10,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=-1,
