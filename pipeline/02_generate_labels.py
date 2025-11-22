@@ -22,7 +22,7 @@ import argparse
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 from generateLabels.main import process_single_ticker
 
@@ -63,8 +63,8 @@ def main():
     parser.add_argument(
         "--workers",
         type=int,
-        default=8,
-        help="Number of parallel workers (default: 10)",
+        default=cpu_count(),
+        help="Number of parallel workers (default: CPU count)",
     )
     parser.add_argument(
         "--tickers",

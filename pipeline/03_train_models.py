@@ -48,8 +48,8 @@ def main():
     parser.add_argument(
         "--workers",
         type=int,
-        default=None,
-        help="Number of parallel workers (default: CPU count - 1)",
+        default=cpu_count(),
+        help="Number of parallel workers (default: CPU count)",
     )
 
     parser.add_argument(
@@ -90,9 +90,6 @@ def main():
             return
     else:
         label_files = all_label_files
-
-    if args.workers is None:
-        args.workers = max(1, cpu_count() - 1)
 
     print(f"Found {len(label_files)} stocks to process")
     if args.tickers:

@@ -23,7 +23,7 @@ Usage:
 import argparse
 from tqdm import tqdm
 from pathlib import Path
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 from fetchHistoricalData.main import fetch_emiten_data
 from fetchHistoricalData.helper import _get_yesterday_date
@@ -59,8 +59,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--workers",
         type=int,
-        default=8,
-        help="Number of parallel workers to use (default: 10)",
+        default=cpu_count(),
+        help="Number of parallel workers to use (default: CPU count)",
     )
     parser.add_argument(
         "--update",

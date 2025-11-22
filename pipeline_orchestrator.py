@@ -79,8 +79,7 @@ def run_step(step_num, args):
             cmd.extend(["--end_date", args.end_date])
 
     elif step_num == 1:
-        if args.force:
-            cmd.append("--force")
+        pass
 
     elif step_num == 2:
         if args.label_types:
@@ -89,8 +88,6 @@ def run_step(step_num, args):
             cmd.extend(["--windows", args.windows])
         if args.target_column:
             cmd.extend(["--target_column", args.target_column])
-        if args.force:
-            cmd.append("--force")
 
     elif step_num == 3:
         if args.label_types:

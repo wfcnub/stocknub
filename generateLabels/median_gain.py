@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window: int, quantile_value: float) -> (np.array, float):
+def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window: int) -> (np.array, float):
     """
     (Internal Helper) Calculates the median gain of a target column based on a rolling window
 
@@ -22,7 +22,7 @@ def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window
     else:
         test_median_gain_length = np.round((len(data) - rolling_window) * 0.15).astype(int)
         test_median_gain = median_gain[-1 * (test_median_gain_length + rolling_window): -rolling_window]
-        threshold = np.nanquantile(test_median_gain, quantile_value)
+        threshold = np.nanquantile(test_median_gain, 0.9)
 
     return (median_gain, threshold)
 
@@ -46,7 +46,7 @@ def _bin_median_gain(threshold: float, val: float) -> str:
         return "Low Gain"
 
 
-def _generate_all_median_gain(data: pd.DataFrame, target_column: str, rolling_window: int, quantile_value: float) -> pd.DataFrame:
+def _generate_all_median_gain(data: pd.DataFrame, target_column: str, rolling_window: int) -> pd.DataFrame:
     """
     (Internal Helper) Generates a median gain label for each day based on a rolling window
 
@@ -58,8 +58,8 @@ def _generate_all_median_gain(data: pd.DataFrame, target_column: str, rolling_wi
     Returns:
         pd.DataFrame: The DataFrame with the new future median gain column added
     """
-    column_name = f"Median Gain {quantile_value} {rolling_window}dd"
-    median_gain, threshold = _generate_median_gain(data, target_column, rolling_window, quantile_value)
+    column_name = f"Median Gain {rolling_window}dd"
+    median_gain, threshold = _generate_median_gain(data, target_column, rolling_window)
     data[column_name] = [_bin_median_gain(threshold, val) for val in median_gain]
     data["Threshold " + column_name] = threshold
 
