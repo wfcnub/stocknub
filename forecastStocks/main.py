@@ -1,0 +1,123 @@
+import pickle
+import pandas as pd
+from pathlib import Path
+from camel_converter import to_camel
+from utils.pipeline import get_label_config
+
+def process_single_ticker(args_tuple):
+    """
+    Forecast an emiten based on the label_type and window combination using the developed model.
+
+    Args:
+        args_tuple: Tuple containing (emiten, label_type, window, feature_columns)
+
+    Returns:
+        Tuple of (emiten, label_type, window, success, message, forecast_data_dict)
+    """
+    emiten, label_type, window, feature_columns = args_tuple
+
+    try:
+        target_col, threshold_col, positive_label, negative_label = get_label_config(
+            label_type, window
+        )
+
+        camel_label = to_camel(label_type)
+        model_path = f"data/stock/03_model/{camel_label}/{emiten}-{window}dd.pkl"
+
+        if not Path(model_path).exists():
+            return (
+                emiten,
+                label_type,
+                window,
+                False,
+                f"Model not found: {model_path}",
+                None,
+            )
+
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+
+        try:
+            technical_path = f"data/stock/01_technical/{emiten}.csv"
+            if not Path(technical_path).exists():
+                return (
+                    emiten,
+                    label_type,
+                    window,
+                    False,
+                    f"Technical data not found: {technical_path}",
+                    None,
+                )
+
+            forecasting_data = pd.read_csv(technical_path)
+            if forecasting_data.empty:
+                return (
+                    emiten,
+                    label_type,
+                    window,
+                    False,
+                    "Technical data is empty",
+                    None,
+                )
+
+            latest_data = forecasting_data.tail(1).copy()
+            latest_data["Kode"] = emiten
+
+        except Exception as e:
+            return (
+                emiten,
+                label_type,
+                window,
+                False,
+                f"Failed to read data: {str(e)}",
+                None,
+            )
+
+        missing_features = [
+            col for col in feature_columns if col not in latest_data.columns
+        ]
+        if missing_features:
+            return (
+                emiten,
+                label_type,
+                window,
+                False,
+                f"Missing features: {missing_features[:5]}...",
+                None,
+            )
+
+        forecast_column_name = f"Forecast {positive_label} {window}dd"
+        positive_label_index = list(model.classes_).index(positive_label)
+
+        forecast_proba = model.predict_proba(
+            latest_data[feature_columns].values.reshape(1, -1)
+        )[0, positive_label_index]
+
+        latest_date = (
+            latest_data["Date"].iloc[0] if "Date" in latest_data.columns else None
+        )
+
+        forecast_data = {
+            "Kode": emiten,
+            "Date": latest_date,
+            "forecast_column": forecast_column_name,
+            "forecast_value": forecast_proba,
+        }
+
+        return (
+            emiten,
+            label_type,
+            window,
+            True,
+            f"Forecast: {forecast_proba:.4f}",
+            forecast_data,
+        )
+
+    except Exception as e:
+        return (
+            emiten, 
+            label_type, 
+            window, 
+            False, f"Error: {str(e)}", 
+            None
+        )

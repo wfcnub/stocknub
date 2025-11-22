@@ -1,12 +1,13 @@
-import logging
+import numpy as np
 import pandas as pd
 from stock_indicators import Quote
 
-from technicalIndicators.price_trends import calculate_atr_trailing_stop, calculate_aroon, calculate_average_directional_index, calculate_elder_ray_index, calculate_moving_average_convergence_divergence
-from technicalIndicators.price_channels import calculate_keltner, calculate_donchian, calculate_bollinger_bands
-from technicalIndicators.oscillators import calculate_relative_strength_index, calculate_stochastic_oscillator
-from technicalIndicators.volume_based import calculate_on_balance_volume, calculate_money_flow_index, calculate_chaikin_money_flow, calculate_accumulation_distribution_line
-from technicalIndicators.price_transformations import calculate_ehler_fisher_transform, calculate_zig_zag
+from prepareTechnicalIndicators.price_trends import calculate_atr_trailing_stop, calculate_aroon, calculate_average_directional_index, calculate_elder_ray_index, calculate_moving_average_convergence_divergence
+from prepareTechnicalIndicators.price_channels import calculate_keltner, calculate_donchian, calculate_bollinger_bands
+from prepareTechnicalIndicators.oscillators import calculate_relative_strength_index, calculate_stochastic_oscillator
+from prepareTechnicalIndicators.volume_based import calculate_on_balance_volume, calculate_money_flow_index, calculate_chaikin_money_flow, calculate_accumulation_distribution_line
+from prepareTechnicalIndicators.price_transformations import calculate_ehler_fisher_transform, calculate_zig_zag
+
 
 def _prepare_data_for_generating_stock_indicators(data: pd.DataFrame) -> list:
     """
@@ -90,7 +91,7 @@ def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
     for col in feature_columns:
         all_stock_indicators_data[col] = all_stock_indicators_data[col].astype(int)
 
-    output_path = 'database/stocksInformation/technical_indicator_features.txt'
+    output_path = 'data/technical_indicator_features.txt'
     with open(output_path, "w") as file:
         for fea_col in feature_columns:
             file.write(fea_col + "\n")

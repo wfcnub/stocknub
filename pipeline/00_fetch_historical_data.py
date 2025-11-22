@@ -21,66 +21,12 @@ Usage:
 """
 
 import argparse
-from pathlib import Path
-from multiprocessing import Pool
-from datetime import datetime, timedelta
 from tqdm import tqdm
+from pathlib import Path
+from multiprocessing import Pool, cpu_count
 
-from utils.data_fetcher import download_stock_data
-from utils.io import append_df_to_csv, get_last_date_from_csv
-
-
-def get_yesterday_date():
-    """
-    Get yesterday's date in YYYY-MM-DD format.
-
-    Returns:
-        str: Yesterday's date in 'YYYY-MM-DD' format
-    """
-    yesterday = datetime.now() - timedelta(days=1)
-    return yesterday.strftime("%Y-%m-%d")
-
-
-def fetch_emiten_data(args_tuple):
-    """
-    Fetch data for a single emiten.
-
-    Args:
-        args_tuple: Tuple containing (emiten, start_date, end_date, csv_folder_path, update_mode)
-
-    Returns:
-        Tuple of (emiten, success, message)
-    """
-    emiten, start_date, end_date, csv_folder_path, update_mode = args_tuple
-
-    try:
-        csv_file_path = f"{csv_folder_path}/{emiten}.csv"
-
-        # If update mode is enabled, get the last date from the CSV
-        if update_mode:
-            last_date = get_last_date_from_csv(csv_file_path)
-            if last_date:
-                # Add one day to avoid re-downloading the same date
-                last_date_dt = datetime.strptime(last_date, "%Y-%m-%d")
-                next_date = last_date_dt + timedelta(days=1)
-                start_date = next_date.strftime("%Y-%m-%d")
-            # If no last date found (file doesn't exist or is empty), use provided start_date
-
-        df = download_stock_data(emiten, start_date=start_date, end_date=end_date)
-
-        if df is not None and not df.empty:
-            append_df_to_csv(df, csv_file_path)
-            date_range = f"from {start_date or 'earliest'} to {end_date or 'today'}"
-            return (
-                emiten,
-                True,
-                f"Data for {emiten} {date_range} saved to {csv_file_path}.",
-            )
-        else:
-            return (emiten, False, f"No data found for {emiten}.")
-    except Exception as e:
-        return (emiten, False, f"Error fetching {emiten}: {str(e)}")
-
+from fetchHistoricalData.main import fetch_emiten_data
+from fetchHistoricalData.helper import _get_yesterday_date
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -101,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--file_name",
         type=str,
-        default="data/stock/emiten_list.txt",
+        default="data/emiten_list.txt",
         help="Path to the file containing emiten list (default: data/stock/emiten_list.txt)",
     )
     parser.add_argument(
@@ -113,8 +59,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--workers",
         type=int,
-        default=10,
-        help="Number of parallel workers to use (default: 10)",
+        default=cpu_count(),
+        help="Number of parallel workers to use (default: CPU count)",
     )
     parser.add_argument(
         "--update",
@@ -126,26 +72,20 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Ensure output directory exists
     Path(args.csv_folder_path).mkdir(parents=True, exist_ok=True)
 
-    # Handle update mode and set end_date based on the update option
     if args.update:
         if args.update == "yesterday" and not args.end_date:
-            args.end_date = get_yesterday_date()
-        # For "today", end_date remains empty (default behavior)
-
-    # read emiten list from specified file
+            args.end_date = _get_yesterday_date()
+        
     with open(args.file_name, "r") as f:
         emiten_list = f.read().splitlines()
 
-    # Prepare arguments for multiprocessing
     fetch_args = [
         (emiten, args.start_date, args.end_date, args.csv_folder_path, args.update)
         for emiten in emiten_list
     ]
 
-    # Use multiprocessing to fetch data in parallel
     mode_str = f"UPDATE mode (until {args.update})" if args.update else "FETCH mode"
     print("=" * 80)
     print("PIPELINE STEP 0: FETCH HISTORICAL DATA")
@@ -176,7 +116,6 @@ if __name__ == "__main__":
             )
         )
 
-    # Print all results
     print("\n" + "=" * 80)
     print("FETCH SUMMARY")
     print("=" * 80)

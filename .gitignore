@@ -15,3 +15,5 @@ database/forecastedStocks
 database/modelPerformances
 
 data/stock/*
+
+experiments/
