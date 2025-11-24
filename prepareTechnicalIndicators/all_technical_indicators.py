@@ -28,6 +28,45 @@ def _prepare_data_for_generating_stock_indicators(data: pd.DataFrame) -> list:
     
     return prepared_data
 
+def _generate_all_technical_indicators(data, prepared_data, technical_indicator):
+    if technical_indicator == 'price_trends':
+        technical_indicator_data = [
+            calculate_atr_trailing_stop(data, prepared_data),
+            calculate_aroon(prepared_data),
+            calculate_average_directional_index(prepared_data), 
+            calculate_elder_ray_index(prepared_data), 
+            calculate_moving_average_convergence_divergence(prepared_data)
+        ]
+
+    elif technical_indicator == 'price_channels':
+        technical_indicator_data = [
+            calculate_keltner(data, prepared_data), 
+            calculate_donchian(data, prepared_data),
+            calculate_bollinger_bands(data, prepared_data)
+        ]
+
+    elif technical_indicator == 'oscillators':
+        technical_indicator_data = [
+            calculate_relative_strength_index(prepared_data), 
+            calculate_stochastic_oscillator(prepared_data)
+        ]
+
+    elif technical_indicator == 'volume_based':
+        technical_indicator_data = [
+            calculate_on_balance_volume(prepared_data),
+            calculate_money_flow_index(prepared_data),
+            calculate_chaikin_money_flow(prepared_data),
+            calculate_accumulation_distribution_line(prepared_data)
+        ]
+
+    elif technical_indicator == 'price_transformations':
+        technical_indicator_data = [
+            calculate_ehler_fisher_transform(prepared_data), 
+            calculate_zig_zag(prepared_data)
+        ]
+
+    return technical_indicator_data
+    
 def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
     """
     Generates all the technical indicators, each having different unique characteristics of the stock to be measures
@@ -51,39 +90,14 @@ def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
     data.set_index('Date', inplace=True)
     original_columns = set(data.columns)
 
-    price_trends = [
-        calculate_atr_trailing_stop(data, prepared_data),
-        calculate_aroon(prepared_data),
-        calculate_average_directional_index(prepared_data), 
-        calculate_elder_ray_index(prepared_data), 
-        calculate_moving_average_convergence_divergence(prepared_data)
-    ]
+    all_stock_indicators_data = data.copy()
+    selected_technical_indicators = ['price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations']
+    
+    for technical_indicator in selected_technical_indicators:
+        technical_indicator_data = _generate_all_technical_indicators(data, prepared_data, technical_indicator)
+        for d in technical_indicator_data:
+            all_stock_indicators_data = pd.merge(all_stock_indicators_data, d, left_index=True, right_index=True, how='left')
 
-    price_channels = [
-        calculate_keltner(data, prepared_data), 
-        calculate_donchian(data, prepared_data),
-        calculate_bollinger_bands(data, prepared_data)
-    ]
-
-    oscillators = [
-        calculate_relative_strength_index(prepared_data), 
-        calculate_stochastic_oscillator(prepared_data)
-    ]
-
-    volume_based = [
-        calculate_on_balance_volume(prepared_data), 
-        calculate_money_flow_index(prepared_data), 
-        calculate_chaikin_money_flow(prepared_data),
-        calculate_accumulation_distribution_line(prepared_data)
-    ]
-
-    price_transformations = [
-        calculate_ehler_fisher_transform(prepared_data), 
-        calculate_zig_zag(prepared_data)
-    ]
-
-    all_stock_indicators = price_trends + price_channels + oscillators + volume_based + price_transformations
-    all_stock_indicators_data = data.join(all_stock_indicators)
     all_stock_indicators_data.dropna(inplace=True)
 
     updated_columns = set(all_stock_indicators_data.columns)
