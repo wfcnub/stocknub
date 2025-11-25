@@ -8,7 +8,7 @@ def _ensure_directories_exist(label_types, windows):
     for label_type in label_types:
         camel_label = to_camel(label_type)
         for window in windows:
-            Path(f"data/stock/04_forecast/{camel_label}").mkdir(
+            Path(f"data/stock/04_forecast/{camel_label}/{window}dd").mkdir(
                 parents=True, exist_ok=True
             )
 
@@ -79,12 +79,10 @@ def _get_filtered_emiten_list(label_types, windows, min_test_gini=None):
     return sorted(list(common_emiten))
 
 
-def _save_forecast(forecast_df, label_type, window):
+def _save_forecast(forecast_df, label_type, window, emiten):
     """Save or append forecast results to CSV."""
     camel_label = to_camel(label_type)
-    filepath = f"data/stock/04_forecast/{camel_label}/{window}dd.csv"
+    filepath = f"data/stock/04_forecast/{camel_label}/{window}dd/{emiten}.csv"
+    forecast_df.to_csv(filepath, index=False)
 
-    if Path(filepath).exists():
-        forecast_df.to_csv(filepath, mode="a", index=False, header=False)
-    else:
-        forecast_df.to_csv(filepath, index=False)
+    return

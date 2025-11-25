@@ -60,9 +60,6 @@ def process_single_ticker(args_tuple):
                     None,
                 )
 
-            latest_data = forecasting_data.tail(1).copy()
-            latest_data["Kode"] = emiten
-
         except Exception as e:
             return (
                 emiten,
@@ -74,7 +71,7 @@ def process_single_ticker(args_tuple):
             )
 
         missing_features = [
-            col for col in feature_columns if col not in latest_data.columns
+            col for col in feature_columns if col not in forecasting_data.columns
         ]
         if missing_features:
             return (
@@ -90,27 +87,18 @@ def process_single_ticker(args_tuple):
         positive_label_index = list(model.classes_).index(positive_label)
 
         forecast_proba = model.predict_proba(
-            latest_data[feature_columns].values.reshape(1, -1)
-        )[0, positive_label_index]
+            forecasting_data[feature_columns].values
+        )[:, positive_label_index]
 
-        latest_date = (
-            latest_data["Date"].iloc[0] if "Date" in latest_data.columns else None
-        )
-
-        forecast_data = {
-            "Kode": emiten,
-            "Date": latest_date,
-            "forecast_column": forecast_column_name,
-            "forecast_value": forecast_proba,
-        }
+        forecasting_data[forecast_column_name] = forecast_proba
 
         return (
             emiten,
             label_type,
             window,
             True,
-            f"Forecast: {forecast_proba:.4f}",
-            forecast_data,
+            "Forecast Succeeded",
+            forecasting_data,
         )
 
     except Exception as e:
@@ -118,6 +106,7 @@ def process_single_ticker(args_tuple):
             emiten, 
             label_type, 
             window, 
-            False, f"Error: {str(e)}", 
+            False, 
+            f"Error: {str(e)}", 
             None
         )

@@ -143,15 +143,10 @@ def main():
     print("FORECAST SUMMARY")
     print("=" * 80)
 
-    forecasts_by_key = {}
-
     for emiten, label_type, window, success, message, forecast_data in results:
         if success and forecast_data is not None:
             successful += 1
-            key = (label_type, window)
-            if key not in forecasts_by_key:
-                forecasts_by_key[key] = []
-            forecasts_by_key[key].append(forecast_data)
+            _save_forecast(forecast_data, label_type, window, emiten)
         else:
             failed += 1
             if failed <= 10:
@@ -160,27 +155,12 @@ def main():
     if failed > 10:
         print(f"   ... and {failed - 10} more failures")
 
-    if forecasts_by_key:
-        print("\nSaving forecasts...")
-        for (label_type, window), forecast_list in forecasts_by_key.items():
-            rows = []
-            for forecast_data in forecast_list:
-                row = {
-                    "Kode": forecast_data["Kode"],
-                    "Date": forecast_data["Date"],
-                    forecast_data["forecast_column"]: forecast_data["forecast_value"],
-                }
-                rows.append(row)
-
-            df = pd.DataFrame(rows)
-            _save_forecast(df, label_type, window)
-
     print(f"\nSuccessful: {successful}/{total_tasks}")
     print(f"Failed: {failed}/{total_tasks}")
 
     if successful > 0:
         print(
-            "\nForecasts saved to: data/stock/04_forecast/{label_type}/{window}dd.csv"
+            "\nForecasts saved to: data/stock/04_forecast/{label_type}/{window}dd"
         )
 
     print("\n" + "=" * 80)
