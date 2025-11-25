@@ -2,15 +2,16 @@
 Pipeline Step 3: Train Models for Stock Prediction
 
 This script trains machine learning models for stock prediction using multiprocessing.
-It reads from data/stock/02_label/*.csv and outputs:
-- Trained models to data/stock/03_model/{label_type}/*.pkl
-- Performance metrics to data/stock/03_model/performance/{label_type}/*.csv
+It reads from data/stock/label/*.csv and outputs:
+- Trained models to data/stock/model/{label_type}/*.pkl
+- Performance metrics to data/stock/model/performance/{label_type}/{window}dd/{emiten}.csv
 
 Usage:
-    python -m pipeline.03_train_models
-    python -m pipeline.03_train_models --label_types median_gain,max_loss --windows 5,10,20
-    python -m pipeline.03_train_models --workers 10
-    python -m pipeline.03_train_models --tickers BBCA,BBRI,TLKM
+    # Develop models with default settings
+    python -m pipeline.train_models
+    
+    # Process specific tickers
+    python -m pipeline.train_models --tickers BBCA,BBRI,TLKM
 """
 
 import argparse
@@ -34,15 +35,29 @@ def main():
     parser.add_argument(
         "--label_types",
         type=str,
-        default="median_gain,max_loss",
+        default="median_gain",
         help="Comma-separated label types (default: median_gain,max_loss)",
     )
 
     parser.add_argument(
         "--windows",
         type=str,
-        default="5,10",
+        default="5,10,15",
         help="Comma-separated rolling windows in days (default: 5,10,20)",
+    )
+
+    parser.add_argument(
+        "--labels_folder",
+        type=str,
+        default="data/stock/label",
+        help="Folder to save labels (default: data/stock/label)",
+    )
+
+    parser.add_argument(
+        "--model_version",
+        type=str,
+        default="model_v1",
+        help="Model version to be develop",
     )
 
     parser.add_argument(
@@ -70,9 +85,9 @@ def main():
             print(f"Error: Invalid label type: {label_type}")
             return
 
-    _ensure_directories_exist(label_types)
+    _ensure_directories_exist(args.model_version, label_types)
 
-    label_dir = Path("data/stock/02_label")
+    label_dir = Path(args.labels_folder)
     all_label_files = sorted(label_dir.glob("*.csv"))
 
     if args.tickers:
@@ -103,7 +118,7 @@ def main():
     feature_columns = get_all_technical_indicators()
 
     args_list = [
-        (label_file, label_types, rolling_windows, feature_columns)
+        (args.model_version, label_file, label_types, rolling_windows, feature_columns)
         for label_file in label_files
     ]
 
@@ -132,7 +147,7 @@ def main():
         print("\nSaving performance metrics...")
         for (label_type, window), metrics_dfs in all_metrics.items():
             camel_label = to_camel(label_type)
-            filepath = f"data/stock/03_model/performance/{camel_label}/{window}dd.csv"
+            filepath = f"data/stock/{args.model_version}/performance/{camel_label}/{window}dd.csv"
 
             combined_metrics = pd.concat(metrics_dfs, ignore_index=True)
             combined_metrics.to_csv(filepath, index=False)

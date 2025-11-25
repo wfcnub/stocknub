@@ -14,7 +14,7 @@ def process_single_ticker(args_tuple):
     Returns:
         Tuple of (emiten, label_type, window, success, message, forecast_data_dict)
     """
-    emiten, label_type, window, feature_columns = args_tuple
+    model_version, technical_folder, emiten, label_type, window, feature_columns = args_tuple
 
     try:
         target_col, threshold_col, positive_label, negative_label = get_label_config(
@@ -22,7 +22,7 @@ def process_single_ticker(args_tuple):
         )
 
         camel_label = to_camel(label_type)
-        model_path = f"data/stock/03_model/{camel_label}/{emiten}-{window}dd.pkl"
+        model_path = f"data/stock/{model_version}/{camel_label}/{emiten}-{window}dd.pkl"
 
         if not Path(model_path).exists():
             return (
@@ -38,7 +38,7 @@ def process_single_ticker(args_tuple):
             model = pickle.load(f)
 
         try:
-            technical_path = f"data/stock/01_technical/{emiten}.csv"
+            technical_path = f"{technical_folder}/{emiten}.csv"
             if not Path(technical_path).exists():
                 return (
                     emiten,

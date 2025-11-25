@@ -4,25 +4,27 @@ from pathlib import Path
 from camel_converter import to_camel
 from utils.pipeline import get_label_config
 
-def _ensure_directories_exist(label_types):
+def _ensure_directories_exist(model_version, label_types):
     """
     (Internal Helper) Ensure all required directories exist before training.
     """
     for label_type in label_types:
         camel_label = to_camel(label_type)
-        Path(f"data/stock/03_model/{camel_label}").mkdir(parents=True, exist_ok=True)
-        Path(f"data/stock/03_model/performance/{camel_label}").mkdir(
+        Path(f"data/stock/{model_version}/{camel_label}").mkdir(
+            parents=True, exist_ok=True
+        )
+        Path(f"data/stock/{model_version}/performance/{camel_label}").mkdir(
             parents=True, exist_ok=True
         )
     
     return
 
-def _save_model(model, label_type, emiten, window):
+def _save_model(model_version, model, label_type, emiten, window):
     """
     (Internal Helper) Save a trained model to file.
     """
     camel_label = to_camel(label_type)
-    filepath = f"data/stock/03_model/{camel_label}/{emiten}-{window}dd.pkl"
+    filepath = f"data/stock/{model_version}/{camel_label}/{emiten}-{window}dd.pkl"
     with open(filepath, "wb") as f:
         pickle.dump(model, f)
     

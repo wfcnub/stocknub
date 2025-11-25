@@ -11,13 +11,13 @@ The script supports:
 
 Usage:
     # Full download from 2021
-    python -m pipeline.00_fetch_historical_data --start_date 2021-01-01 --workers 10
+    python -m pipeline.fetch_historical_data --start_date 2021-01-01
 
     # Daily update (fetch until yesterday to avoid incomplete data)
-    python -m pipeline.00_fetch_historical_data --update yesterday --workers 10
+    python -m pipeline.fetch_historical_data --update yesterday
 
     # Daily update (fetch until today)
-    python -m pipeline.00_fetch_historical_data --update today --workers 10
+    python -m pipeline.fetch_historical_data --update today
 """
 
 import argparse
@@ -53,8 +53,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--csv_folder_path",
         type=str,
-        default="data/stock/00_historical",
-        help="Directory path where CSV files will be saved (default: data/stock/00_historical)",
+        default="data/stock/historical",
+        help="Directory path where CSV files will be saved (default: data/stock/historical)",
     )
     parser.add_argument(
         "--workers",

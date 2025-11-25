@@ -2,11 +2,11 @@
 Pipeline Step 1: Generate Technical Indicators
 
 This script generates technical indicators from historical stock data.
-It reads from data/stock/00_historical/*.csv and outputs to data/stock/01_technical/*.csv
+It reads from data/stock/historical/*.csv and outputs to data/stock/technical/*.csv
 
 Usage:
     # Process all tickers (incremental update)
-    python -m pipeline.01_prepare_technical_indicators --workers 10
+    python -m pipeline.prepare_technical_indicators
 """
 
 import os
@@ -24,14 +24,14 @@ def main():
     parser.add_argument(
         "--historical_folder",
         type=str,
-        default="data/stock/00_historical",
-        help="Folder containing historical stock data (default: data/stock/00_historical)",
+        default="data/stock/historical",
+        help="Folder containing historical stock data (default: data/stock/historical)",
     )
     parser.add_argument(
         "--technical_folder",
         type=str,
-        default="data/stock/01_technical",
-        help="Folder to save technical indicators (default: data/stock/01_technical)",
+        default="data/stock/technical",
+        help="Folder to save technical indicators (default: data/stock/technical)",
     )
     parser.add_argument(
         "--workers",

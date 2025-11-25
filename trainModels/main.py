@@ -14,7 +14,7 @@ def process_single_ticker(args_tuple):
     Returns:
         Tuple of (failed_stocks, metrics_list)
     """
-    label_file, label_types, rolling_windows, feature_columns = args_tuple
+    model_version, label_file, label_types, rolling_windows, feature_columns = args_tuple
 
     emiten = label_file.stem
     failed_stocks = []
@@ -37,7 +37,7 @@ def process_single_ticker(args_tuple):
                         clean_data, target_col, pos_label, neg_label
                     )
 
-                    _save_model(model, label_type, emiten, window)
+                    _save_model(model_version, model, label_type, emiten, window)
 
                     threshold_value = data[threshold_col].iloc[0]
                     metrics_df = _combine_metrics(

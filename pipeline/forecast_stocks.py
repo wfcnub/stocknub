@@ -2,8 +2,8 @@
 Pipeline Step 4: Forecast Stock Performance
 
 This script generates forecasts using trained models from step 3.
-It reads models from data/stock/03_model/{label_type}/*.pkl and outputs:
-- Forecast results to data/stock/04_forecast_stocks/{label_type}/{window}dd.csv
+It reads models from data/stock/{model_version}/{label_type}/*.pkl and outputs:
+- Forecast results to data/stock/forecast_stocks/{label_type}/{window}dd.csv
 
 The script:
 - Filters stocks by minimum test Gini performance
@@ -13,13 +13,13 @@ The script:
 
 Usage:
     # Forecast with default settings (all models with min_test_gini >= 0.3)
-    python -m pipeline.04_forecast_stocks--windows 5,10,20 --label_types median_gain,max_loss --min_test_gini 0.3 --workers 10
+    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain,max_loss --min_test_gini 0.3
 
     # Forecast without Gini filter (use all available models)
-    python -m pipeline.04_forecast_stocks --windows 5,10,20 --label_types median_gain,max_loss --workers 10
+    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain
 
     # Forecast specific tickers only
-    python -m pipeline.04_forecast_stocks --tickers "ADRO,ADMR" --windows 5,10 --label_types median_gain --workers 10
+    python -m pipeline.forecast_stocks --tickers BBCA,BBRI,TLKM --windows 5,10,15 --label_types median_gain
 """
 
 import argparse
@@ -64,6 +64,20 @@ def main():
     )
 
     parser.add_argument(
+        "--technical_folder",
+        type=str,
+        default="data/stock/technical",
+        help="Folder to save the technical (default: data/stock/technical)",
+    )
+
+    parser.add_argument(
+        "--model_version",
+        type=str,
+        default="model_v1",
+        help="Model version to be develop",
+    )
+
+    parser.add_argument(
         "--tickers",
         type=str,
         default=None,
@@ -89,10 +103,10 @@ def main():
             print(f"   Valid types: {', '.join(valid_label_types)}")
             return
 
-    _ensure_directories_exist(label_types, windows)
+    _ensure_directories_exist(args.model_version, label_types, windows)
 
     print("\nClearing old forecast files...")
-    _clear_forecast_files(label_types, windows)
+    _clear_forecast_files(args.model_version, label_types, windows)
 
     feature_columns = get_all_technical_indicators()
     print(f"Using {len(feature_columns)} technical indicators as features")
@@ -107,7 +121,7 @@ def main():
         else:
             print("   Min Test Gini: None (using all available models)")
 
-        emiten_list = _get_filtered_emiten_list(label_types, windows, args.min_test_gini)
+        emiten_list = _get_filtered_emiten_list(args.model_version, label_types, windows, args.min_test_gini)
 
         if not emiten_list:
             print("ERROR: No emiten found meeting the criteria")
@@ -119,7 +133,7 @@ def main():
     for emiten in emiten_list:
         for label_type in label_types:
             for window in windows:
-                forecast_tasks.append((emiten, label_type, window, feature_columns))
+                forecast_tasks.append((args.model_version, args.technical_folder, emiten, label_type, window, feature_columns))
 
     total_tasks = len(forecast_tasks)
     print(
@@ -146,7 +160,7 @@ def main():
     for emiten, label_type, window, success, message, forecast_data in results:
         if success and forecast_data is not None:
             successful += 1
-            _save_forecast(forecast_data, label_type, window, emiten)
+            _save_forecast(forecast_data, args.model_version, label_type, window, emiten)
         else:
             failed += 1
             if failed <= 10:
@@ -160,7 +174,7 @@ def main():
 
     if successful > 0:
         print(
-            "\nForecasts saved to: data/stock/04_forecast/{label_type}/{window}dd"
+            f"\nForecasts saved to: data/stock/forecast/{args.model_version}/{label_type}/{window}dd"
         )
 
     print("\n" + "=" * 80)
