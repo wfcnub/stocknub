@@ -14,8 +14,8 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
 
     This function implements a time-based split crucial for financial forecasting:
     - Training Set: All data preceding the test set
-    - Validation Set (for Hyperparameter Tuning): The last 30 days of the training set
-    - Test Set: The most recent days worth 10% of the overall training data
+    - Validation Set (for Hyperparameter Tuning): The last 40 days of the training set
+    - Test Set: The last 100 days from current date
 
     Args:
         data (pd.DataFrame): The complete DataFrame containing features and the target
@@ -29,9 +29,9 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
                - test_feature (np.array): Features for the test set
                - test_target (np.array): Target for the test set
                - predefined_split_index (PredefinedSplit): An index for cross-validation
-                 that designates the recent days worth 10% of the overall training data as the validation set
+                 that designates the last 40 days of the training data as the validation set
     """
-    test_length = np.ceil(len(data) * 0.075).astype(int)
+    test_length = 80
     test_data = data.tail(test_length)
     train_length = len(data) - test_length
     train_data = data.head(train_length)
@@ -42,7 +42,7 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     test_target = test_data[target_column].values
     
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[-test_length:] = 0
+    split_index[-40:] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
@@ -84,7 +84,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=10,
+        n_iter=50,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=-1,

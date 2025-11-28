@@ -1,7 +1,6 @@
 import pandas as pd
 from utils.pipeline import get_label_config
 
-from trainModels.modelling_v1 import develop_model
 from trainModels.helper import _ensure_directories_exist, _save_model, _combine_metrics
 
 def process_single_ticker(args_tuple):
@@ -15,6 +14,11 @@ def process_single_ticker(args_tuple):
         Tuple of (failed_stocks, metrics_list)
     """
     model_version, label_file, label_types, rolling_windows, feature_columns = args_tuple
+
+    if model_version == 'model_v1':
+        from trainModels.modelling_v1 import develop_model as develop_model
+    else:
+        return None, None
 
     emiten = label_file.stem
     failed_stocks = []
