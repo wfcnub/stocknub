@@ -1,7 +1,8 @@
 import pandas as pd
 from utils.pipeline import get_label_config
 
-from trainModels.helper import _ensure_directories_exist, _save_model, _combine_metrics
+from trainModelsV1.modelling import develop_model as develop_model
+from trainModelsV1.helper import _ensure_directories_exist, _save_model, _combine_metrics
 
 def process_single_ticker(args_tuple):
     """
@@ -13,12 +14,7 @@ def process_single_ticker(args_tuple):
     Returns:
         Tuple of (failed_stocks, metrics_list)
     """
-    model_version, label_file, label_types, rolling_windows, feature_columns = args_tuple
-
-    if model_version == 'model_v1':
-        from trainModels.modelling_v1 import develop_model as develop_model
-    else:
-        return None, None
+    label_file, label_types, rolling_windows, feature_columns = args_tuple
 
     emiten = label_file.stem
     failed_stocks = []
@@ -41,7 +37,7 @@ def process_single_ticker(args_tuple):
                         clean_data, target_col, pos_label, neg_label
                     )
 
-                    _save_model(model_version, model, label_type, emiten, window)
+                    _save_model(model, label_type, emiten, window)
 
                     threshold_value = data[threshold_col].iloc[0]
                     metrics_df = _combine_metrics(

@@ -1,0 +1,955 @@
+Kode,Industri
+AKSI,Transportation & Logistic
+ASSA,Transportation & Logistic
+BIRD,Transportation & Logistic
+BLTA,Transportation & Logistic
+CMPP,Transportation & Logistic
+GIAA,Transportation & Logistic
+IMJS,Transportation & Logistic
+LRNA,Transportation & Logistic
+MIRA,Transportation & Logistic
+MITI,Transportation & Logistic
+NELY,Transportation & Logistic
+SAFE,Transportation & Logistic
+SDMU,Transportation & Logistic
+SMDR,Transportation & Logistic
+TAXI,Transportation & Logistic
+TMAS,Transportation & Logistic
+WEHA,Transportation & Logistic
+HELI,Transportation & Logistic
+TRUK,Transportation & Logistic
+TNCA,Transportation & Logistic
+BPTR,Transportation & Logistic
+SAPX,Transportation & Logistic
+DEAL,Transportation & Logistic
+JAYA,Transportation & Logistic
+KJEN,Transportation & Logistic
+PURA,Transportation & Logistic
+PPGL,Transportation & Logistic
+TRJA,Transportation & Logistic
+HAIS,Transportation & Logistic
+HATM,Transportation & Logistic
+RCCC,Transportation & Logistic
+ELPI,Transportation & Logistic
+LAJU,Transportation & Logistic
+GTRA,Transportation & Logistic
+MPXL,Transportation & Logistic
+KLAS,Transportation & Logistic
+LOPI,Transportation & Logistic
+BLOG,Transportation & Logistic
+ADMG,Basic Materials
+AGII,Basic Materials
+AKPI,Basic Materials
+ALDO,Basic Materials
+ALKA,Basic Materials
+ALMI,Basic Materials
+ANTM,Basic Materials
+APLI,Basic Materials
+BAJA,Basic Materials
+BMSR,Basic Materials
+BRMS,Basic Materials
+BRNA,Basic Materials
+BRPT,Basic Materials
+BTON,Basic Materials
+CITA,Basic Materials
+CLPI,Basic Materials
+CTBN,Basic Materials
+DKFT,Basic Materials
+DPNS,Basic Materials
+EKAD,Basic Materials
+ESSA,Basic Materials
+ETWA,Basic Materials
+FASW,Basic Materials
+FPNI,Basic Materials
+GDST,Basic Materials
+IGAR,Basic Materials
+INAI,Basic Materials
+INCI,Basic Materials
+INCO,Basic Materials
+INKP,Basic Materials
+INRU,Basic Materials
+INTD,Basic Materials
+INTP,Basic Materials
+IPOL,Basic Materials
+ISSP,Basic Materials
+KBRI,Basic Materials
+KDSI,Basic Materials
+KRAS,Basic Materials
+LMSH,Basic Materials
+LTLS,Basic Materials
+MDKA,Basic Materials
+NIKL,Basic Materials
+OKAS,Basic Materials
+PICO,Basic Materials
+PSAB,Basic Materials
+SIMA,Basic Materials
+SMBR,Basic Materials
+SMCB,Basic Materials
+SMGR,Basic Materials
+SPMA,Basic Materials
+SQMI,Basic Materials
+SRSN,Basic Materials
+SULI,Basic Materials
+TALF,Basic Materials
+TBMS,Basic Materials
+TINS,Basic Materials
+TIRT,Basic Materials
+TKIM,Basic Materials
+TPIA,Basic Materials
+TRST,Basic Materials
+UNIC,Basic Materials
+WTON,Basic Materials
+YPAS,Basic Materials
+INCF,Basic Materials
+WSBP,Basic Materials
+KMTR,Basic Materials
+MDKI,Basic Materials
+ZINC,Basic Materials
+PBID,Basic Materials
+TDPM,Basic Materials
+SWAT,Basic Materials
+MOLI,Basic Materials
+HKMU,Basic Materials
+KAYU,Basic Materials
+SMKL,Basic Materials
+GGRP,Basic Materials
+OPMS,Basic Materials
+PURE,Basic Materials
+ESIP,Basic Materials
+IFSH,Basic Materials
+IFII,Basic Materials
+SAMF,Basic Materials
+EPAC,Basic Materials
+BEBS,Basic Materials
+NPGF,Basic Materials
+ARCI,Basic Materials
+NICL,Basic Materials
+SBMA,Basic Materials
+CMNT,Basic Materials
+OBMD,Basic Materials
+AVIA,Basic Materials
+CHEM,Basic Materials
+KKES,Basic Materials
+PDPP,Basic Materials
+FWCT,Basic Materials
+PACK,Basic Materials
+AMMN,Basic Materials
+PPRI,Basic Materials
+SMGA,Basic Materials
+SOLA,Basic Materials
+BATR,Basic Materials
+BLES,Basic Materials
+PTMR,Basic Materials
+DAAZ,Basic Materials
+DGWG,Basic Materials
+MINE,Basic Materials
+ASPR,Basic Materials
+EMAS,Basic Materials
+AYLS,Basic Materials
+NCKL,Basic Materials
+MBMA,Basic Materials
+NICE,Basic Materials
+SMLE,Basic Materials
+APLN,Properties & Real Estate
+ASRI,Properties & Real Estate
+BAPA,Properties & Real Estate
+BCIP,Properties & Real Estate
+BEST,Properties & Real Estate
+BIKA,Properties & Real Estate
+BIPP,Properties & Real Estate
+BKDP,Properties & Real Estate
+BKSL,Properties & Real Estate
+BSDE,Properties & Real Estate
+COWL,Properties & Real Estate
+CTRA,Properties & Real Estate
+DART,Properties & Real Estate
+DILD,Properties & Real Estate
+DMAS,Properties & Real Estate
+DUTI,Properties & Real Estate
+ELTY,Properties & Real Estate
+EMDE,Properties & Real Estate
+FMII,Properties & Real Estate
+GAMA,Properties & Real Estate
+GMTD,Properties & Real Estate
+GPRA,Properties & Real Estate
+INPP,Properties & Real Estate
+JRPT,Properties & Real Estate
+KIJA,Properties & Real Estate
+LCGP,Properties & Real Estate
+LPCK,Properties & Real Estate
+LPKR,Properties & Real Estate
+LPLI,Properties & Real Estate
+MDLN,Properties & Real Estate
+MKPI,Properties & Real Estate
+MMLP,Properties & Real Estate
+MTLA,Properties & Real Estate
+MTSM,Properties & Real Estate
+NIRO,Properties & Real Estate
+OMRE,Properties & Real Estate
+PLIN,Properties & Real Estate
+PPRO,Properties & Real Estate
+PUDP,Properties & Real Estate
+PWON,Properties & Real Estate
+RBMS,Properties & Real Estate
+RDTX,Properties & Real Estate
+RIMO,Properties & Real Estate
+RODA,Properties & Real Estate
+SMDM,Properties & Real Estate
+SMRA,Properties & Real Estate
+TARA,Properties & Real Estate
+CSIS,Properties & Real Estate
+ARMY,Properties & Real Estate
+NASA,Properties & Real Estate
+RISE,Properties & Real Estate
+POLL,Properties & Real Estate
+LAND,Properties & Real Estate
+PANI,Properties & Real Estate
+CITY,Properties & Real Estate
+MPRO,Properties & Real Estate
+SATU,Properties & Real Estate
+URBN,Properties & Real Estate
+POLI,Properties & Real Estate
+CPRI,Properties & Real Estate
+POSA,Properties & Real Estate
+PAMG,Properties & Real Estate
+BAPI,Properties & Real Estate
+NZIA,Properties & Real Estate
+REAL,Properties & Real Estate
+INDO,Properties & Real Estate
+TRIN,Properties & Real Estate
+KBAG,Properties & Real Estate
+BBSS,Properties & Real Estate
+UANG,Properties & Real Estate
+PURI,Properties & Real Estate
+HOMI,Properties & Real Estate
+ROCK,Properties & Real Estate
+ATAP,Properties & Real Estate
+ADCP,Properties & Real Estate
+TRUE,Properties & Real Estate
+IPAC,Properties & Real Estate
+WINR,Properties & Real Estate
+BSBK,Properties & Real Estate
+CBPE,Properties & Real Estate
+VAST,Properties & Real Estate
+SAGE,Properties & Real Estate
+RELF,Properties & Real Estate
+HBAT,Properties & Real Estate
+GRIA,Properties & Real Estate
+MSIE,Properties & Real Estate
+KOCI,Properties & Real Estate
+KSIX,Properties & Real Estate
+CBDK,Properties & Real Estate
+DADA,Properties & Real Estate
+ASPI,Properties & Real Estate
+AMAN,Properties & Real Estate
+ABDA,Financials
+ADMF,Financials
+AGRO,Financials
+AGRS,Financials
+AHAP,Financials
+AMAG,Financials
+APIC,Financials
+ARTO,Financials
+ASBI,Financials
+ASDM,Financials
+ASJT,Financials
+ASMI,Financials
+ASRM,Financials
+BABP,Financials
+BACA,Financials
+BBCA,Financials
+BBHI,Financials
+BBKP,Financials
+BBLD,Financials
+BBMD,Financials
+BBNI,Financials
+BBRI,Financials
+BBTN,Financials
+BBYB,Financials
+BCAP,Financials
+BCIC,Financials
+BDMN,Financials
+BEKS,Financials
+BFIN,Financials
+BGTG,Financials
+BINA,Financials
+BJBR,Financials
+BJTM,Financials
+BKSW,Financials
+BMAS,Financials
+BMRI,Financials
+BNBA,Financials
+BNGA,Financials
+BNII,Financials
+BNLI,Financials
+BPFI,Financials
+BPII,Financials
+BSIM,Financials
+BSWD,Financials
+BTPN,Financials
+BVIC,Financials
+CFIN,Financials
+DEFI,Financials
+DNAR,Financials
+DNET,Financials
+GSMF,Financials
+HDFA,Financials
+INPC,Financials
+LPGI,Financials
+LPPS,Financials
+MAYA,Financials
+MCOR,Financials
+MEGA,Financials
+MREI,Financials
+NISP,Financials
+NOBU,Financials
+OCAP,Financials
+PADI,Financials
+PALM,Financials
+PANS,Financials
+PEGE,Financials
+PLAS,Financials
+PNBN,Financials
+PNBS,Financials
+PNIN,Financials
+PNLF,Financials
+POOL,Financials
+RELI,Financials
+SDRA,Financials
+SMMA,Financials
+SRTG,Financials
+STAR,Financials
+TIFA,Financials
+TRIM,Financials
+TRUS,Financials
+VICO,Financials
+VINS,Financials
+VRNA,Financials
+WOMF,Financials
+YULE,Financials
+CASA,Financials
+BRIS,Financials
+MTWI,Financials
+JMAS,Financials
+NICK,Financials
+BTPS,Financials
+TUGU,Financials
+POLA,Financials
+SFAN,Financials
+LIFE,Financials
+FUJI,Financials
+AMAR,Financials
+AMOR,Financials
+BHAT,Financials
+BBSI,Financials
+BANK,Financials
+MASB,Financials
+VTNY,Financials
+YOII,Financials
+COIN,Financials
+ACST,Infrastructures
+ADHI,Infrastructures
+BALI,Infrastructures
+BTEL,Infrastructures
+BUKK,Infrastructures
+CASS,Infrastructures
+CENT,Infrastructures
+CMNP,Infrastructures
+DGIK,Infrastructures
+EXCL,Infrastructures
+GOLD,Infrastructures
+HADE,Infrastructures
+IBST,Infrastructures
+ISAT,Infrastructures
+JKON,Infrastructures
+JSMR,Infrastructures
+KARW,Infrastructures
+KBLV,Infrastructures
+LINK,Infrastructures
+META,Infrastructures
+NRCA,Infrastructures
+PTPP,Infrastructures
+SSIA,Infrastructures
+SUPR,Infrastructures
+TBIG,Infrastructures
+TLKM,Infrastructures
+TOTL,Infrastructures
+TOWR,Infrastructures
+WIKA,Infrastructures
+WSKT,Infrastructures
+IDPR,Infrastructures
+MTRA,Infrastructures
+OASA,Infrastructures
+POWR,Infrastructures
+PBSA,Infrastructures
+PORT,Infrastructures
+TGRA,Infrastructures
+TOPS,Infrastructures
+MPOW,Infrastructures
+GMFI,Infrastructures
+PPRE,Infrastructures
+WEGE,Infrastructures
+MORA,Infrastructures
+IPCM,Infrastructures
+LCKM,Infrastructures
+GHON,Infrastructures
+IPCC,Infrastructures
+MTPS,Infrastructures
+JAST,Infrastructures
+KEEN,Infrastructures
+PTPW,Infrastructures
+TAMA,Infrastructures
+RONY,Infrastructures
+PTDU,Infrastructures
+KETR,Infrastructures
+FIMP,Infrastructures
+MTEL,Infrastructures
+SMKM,Infrastructures
+ARKO,Infrastructures
+KRYA,Infrastructures
+PGEO,Infrastructures
+BDKR,Infrastructures
+INET,Infrastructures
+BREN,Infrastructures
+KOKA,Infrastructures
+ASLI,Infrastructures
+DATA,Infrastructures
+HGII,Infrastructures
+CDIA,Infrastructures
+MANG,Infrastructures
+ABBA,Consumer Cyclicals
+ACES,Consumer Cyclicals
+AKKU,Consumer Cyclicals
+ARGO,Consumer Cyclicals
+ARTA,Consumer Cyclicals
+AUTO,Consumer Cyclicals
+BATA,Consumer Cyclicals
+BAYU,Consumer Cyclicals
+BIMA,Consumer Cyclicals
+BLTZ,Consumer Cyclicals
+BMTR,Consumer Cyclicals
+BOLT,Consumer Cyclicals
+BRAM,Consumer Cyclicals
+BUVA,Consumer Cyclicals
+CINT,Consumer Cyclicals
+CNTX,Consumer Cyclicals
+CSAP,Consumer Cyclicals
+ECII,Consumer Cyclicals
+ERAA,Consumer Cyclicals
+ERTX,Consumer Cyclicals
+ESTI,Consumer Cyclicals
+FAST,Consumer Cyclicals
+FORU,Consumer Cyclicals
+GDYR,Consumer Cyclicals
+GEMA,Consumer Cyclicals
+GJTL,Consumer Cyclicals
+GLOB,Consumer Cyclicals
+GWSA,Consumer Cyclicals
+HOME,Consumer Cyclicals
+HOTL,Consumer Cyclicals
+IIKP,Consumer Cyclicals
+IMAS,Consumer Cyclicals
+INDR,Consumer Cyclicals
+INDS,Consumer Cyclicals
+JIHD,Consumer Cyclicals
+JSPT,Consumer Cyclicals
+KICI,Consumer Cyclicals
+KPIG,Consumer Cyclicals
+LMPI,Consumer Cyclicals
+LPIN,Consumer Cyclicals
+LPPF,Consumer Cyclicals
+MAPI,Consumer Cyclicals
+MASA,Consumer Cyclicals
+MDIA,Consumer Cyclicals
+MGNA,Consumer Cyclicals
+MICE,Consumer Cyclicals
+MNCN,Consumer Cyclicals
+MPMX,Consumer Cyclicals
+MSKY,Consumer Cyclicals
+MYTX,Consumer Cyclicals
+PANR,Consumer Cyclicals
+PBRX,Consumer Cyclicals
+PDES,Consumer Cyclicals
+PGLI,Consumer Cyclicals
+PJAA,Consumer Cyclicals
+PNSE,Consumer Cyclicals
+POLY,Consumer Cyclicals
+PSKT,Consumer Cyclicals
+PTSP,Consumer Cyclicals
+RALS,Consumer Cyclicals
+RICY,Consumer Cyclicals
+SCMA,Consumer Cyclicals
+SHID,Consumer Cyclicals
+SMSM,Consumer Cyclicals
+SONA,Consumer Cyclicals
+SRIL,Consumer Cyclicals
+SSTM,Consumer Cyclicals
+TELE,Consumer Cyclicals
+TFCO,Consumer Cyclicals
+TMPO,Consumer Cyclicals
+TRIO,Consumer Cyclicals
+TRIS,Consumer Cyclicals
+UNIT,Consumer Cyclicals
+VIVA,Consumer Cyclicals
+JGLE,Consumer Cyclicals
+MARI,Consumer Cyclicals
+MKNT,Consumer Cyclicals
+BOGA,Consumer Cyclicals
+CARS,Consumer Cyclicals
+MINA,Consumer Cyclicals
+MAPB,Consumer Cyclicals
+WOOD,Consumer Cyclicals
+HRTA,Consumer Cyclicals
+MABA,Consumer Cyclicals
+BELL,Consumer Cyclicals
+DFAM,Consumer Cyclicals
+PZZA,Consumer Cyclicals
+MSIN,Consumer Cyclicals
+MAPA,Consumer Cyclicals
+NUSA,Consumer Cyclicals
+FILM,Consumer Cyclicals
+DIGI,Consumer Cyclicals
+DUCK,Consumer Cyclicals
+YELO,Consumer Cyclicals
+SOTS,Consumer Cyclicals
+ZONE,Consumer Cyclicals
+CLAY,Consumer Cyclicals
+NATO,Consumer Cyclicals
+HRME,Consumer Cyclicals
+FITT,Consumer Cyclicals
+BOLA,Consumer Cyclicals
+POLU,Consumer Cyclicals
+IPTV,Consumer Cyclicals
+EAST,Consumer Cyclicals
+KOTA,Consumer Cyclicals
+INOV,Consumer Cyclicals
+SLIS,Consumer Cyclicals
+PMJS,Consumer Cyclicals
+SBAT,Consumer Cyclicals
+CBMF,Consumer Cyclicals
+CSMI,Consumer Cyclicals
+SOFA,Consumer Cyclicals
+TOYS,Consumer Cyclicals
+SCNP,Consumer Cyclicals
+PLAN,Consumer Cyclicals
+UFOE,Consumer Cyclicals
+SNLK,Consumer Cyclicals
+LFLO,Consumer Cyclicals
+LUCY,Consumer Cyclicals
+MGLV,Consumer Cyclicals
+IDEA,Consumer Cyclicals
+DEPO,Consumer Cyclicals
+DRMA,Consumer Cyclicals
+ASLC,Consumer Cyclicals
+NETV,Consumer Cyclicals
+BAUT,Consumer Cyclicals
+ENAK,Consumer Cyclicals
+BIKE,Consumer Cyclicals
+OLIV,Consumer Cyclicals
+SWID,Consumer Cyclicals
+RAFI,Consumer Cyclicals
+KLIN,Consumer Cyclicals
+TOOL,Consumer Cyclicals
+KDTN,Consumer Cyclicals
+ZATA,Consumer Cyclicals
+ISAP,Consumer Cyclicals
+BMBL,Consumer Cyclicals
+FUTR,Consumer Cyclicals
+HAJJ,Consumer Cyclicals
+TYRE,Consumer Cyclicals
+VKTR,Consumer Cyclicals
+CNMA,Consumer Cyclicals
+ERAL,Consumer Cyclicals
+LMAX,Consumer Cyclicals
+BABY,Consumer Cyclicals
+AEGS,Consumer Cyclicals
+GRPH,Consumer Cyclicals
+UNTD,Consumer Cyclicals
+MEJA,Consumer Cyclicals
+LIVE,Consumer Cyclicals
+BAIK,Consumer Cyclicals
+SPRE,Consumer Cyclicals
+PART,Consumer Cyclicals
+GOLF,Consumer Cyclicals
+DOSS,Consumer Cyclicals
+VERN,Consumer Cyclicals
+MDIY,Consumer Cyclicals
+MERI,Consumer Cyclicals
+PMUI,Consumer Cyclicals
+KAQI,Consumer Cyclicals
+ESTA,Consumer Cyclicals
+RAAM,Consumer Cyclicals
+DOOH,Consumer Cyclicals
+ACRO,Consumer Cyclicals
+AALI,Consumer Non-Cyclicals
+ADES,Consumer Non-Cyclicals
+AISA,Consumer Non-Cyclicals
+ALTO,Consumer Non-Cyclicals
+AMRT,Consumer Non-Cyclicals
+ANJT,Consumer Non-Cyclicals
+BISI,Consumer Non-Cyclicals
+BTEK,Consumer Non-Cyclicals
+BUDI,Consumer Non-Cyclicals
+BWPT,Consumer Non-Cyclicals
+CEKA,Consumer Non-Cyclicals
+CPIN,Consumer Non-Cyclicals
+CPRO,Consumer Non-Cyclicals
+DLTA,Consumer Non-Cyclicals
+DSFI,Consumer Non-Cyclicals
+DSNG,Consumer Non-Cyclicals
+EPMT,Consumer Non-Cyclicals
+FISH,Consumer Non-Cyclicals
+GGRM,Consumer Non-Cyclicals
+GOLL,Consumer Non-Cyclicals
+GZCO,Consumer Non-Cyclicals
+HERO,Consumer Non-Cyclicals
+HMSP,Consumer Non-Cyclicals
+ICBP,Consumer Non-Cyclicals
+INDF,Consumer Non-Cyclicals
+JAWA,Consumer Non-Cyclicals
+JPFA,Consumer Non-Cyclicals
+LAPD,Consumer Non-Cyclicals
+LSIP,Consumer Non-Cyclicals
+MAGP,Consumer Non-Cyclicals
+MAIN,Consumer Non-Cyclicals
+MBTO,Consumer Non-Cyclicals
+MIDI,Consumer Non-Cyclicals
+MLBI,Consumer Non-Cyclicals
+MLPL,Consumer Non-Cyclicals
+MPPA,Consumer Non-Cyclicals
+MRAT,Consumer Non-Cyclicals
+MYOR,Consumer Non-Cyclicals
+PSDN,Consumer Non-Cyclicals
+RANC,Consumer Non-Cyclicals
+ROTI,Consumer Non-Cyclicals
+SDPC,Consumer Non-Cyclicals
+SGRO,Consumer Non-Cyclicals
+SIMP,Consumer Non-Cyclicals
+SIPD,Consumer Non-Cyclicals
+SKBM,Consumer Non-Cyclicals
+SKLT,Consumer Non-Cyclicals
+SMAR,Consumer Non-Cyclicals
+SSMS,Consumer Non-Cyclicals
+STTP,Consumer Non-Cyclicals
+TBLA,Consumer Non-Cyclicals
+TCID,Consumer Non-Cyclicals
+TGKA,Consumer Non-Cyclicals
+ULTJ,Consumer Non-Cyclicals
+UNSP,Consumer Non-Cyclicals
+UNVR,Consumer Non-Cyclicals
+WAPO,Consumer Non-Cyclicals
+WICO,Consumer Non-Cyclicals
+WIIM,Consumer Non-Cyclicals
+DAYA,Consumer Non-Cyclicals
+DPUM,Consumer Non-Cyclicals
+KINO,Consumer Non-Cyclicals
+CLEO,Consumer Non-Cyclicals
+HOKI,Consumer Non-Cyclicals
+CAMP,Consumer Non-Cyclicals
+PCAR,Consumer Non-Cyclicals
+MGRO,Consumer Non-Cyclicals
+ANDI,Consumer Non-Cyclicals
+GOOD,Consumer Non-Cyclicals
+FOOD,Consumer Non-Cyclicals
+BEEF,Consumer Non-Cyclicals
+COCO,Consumer Non-Cyclicals
+ITIC,Consumer Non-Cyclicals
+KEJU,Consumer Non-Cyclicals
+PSGO,Consumer Non-Cyclicals
+AGAR,Consumer Non-Cyclicals
+UCID,Consumer Non-Cyclicals
+CSRA,Consumer Non-Cyclicals
+DMND,Consumer Non-Cyclicals
+IKAN,Consumer Non-Cyclicals
+PGUN,Consumer Non-Cyclicals
+PNGO,Consumer Non-Cyclicals
+KMDS,Consumer Non-Cyclicals
+ENZO,Consumer Non-Cyclicals
+VICI,Consumer Non-Cyclicals
+PMMP,Consumer Non-Cyclicals
+FAPA,Consumer Non-Cyclicals
+WMUU,Consumer Non-Cyclicals
+TAPG,Consumer Non-Cyclicals
+FLMC,Consumer Non-Cyclicals
+OILS,Consumer Non-Cyclicals
+BOBA,Consumer Non-Cyclicals
+CMRY,Consumer Non-Cyclicals
+TAYS,Consumer Non-Cyclicals
+WMPP,Consumer Non-Cyclicals
+IPPE,Consumer Non-Cyclicals
+NASI,Consumer Non-Cyclicals
+STAA,Consumer Non-Cyclicals
+NANO,Consumer Non-Cyclicals
+TLDN,Consumer Non-Cyclicals
+IBOS,Consumer Non-Cyclicals
+ASHA,Consumer Non-Cyclicals
+TRGU,Consumer Non-Cyclicals
+DEWI,Consumer Non-Cyclicals
+GULA,Consumer Non-Cyclicals
+JARR,Consumer Non-Cyclicals
+AMMS,Consumer Non-Cyclicals
+EURO,Consumer Non-Cyclicals
+BUAH,Consumer Non-Cyclicals
+CRAB,Consumer Non-Cyclicals
+CBUT,Consumer Non-Cyclicals
+MKTR,Consumer Non-Cyclicals
+SOUL,Consumer Non-Cyclicals
+BEER,Consumer Non-Cyclicals
+WINE,Consumer Non-Cyclicals
+NAYZ,Consumer Non-Cyclicals
+NSSS,Consumer Non-Cyclicals
+MAXI,Consumer Non-Cyclicals
+GRPM,Consumer Non-Cyclicals
+TGUK,Consumer Non-Cyclicals
+PTPS,Consumer Non-Cyclicals
+STRK,Consumer Non-Cyclicals
+UDNG,Consumer Non-Cyclicals
+AYAM,Consumer Non-Cyclicals
+ISEA,Consumer Non-Cyclicals
+GUNA,Consumer Non-Cyclicals
+NEST,Consumer Non-Cyclicals
+BRRC,Consumer Non-Cyclicals
+YUPI,Consumer Non-Cyclicals
+FORE,Consumer Non-Cyclicals
+MSJA,Consumer Non-Cyclicals
+ABMM,Energy
+ADRO,Energy
+AIMS,Energy
+AKRA,Energy
+APEX,Energy
+ARII,Energy
+ARTI,Energy
+BBRM,Energy
+BIPI,Energy
+BSSR,Energy
+BULL,Energy
+BUMI,Energy
+BYAN,Energy
+CANI,Energy
+CNKO,Energy
+DEWA,Energy
+DOID,Energy
+DSSA,Energy
+ELSA,Energy
+ENRG,Energy
+GEMS,Energy
+GTBO,Energy
+HITS,Energy
+HRUM,Energy
+IATA,Energy
+INDY,Energy
+ITMA,Energy
+ITMG,Energy
+KKGI,Energy
+KOPI,Energy
+LEAD,Energy
+MBAP,Energy
+MBSS,Energy
+MEDC,Energy
+MTFN,Energy
+MYOH,Energy
+PGAS,Energy
+PKPK,Energy
+PTBA,Energy
+PTIS,Energy
+PTRO,Energy
+RAJA,Energy
+RIGS,Energy
+RUIS,Energy
+SMMT,Energy
+SMRU,Energy
+SOCI,Energy
+SUGI,Energy
+TOBA,Energy
+TPMA,Energy
+TRAM,Energy
+WINS,Energy
+SHIP,Energy
+TAMU,Energy
+FIRE,Energy
+PSSI,Energy
+DWGL,Energy
+BOSS,Energy
+JSKY,Energy
+INPS,Energy
+TCPI,Energy
+SURE,Energy
+WOWS,Energy
+TEBE,Energy
+SGER,Energy
+UNIQ,Energy
+MCOL,Energy
+GTSI,Energy
+RMKE,Energy
+BSML,Energy
+ADMR,Energy
+SEMA,Energy
+SICO,Energy
+COAL,Energy
+SUNI,Energy
+CBRE,Energy
+HILL,Energy
+CUAN,Energy
+MAHA,Energy
+RMKO,Energy
+HUMI,Energy
+RGAS,Energy
+ALII,Energy
+MKAP,Energy
+ATLA,Energy
+BOAT,Energy
+AADI,Energy
+RATU,Energy
+PSAT,Energy
+BESS,Energy
+CGAS,Energy
+ATIC,Technology
+EMTK,Technology
+KREN,Technology
+LMAS,Technology
+MLPT,Technology
+MTDL,Technology
+PTSN,Technology
+SKYB,Technology
+KIOS,Technology
+MCAS,Technology
+NFCX,Technology
+DIVA,Technology
+LUCK,Technology
+ENVY,Technology
+HDIT,Technology
+TFAS,Technology
+DMMX,Technology
+GLVA,Technology
+PGJO,Technology
+CASH,Technology
+TECH,Technology
+WIFI,Technology
+DCII,Technology
+EDGE,Technology
+ZYRX,Technology
+UVCR,Technology
+BUKA,Technology
+RUNS,Technology
+WGSH,Technology
+WIRG,Technology
+GOTO,Technology
+AXIO,Technology
+BELI,Technology
+NINE,Technology
+ELIT,Technology
+IRSX,Technology
+CHIP,Technology
+TRON,Technology
+JATI,Technology
+CYBR,Technology
+IOTF,Technology
+MSTI,Technology
+TOSK,Technology
+MPIX,Technology
+AREA,Technology
+MENN,Technology
+AWAN,Technology
+DVLA,Healthcare
+INAF,Healthcare
+KAEF,Healthcare
+KLBF,Healthcare
+MERK,Healthcare
+MIKA,Healthcare
+PYFA,Healthcare
+SAME,Healthcare
+SCPI,Healthcare
+SIDO,Healthcare
+SILO,Healthcare
+SRAJ,Healthcare
+TSPC,Healthcare
+PRDA,Healthcare
+PRIM,Healthcare
+HEAL,Healthcare
+PEHA,Healthcare
+IRRA,Healthcare
+SOHO,Healthcare
+DGNS,Healthcare
+BMHS,Healthcare
+RSGK,Healthcare
+MTMH,Healthcare
+MEDS,Healthcare
+PRAY,Healthcare
+OMED,Healthcare
+MMIX,Healthcare
+PEVE,Healthcare
+HALO,Healthcare
+RSCH,Healthcare
+IKPM,Healthcare
+SURI,Healthcare
+LABS,Healthcare
+OBAT,Healthcare
+CHEK,Healthcare
+MDLA,Healthcare
+DKHH,Healthcare
+CARE,Healthcare
+AMFG,Industrials
+AMIN,Industrials
+APII,Industrials
+ARNA,Industrials
+ASGR,Industrials
+ASII,Industrials
+BHIT,Industrials
+BNBR,Industrials
+CTTH,Industrials
+DYAN,Industrials
+HEXA,Industrials
+IBFN,Industrials
+ICON,Industrials
+IKAI,Industrials
+IKBI,Industrials
+IMPC,Industrials
+INDX,Industrials
+INTA,Industrials
+JECC,Industrials
+JTPE,Industrials
+KBLI,Industrials
+KBLM,Industrials
+KIAS,Industrials
+KOBX,Industrials
+KOIN,Industrials
+KONI,Industrials
+LION,Industrials
+MDRN,Industrials
+MFMI,Industrials
+MLIA,Industrials
+SCCO,Industrials
+TIRA,Industrials
+TOTO,Industrials
+TRIL,Industrials
+UNTR,Industrials
+VOKS,Industrials
+ZBRA,Industrials
+MARK,Industrials
+SPTO,Industrials
+SKRN,Industrials
+CAKK,Industrials
+SOSS,Industrials
+CCSI,Industrials
+BLUE,Industrials
+ARKA,Industrials
+SINI,Industrials
+HOPE,Industrials
+LABA,Industrials
+GPSO,Industrials
+KUAS,Industrials
+BINO,Industrials
+NTBK,Industrials
+PADA,Industrials
+KING,Industrials
+PTMP,Industrials
+SMIL,Industrials
+CRSN,Industrials
+WIDI,Industrials
+FOLK,Industrials
+MUTU,Industrials
+HYGN,Industrials
+VISI,Industrials
+MHKI,Industrials
+NAIK,Industrials
+PIPA,Industrials

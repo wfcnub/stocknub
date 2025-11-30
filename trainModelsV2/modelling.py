@@ -1,0 +1,293 @@
+import numpy as np
+import pandas as pd
+from skopt import BayesSearchCV
+from catboost import CatBoostClassifier
+from skopt.space import Real, Categorical, Integer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import PredefinedSplit
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+
+from prepareTechnicalIndicators.helper import get_all_technical_indicators
+
+def _select_emiten_as_features(industry: str) -> pd.DataFrame:
+    emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
+    all_emiten = emiten_industry_df.loc[emiten_industry_df['Industri'] == industry, 'Kode'].values
+
+    all_average_volumes = []
+
+    for emiten in all_emiten:
+        try:
+            emiten_data = pd.read_csv(f'data/stock/label/{emiten}.csv').tail(120)
+            emiten_avg_vol = emiten_data['Volume'].mean()
+            all_average_volumes.append(emiten_avg_vol)
+        except:
+            all_average_volumes.append(np.nan)
+
+    emiten_avg_vol_df = pd.DataFrame({'Kode': all_emiten, 'Average Volume': all_average_volumes}) \
+                            .sort_values('Average Volume', ascending=False) \
+                            .reset_index(drop=True)
+
+    n_selected_emiten = np.ceil(len(emiten_avg_vol_df) / 2).astype(int)
+    selected_emiten = emiten_avg_vol_df.head(n_selected_emiten)['Kode'].values
+    
+    selected_emiten_df = pd.concat((pd.read_csv(f'data/stock/label/{emiten}.csv') for emiten in selected_emiten)) \
+                            .sort_values('Date', ascending=True) \
+                            .reset_index(drop=True)
+
+    return selected_emiten_df
+
+def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
+    """
+    (Internal Helper) Splits time-series data into training, validation, and testing sets
+
+    This function implements a time-based split crucial for financial forecasting:
+    - Training Set: All data preceding the test set
+    - Validation Set (for Hyperparameter Tuning): The last 40 days of the training set
+    - Test Set: The last 100 days from current date
+
+    Args:
+        data (pd.DataFrame): The complete DataFrame containing features and the target
+        feature_columns (list): A list of column names to be used as features
+        target_column (str): The name of the column to be used as the target variable
+
+    Returns:
+        tuple: A tuple containing:
+               - train_feature (np.array): Features for the training set
+               - train_target (np.array): Target for the training set
+               - test_feature (np.array): Features for the test set
+               - test_target (np.array): Target for the test set
+               - predefined_split_index (PredefinedSplit): An index for cross-validation
+                 that designates the last 40 days of the training data as the validation set
+    """
+
+    all_dates = np.sort(data['Date'].unique())
+    
+    test_length = 80
+    test_dates = all_dates[-test_length:]
+    
+    test_data = data.loc[data['Date'].isin(test_dates), :]
+    train_data = data.loc[~data['Date'].isin(test_dates), :]
+    
+    train_dates = np.sort(train_data['Date'].unique())
+
+    val_length = 40
+    val_dates = train_dates[-val_length:]
+
+    val_data = train_data.loc[train_data['Date'].isin(val_dates), :]
+    len_val_data = len(val_data)
+     
+    train_feature = train_data[feature_columns].values
+    train_target = train_data[target_column].values
+    test_feature = test_data[feature_columns].values
+    test_target = test_data[target_column].values
+    
+    split_index = np.full(len(train_feature), -1, dtype=int)
+    split_index[-len_val_data:] = 0    
+    predefined_split_index = PredefinedSplit(test_fold=split_index)
+    
+    return train_feature, train_target, test_feature, test_target, predefined_split_index
+
+def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.array, train_target: np.array, predefined_split_index: PredefinedSplit) -> any:
+    """
+    (Internal Helper) Initializes, fits, and tunes a CatBoost Classifier using Bayesian Optimization
+
+    This function uses BayesSearchCV to efficiently search for the optimal
+    hyperparameters for a CatBoost model. It validates performance using a
+    predefined time-series split and fits the best-found model on the entire
+    training dataset
+
+    Args:
+        train_feature (np.array): The feature set for training
+        train_target (np.array): The target variable for training
+        predefined_split_index (PredefinedSplit): The cross-validation strategy
+
+    Returns:
+        CatBoostClassifier: The best-performing model found by the search
+    """
+    model = CatBoostClassifier(
+        loss_function='Logloss',
+        eval_metric='AUC',
+        logging_level='Silent'
+    )
+
+    search_spaces = {
+        'depth': Integer(1, 5),
+        'learning_rate': Real(0.01, 0.1, prior='log-uniform'),
+        'iterations': Integer(250, 750),
+        'l2_leaf_reg': Real(0.5, 3.0)
+    }
+    
+    scoring_method = 'roc_auc'
+    if len(np.unique(train_target[-30:])) == 1:
+        scoring_method = 'accuracy'
+    
+    hyper_tune_search = BayesSearchCV(
+        estimator=model,
+        search_spaces=search_spaces,
+        n_iter=1,
+        cv=predefined_split_index,
+        scoring=scoring_method,
+        n_jobs=-1,
+        verbose=0
+    )
+
+    hyper_tune_search.fit(train_feature, train_target)
+    best_model = hyper_tune_search.best_estimator_
+
+    return best_model
+
+def _measure_model_performance(model, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
+    """
+    Measures and reports the performance of the model on a given dataset
+
+    Args:
+        model: The trained classifier model
+        feature (np.array): The feature set (e.g., train_feature or test_feature)
+        target (np.array): The corresponding true target labels
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+
+    Returns:
+        dict: A dictionary containing all calculated performance metrics.
+    """
+    target_pred = model.predict(feature)
+    target_pred_proba = model.predict_proba(feature)
+
+    accuracy, prec_positive, prec_negative, rec_positive, rec_negative = _calculate_classification_metrics(target, target_pred, positive_label, negative_label)
+    gini = _calculate_gini(model, target, target_pred_proba, positive_label)
+
+    all_metrics = {
+        'Accuracy': [accuracy],
+        f'Precision {positive_label}': [prec_positive],
+        f'Precision {negative_label}': [prec_negative],
+        f'Recall {positive_label}': [rec_positive],
+        f'Recall {negative_label}': [rec_negative],
+        'Gini': [gini]
+    }
+    
+    return all_metrics
+
+def _calculate_classification_metrics(target_true: np.array, target_pred: np.array, positive_label: str, negative_label: str) -> (np.array, np.array, np.array, np.array):
+    """
+    (Internal Helper) Calculates key classification metrics for a binary prediction task
+
+    Args:
+        target_true (np.array): The ground truth labels
+        target_pred (np.array): The predicted labels from the model
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+
+    Returns:
+        tuple: A tuple containing accuracy, precision for both classes, and recall for both classes
+    """
+    accuracy = accuracy_score(target_true, target_pred)
+    precision_positive = precision_score(target_true, target_pred, pos_label=positive_label, zero_division=0)
+    precision_negative = precision_score(target_true, target_pred, pos_label=negative_label, zero_division=0)
+    recall_positive = recall_score(target_true, target_pred, pos_label=positive_label, zero_division=0)
+    recall_negative = recall_score(target_true, target_pred, pos_label=negative_label, zero_division=0)
+
+    return accuracy, precision_negative, precision_negative, recall_positive, recall_negative
+
+def _calculate_gini(model: any, target_true: np.array, target_pred_proba: np.array, positive_label: str) -> float:
+    """
+    (Internal Helper) Calculates the Gini coefficient from the model's prediction probabilities
+
+    The Gini coefficient is a common metric for evaluating binary classification
+    models and is derived from the Area Under the ROC Curve (AUC)
+    Formula: Gini = 2 * AUC - 1
+
+    Args:
+        model (any): The trianed catboost model for binary classifications
+        target_true (np.array): The true labels of the target variable
+        target_pred_proba (np.array): The predicted probabilities for each class
+        positive_label (str): The positive class of the predicted label
+
+    Returns:
+        float: The calculated Gini coefficient, or 0.0 if AUC cannot be calculated
+    """
+    try:
+        positive_class_true = (target_true == positive_label).astype(int)
+        
+        positive_class_index = np.where(model.classes_ == positive_label)[0][0]
+        positive_class_prob = target_pred_proba[:, positive_class_index]
+        auc = roc_auc_score(positive_class_true, positive_class_prob)
+        gini = 2 * auc - 1
+    except (ValueError, IndexError):
+        gini = 0.0
+
+    return gini
+
+def _measure_model_performance_on_single_emiten(prepared_data, model, target_column, positive_label, negative_label):
+    feature_columns = get_all_technical_indicators()
+
+    train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test(
+        prepared_data.dropna(subset=[target_column]), feature_columns, target_column
+    )
+
+    train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
+    test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
+
+    train_metrics_df = pd.DataFrame(train_metrics)
+    test_metrics_df = pd.DataFrame(test_metrics)
+    
+    return train_metrics_df, test_metrics_df
+
+def _measure_model_performance_for_all_emiten_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col):
+    emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
+    all_emiten = emiten_industry_df.loc[emiten_industry_df['Industri'] == industry, 'Kode'].values
+
+    all_emiten_train_metrics_df = pd.DataFrame()
+    all_emiten_test_metrics_df = pd.DataFrame()
+
+    for emiten in all_emiten:
+        try:
+            prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
+            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, target_column, positive_label, negative_label)
+    
+            emiten_train_metrics_df['Kode'] = emiten
+            emiten_test_metrics_df['Kode'] = emiten
+
+            emiten_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+            emiten_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+    
+            all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
+            all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
+        except:
+            pass
+
+    all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
+    all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
+
+    return all_emiten_train_metrics, all_emiten_test_metrics
+        
+
+def develop_model(industry: str, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (any, dict, dict):
+    """
+    Main orchestration function for the entire model development process
+
+    This function loads the feature names, splits the data, tunes the model,
+    and evaluates its final performance
+
+    Args:
+        industry (str): 
+        target_column (str): The name of the target variable column
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+        
+    Returns:
+        tuple: A tuple containing:
+               - model (CatBoostClassifier): The final, trained model
+               - train_metrics (dict): Performance metrics on the training set
+               - test_metrics (dict): Performance metrics on the testing set
+    """
+    feature_columns = get_all_technical_indicators()
+
+    prepared_data = _select_emiten_as_features(industry)
+    
+    train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test(prepared_data.dropna(subset=[target_column]), feature_columns, target_column)
+
+    model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split)
+
+    train_metrics, test_metrics = _measure_model_performance_for_all_emiten_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
+    
+    return model, train_metrics, test_metrics

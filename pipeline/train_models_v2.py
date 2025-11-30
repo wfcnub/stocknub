@@ -8,10 +8,10 @@ It reads from data/stock/label/*.csv and outputs:
 
 Usage:
     # Develop models with default settings
-    python -m pipeline.train_models
+    python -m pipeline.train_models_v2
     
     # Process specific tickers
-    python -m pipeline.train_models --tickers BBCA,BBRI,TLKM
+    python -m pipeline.train_models_v2 --tickers BBCA,BBRI,TLKM
 """
 
 import argparse
@@ -24,8 +24,8 @@ from multiprocessing import Pool, cpu_count
 from warnings import simplefilter
 simplefilter(action="ignore")
 
-from trainModels.main import process_single_ticker
-from trainModels.helper import _ensure_directories_exist
+from trainModelsV2.main import process_single_ticker
+from trainModelsV2.helper import _ensure_directories_exist
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 
 
@@ -42,7 +42,7 @@ def main():
     parser.add_argument(
         "--windows",
         type=str,
-        default="5,10,15",
+        default="5",
         help="Comma-separated rolling windows in days (default: 5,10,20)",
     )
 
@@ -54,13 +54,6 @@ def main():
     )
 
     parser.add_argument(
-        "--model_version",
-        type=str,
-        default="model_v1",
-        help="Model version to be develop",
-    )
-
-    parser.add_argument(
         "--workers",
         type=int,
         default=cpu_count(),
@@ -68,10 +61,10 @@ def main():
     )
 
     parser.add_argument(
-        "--tickers",
+        "--industry",
         type=str,
         default="",
-        help="Comma-separated list of specific tickers to process (e.g., 'BBCA,BBRI,TLKM'). If not provided, all tickers will be processed.",
+        help="",
     )
 
     args = parser.parse_args()
@@ -85,31 +78,18 @@ def main():
             print(f"Error: Invalid label type: {label_type}")
             return
 
-    _ensure_directories_exist(args.model_version, label_types)
+    _ensure_directories_exist(label_types)
 
-    label_dir = Path(args.labels_folder)
-    all_label_files = sorted(label_dir.glob("*.csv"))
-
-    if args.tickers:
-        specified_tickers = [t.strip().upper() for t in args.tickers.split(",")]
-        label_files = [f for f in all_label_files if f.stem in specified_tickers]
-
-        missing_tickers = set(specified_tickers) - set([f.stem for f in label_files])
-        if missing_tickers:
-            print(
-                f"Warning: The following tickers were not found: {', '.join(missing_tickers)}"
-            )
-
-        if not label_files:
-            print(f"Error: None of the specified tickers found in {label_dir}")
-            return
+    if args.industry:
+        specified_industries = [t.strip().title() for t in args.industry.split(",")]
+        
     else:
-        label_files = all_label_files
-
-    print(f"Found {len(label_files)} stocks to process")
-    if args.tickers:
+        specified_industries = pd.read_csv('data/emiten_and_industry_list.csv')['Industri'].unique().tolist()
+    
+    print(f"Found {len(specified_industries)} industries to process")
+    if args.industry:
         print(
-            f"Processing specific tickers: {', '.join([f.stem for f in label_files])}"
+            f"Processing specific industries: {', '.join([f for f in specified_industries])}"
         )
     print(f"Label types: {', '.join(label_types)}")
     print(f"Rolling windows: {', '.join(map(str, rolling_windows))} days")
@@ -118,24 +98,24 @@ def main():
     feature_columns = get_all_technical_indicators()
 
     args_list = [
-        (args.model_version, label_file, label_types, rolling_windows, feature_columns)
-        for label_file in label_files
+        (industry, label_types, rolling_windows, feature_columns)
+        for industry in specified_industries
     ]
 
-    all_failed_stocks = []
+    all_failed_industries = []
     all_metrics = {}
 
     with Pool(processes=args.workers) as pool:
         results = list(
             tqdm(
                 pool.imap(process_single_ticker, args_list),
-                total=len(label_files),
+                total=len(specified_industries),
                 desc="Processing stocks",
             )
         )
 
-        for failed_stocks, metrics_list in results:
-            all_failed_stocks.extend(failed_stocks)
+        for failed_industry, metrics_list in results:
+            all_failed_industries.extend(failed_industry)
 
             for label_type, window, metrics_df in metrics_list:
                 key = (label_type, window)
@@ -147,18 +127,18 @@ def main():
         print("\nSaving performance metrics...")
         for (label_type, window), metrics_dfs in all_metrics.items():
             camel_label = to_camel(label_type)
-            filepath = f"data/stock/{args.model_version}/performance/{camel_label}/{window}dd.csv"
+            filepath = f"data/stock/model_v2/performance/{camel_label}/{window}dd.csv"
 
             combined_metrics = pd.concat(metrics_dfs, ignore_index=True)
             combined_metrics.to_csv(filepath, index=False)
 
     print(f"\n{'=' * 60}")
-    print(f"Training complete! Total stocks: {len(label_files)}")
+    print(f"Training complete! Total industries: {len(specified_industries)}")
 
-    if all_failed_stocks:
-        print(f"\nFailed trainings ({len(all_failed_stocks)}):")
-        for emiten, label_type, window, error in all_failed_stocks:
-            print(f"  - {emiten} ({label_type} {window}dd): {error}")
+    if all_failed_industries:
+        print(f"\nFailed trainings ({len(all_failed_industries)}):")
+        for industry, label_type, window, error in all_failed_industries:
+            print(f"  - {industry} ({label_type} {window}dd): {error}")
     else:
         print("\nAll trainings successful!")
 

@@ -33,7 +33,7 @@ PIPELINE_STEPS = {
     },
     3: {
         "name": "Train Models",
-        "module": "pipeline.train_models",
+        "module": "pipeline.train_models_v1",
         "description": "Train machine learning models for stock prediction",
     },
     4: {
@@ -67,7 +67,6 @@ def run_step(step_num, args):
 
     elif step_num == 3:
         cmd.extend(["--windows", '5,10,15'])
-        cmd.extend(["--model_version", 'model_v1'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--labels_folder", 'data/stock/label'])
 
