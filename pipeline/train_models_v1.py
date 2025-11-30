@@ -42,7 +42,7 @@ def main():
     parser.add_argument(
         "--windows",
         type=str,
-        default="5,10,15",
+        default="5",
         help="Comma-separated rolling windows in days (default: 5,10,20)",
     )
 
