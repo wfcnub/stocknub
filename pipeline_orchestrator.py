@@ -31,27 +31,27 @@ simplefilter("ignore")
 PIPELINE_STEPS = {
     0: {
         "name": "Fetch Historical Data",
-        "module": "pipeline.00_fetch_historical_data",
+        "module": "pipeline.fetch_historical_data",
         "description": "Download OHLCV data from Yahoo Finance",
     },
     1: {
         "name": "Generate Technical Indicators",
-        "module": "pipeline.01_prepare_technical_indicators",
+        "module": "pipeline.prepare_technical_indicators",
         "description": "Calculate technical indicators from historical data",
     },
     2: {
         "name": "Generate Target Labels",
-        "module": "pipeline.02_generate_labels",
+        "module": "pipeline.generate_labels",
         "description": "Create target labels for model training",
     },
     3: {
         "name": "Train Models",
-        "module": "pipeline.03_train_models",
+        "module": "pipeline.train_models",
         "description": "Train machine learning models for stock prediction",
     },
     4: {
         "name": "Generate Forecasts",
-        "module": "pipeline.04_forecast",
+        "module": "pipeline.forecast_stocks",
         "description": "Generate forecasts using trained models",
     },
 }
@@ -79,7 +79,8 @@ def run_step(step_num, args):
             cmd.extend(["--end_date", args.end_date])
 
     elif step_num == 1:
-        pass
+        if args.tickers:
+            cmd.extend(["--tickers", args.tickers])
 
     elif step_num == 2:
         if args.label_types:
@@ -94,7 +95,10 @@ def run_step(step_num, args):
             cmd.extend(["--label_types", args.label_types])
         if args.windows:
             cmd.extend(["--windows", args.windows])
-
+        
+        cmd.extend(["--labels_folder", 'data/stock/label'])
+        cmd.extend(["--model_version", 'model_v1'])
+        
     elif step_num == 4:
         if args.label_types:
             cmd.extend(["--label_types", args.label_types])
@@ -102,6 +106,9 @@ def run_step(step_num, args):
             cmd.extend(["--windows", args.windows])
         if args.min_test_gini is not None:
             cmd.extend(["--min_test_gini", str(args.min_test_gini)])
+
+        cmd.extend(["--technical_folder", 'data/stock/technical'])
+        cmd.extend(["--model_version", 'model_v1'])
 
     try:
         subprocess.run(cmd, check=True)
@@ -167,9 +174,9 @@ def main():
 
     # Step 1 (Technical Indicators) specific arguments
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force reprocess all data (Steps 1, 2)",
+        "--tickers",
+        type=str,
+        help="Comma-separated list of specific tickers to process (e.g., 'BBCA,BBRI,TLKM'). If not provided, all tickers will be processed.",
     )
 
     # Step 2 (Labels) specific arguments
@@ -199,11 +206,11 @@ def main():
 
     args = parser.parse_args()
 
-    Path("data/stock/00_historical").mkdir(parents=True, exist_ok=True)
-    Path("data/stock/01_technical").mkdir(parents=True, exist_ok=True)
-    Path("data/stock/02_label").mkdir(parents=True, exist_ok=True)
-    Path("data/stock/03_model").mkdir(parents=True, exist_ok=True)
-    Path("data/stock/04_forecast").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/historical").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/technical").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/label").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/model").mkdir(parents=True, exist_ok=True)
+    Path("data/stock/forecast").mkdir(parents=True, exist_ok=True)
 
     if args.full:
         steps_to_run = sorted(PIPELINE_STEPS.keys())

@@ -10,8 +10,10 @@ def _ensure_directories_exist(label_types):
     """
     for label_type in label_types:
         camel_label = to_camel(label_type)
-        Path(f"data/stock/03_model/{camel_label}").mkdir(parents=True, exist_ok=True)
-        Path(f"data/stock/03_model/performance/{camel_label}").mkdir(
+        Path(f"data/stock/model_v1/{camel_label}").mkdir(
+            parents=True, exist_ok=True
+        )
+        Path(f"data/stock/model_v1/performance/{camel_label}").mkdir(
             parents=True, exist_ok=True
         )
     
@@ -22,7 +24,7 @@ def _save_model(model, label_type, emiten, window):
     (Internal Helper) Save a trained model to file.
     """
     camel_label = to_camel(label_type)
-    filepath = f"data/stock/03_model/{camel_label}/{emiten}-{window}dd.pkl"
+    filepath = f"data/stock/model_v1/{camel_label}/{emiten}-{window}dd.pkl"
     with open(filepath, "wb") as f:
         pickle.dump(model, f)
     

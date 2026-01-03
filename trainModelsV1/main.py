@@ -1,8 +1,8 @@
 import pandas as pd
 from utils.pipeline import get_label_config
 
-from trainModels.modelling_v1 import develop_model
-from trainModels.helper import _ensure_directories_exist, _save_model, _combine_metrics
+from trainModelsV1.modelling import develop_model as develop_model
+from trainModelsV1.helper import _ensure_directories_exist, _save_model, _combine_metrics
 
 def process_single_ticker(args_tuple):
     """

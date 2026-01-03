@@ -12,7 +12,7 @@ def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window
 
     Returns:
         np.array: The median gain for all target data
-        float: The threshold for the quantile 0.8
+        float: The threshold for the quantile 0.9
     """
     median_close = data[target_column][::-1].rolling(rolling_window, closed='left').quantile(0.4)[::-1]
     median_gain = (100 * (median_close - data[target_column].values) / data[target_column].values)
@@ -20,7 +20,7 @@ def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window
     if np.isnan(median_gain).all():
         threshold = np.nan
     else:
-        test_median_gain_length = np.round((len(data) - rolling_window) * 0.15).astype(int)
+        test_median_gain_length = 120
         test_median_gain = median_gain[-1 * (test_median_gain_length + rolling_window): -rolling_window]
         threshold = np.nanquantile(test_median_gain, 0.9)
 

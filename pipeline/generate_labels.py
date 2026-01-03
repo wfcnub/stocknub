@@ -2,19 +2,19 @@
 Pipeline Step 2: Generate Target Labels
 
 This script generates target labels for model training from technical indicator data.
-It reads from data/stock/01_technical/*.csv and outputs to data/stock/02_label/*.csv
+It reads from data/stock/technical/*.csv and outputs to data/stock/label/*.csv
 
 The script supports:
 - Batch processing all tickers
 - Multiple label types (linear_trend, median_gain, max_loss)
-- Multiple rolling windows (e.g., 5, 10, 20 days)
+- Multiple rolling windows (e.g., 5, 10, 15 days)
 
 Usage:
     # Generate labels with default settings
-    python -m pipeline.02_generate_labels --label_types median_gain,max_loss --windows 5,10,20 --workers 10
+    python -m pipeline.generate_labels --label_types median_gain,max_loss --windows 5,10,15 
 
     # Process specific tickers
-    python -m pipeline.02_generate_labels --tickers BBCA,BBRI,TLKM
+    python -m pipeline.generate_labels --tickers BBCA,BBRI,TLKM
 """
 
 import os
@@ -33,14 +33,14 @@ def main():
     parser.add_argument(
         "--technical_folder",
         type=str,
-        default="data/stock/01_technical",
-        help="Folder containing technical indicators (default: data/stock/01_technical)",
+        default="data/stock/technical",
+        help="Folder containing technical indicators (default: data/stock/technical)",
     )
     parser.add_argument(
         "--labels_folder",
         type=str,
-        default="data/stock/02_label",
-        help="Folder to save labels (default: data/stock/02_label)",
+        default="data/stock/label",
+        help="Folder to save labels (default: data/stock/label)",
     )
     parser.add_argument(
         "--target_column",

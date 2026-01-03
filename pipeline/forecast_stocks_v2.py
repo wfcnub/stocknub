@@ -2,8 +2,8 @@
 Pipeline Step 4: Forecast Stock Performance
 
 This script generates forecasts using trained models from step 3.
-It reads models from data/stock/03_model/{label_type}/*.pkl and outputs:
-- Forecast results to data/stock/04_forecast_stocks/{label_type}/{window}dd.csv
+It reads models from data/stock/{model_version}/{label_type}/*.pkl and outputs:
+- Forecast results to data/stock/forecast_stocks/{label_type}/{window}dd.csv
 
 The script:
 - Filters stocks by minimum test Gini performance
@@ -13,13 +13,13 @@ The script:
 
 Usage:
     # Forecast with default settings (all models with min_test_gini >= 0.3)
-    python -m pipeline.04_forecast_stocks--windows 5,10,20 --label_types median_gain,max_loss --min_test_gini 0.3 --workers 10
+    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain,max_loss --min_test_gini 0.3
 
     # Forecast without Gini filter (use all available models)
-    python -m pipeline.04_forecast_stocks --windows 5,10,20 --label_types median_gain,max_loss --workers 10
+    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain
 
     # Forecast specific tickers only
-    python -m pipeline.04_forecast_stocks --tickers "ADRO,ADMR" --windows 5,10 --label_types median_gain --workers 10
+    python -m pipeline.forecast_stocks --tickers BBCA,BBRI,TLKM --windows 5,10,15 --label_types median_gain
 """
 
 import argparse
@@ -31,9 +31,9 @@ from multiprocessing import Pool, cpu_count
 from warnings import simplefilter
 simplefilter(action="ignore")
 
-from forecastStocks.main import process_single_ticker
+from forecastStocksV2.main import process_single_ticker
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
-from forecastStocks.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_emiten_list, _save_forecast
+from forecastStocksV2.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_emiten_list, _save_forecast
 
 
 def main():
@@ -52,22 +52,22 @@ def main():
     parser.add_argument(
         "--windows",
         type=str,
-        default="5,10,20",
+        default="5",
         help="Comma-separated forecast windows in days (default: 5,10,20)",
     )
 
     parser.add_argument(
-        "--min_test_gini",
-        type=float,
-        default=None,
-        help="Minimum test Gini coefficient for model filtering (default: None, use all models)",
+        "--technical_folder",
+        type=str,
+        default="data/stock/technical",
+        help="Folder to save the technical (default: data/stock/technical)",
     )
 
     parser.add_argument(
-        "--tickers",
+        "--industry",
         type=str,
         default=None,
-        help='Comma-separated list of specific tickers to forecast (e.g., "BBCA,BBRI,TLKM")',
+        help='',
     )
 
     parser.add_argument(
@@ -97,29 +97,27 @@ def main():
     feature_columns = get_all_technical_indicators()
     print(f"Using {len(feature_columns)} technical indicators as features")
 
-    if args.tickers:
-        emiten_list = [ticker.strip() for ticker in args.tickers.split(",")]
-        print(f"\nForecasting specified tickers: {', '.join(emiten_list)}")
+    emiten_and_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
+    if args.industry:
+        selected_industry = [t.strip().title() for t in args.industry.split(",")]
+
+        selected_emiten_and_industry_df = emiten_and_industry_df.loc[emiten_and_industry_df['Industri'].isin(selected_industry), :]
+
+        emiten_list = selected_emiten_and_industry_df['Kode'].values.tolist()
+        industry_list = selected_emiten_and_industry_df['Industri'].values.tolist()
+
+        print(f"\nForecasting specified industry: {', '.join(selected_industry)}")
     else:
-        print("\nFinding emiten with models meeting criteria...")
-        if args.min_test_gini is not None:
-            print(f"   Min Test Gini: {args.min_test_gini}")
-        else:
-            print("   Min Test Gini: None (using all available models)")
-
-        emiten_list = _get_filtered_emiten_list(label_types, windows, args.min_test_gini)
-
-        if not emiten_list:
-            print("ERROR: No emiten found meeting the criteria")
-            return
+        emiten_list = emiten_and_industry_df['Kode'].values.tolist()
+        industry_list = emiten_and_industry_df['Industri'].values.tolist()
 
         print(f"Found {len(emiten_list)} emiten meeting criteria")
 
     forecast_tasks = []
-    for emiten in emiten_list:
+    for emiten, industry in zip(emiten_list, industry_list):
         for label_type in label_types:
             for window in windows:
-                forecast_tasks.append((emiten, label_type, window, feature_columns))
+                forecast_tasks.append((args.technical_folder, industry, emiten, label_type, window, feature_columns))
 
     total_tasks = len(forecast_tasks)
     print(
@@ -143,15 +141,10 @@ def main():
     print("FORECAST SUMMARY")
     print("=" * 80)
 
-    forecasts_by_key = {}
-
     for emiten, label_type, window, success, message, forecast_data in results:
         if success and forecast_data is not None:
             successful += 1
-            key = (label_type, window)
-            if key not in forecasts_by_key:
-                forecasts_by_key[key] = []
-            forecasts_by_key[key].append(forecast_data)
+            _save_forecast(forecast_data, label_type, window, emiten)
         else:
             failed += 1
             if failed <= 10:
@@ -160,27 +153,12 @@ def main():
     if failed > 10:
         print(f"   ... and {failed - 10} more failures")
 
-    if forecasts_by_key:
-        print("\nSaving forecasts...")
-        for (label_type, window), forecast_list in forecasts_by_key.items():
-            rows = []
-            for forecast_data in forecast_list:
-                row = {
-                    "Kode": forecast_data["Kode"],
-                    "Date": forecast_data["Date"],
-                    forecast_data["forecast_column"]: forecast_data["forecast_value"],
-                }
-                rows.append(row)
-
-            df = pd.DataFrame(rows)
-            _save_forecast(df, label_type, window)
-
     print(f"\nSuccessful: {successful}/{total_tasks}")
     print(f"Failed: {failed}/{total_tasks}")
 
     if successful > 0:
         print(
-            "\nForecasts saved to: data/stock/04_forecast/{label_type}/{window}dd.csv"
+            f"\nForecasts saved to: data/stock/forecast/model_v2/{label_type}/{window}dd"
         )
 
     print("\n" + "=" * 80)
