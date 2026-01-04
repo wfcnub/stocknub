@@ -84,7 +84,7 @@ def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
     Returns:
         list: Converted pandas dataframe ready to be used for generating the technical indicators
     """
-    prepared_data = _prepare_data_for_generating_stock_indicators(data) 
+    prepared_data = _prepare_data_for_generating_stock_indicators(data)
 
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index('Date', inplace=True)
@@ -96,7 +96,8 @@ def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
     for technical_indicator in selected_technical_indicators:
         technical_indicator_data = _generate_all_technical_indicators(data, prepared_data, technical_indicator)
         for d in technical_indicator_data:
-            all_stock_indicators_data = pd.merge(all_stock_indicators_data, d, left_index=True, right_index=True, how='left')
+            cleaned_d = d.reset_index().drop_duplicates('Date').set_index('Date')
+            all_stock_indicators_data = pd.merge(all_stock_indicators_data, cleaned_d, left_index=True, right_index=True, how='left')
 
     all_stock_indicators_data.dropna(inplace=True)
 

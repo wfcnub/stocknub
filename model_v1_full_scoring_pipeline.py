@@ -38,7 +38,7 @@ PIPELINE_STEPS = {
     },
     4: {
         "name": "Generate Forecasts",
-        "module": "pipeline.forecast_stocks",
+        "module": "pipeline.forecast_stocks_v1",
         "description": "Generate forecasts using trained models",
     },
 }

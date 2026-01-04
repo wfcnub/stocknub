@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
-from utils.data_fetcher import download_stock_data
-from utils.io import append_df_to_csv, get_last_date_from_csv
+from fetchHistoricalData.helper import _download_stock_data, _append_df_to_csv, _get_last_date_from_csv
 
 def fetch_emiten_data(args_tuple):
     """
@@ -19,16 +18,16 @@ def fetch_emiten_data(args_tuple):
         csv_file_path = f"{csv_folder_path}/{emiten}.csv"
 
         if update_mode:
-            last_date = get_last_date_from_csv(csv_file_path)
+            last_date = _get_last_date_from_csv(csv_file_path)
             if last_date:
                 last_date_dt = datetime.strptime(last_date, "%Y-%m-%d")
                 next_date = last_date_dt + timedelta(days=1)
                 start_date = next_date.strftime("%Y-%m-%d")
 
-        df = download_stock_data(emiten, start_date=start_date, end_date=end_date)
+        df = _download_stock_data(emiten, start_date=start_date, end_date=end_date)
 
         if df is not None and not df.empty:
-            append_df_to_csv(df, csv_file_path)
+            _append_df_to_csv(df, csv_file_path)
             date_range = f"from {start_date or 'earliest'} to {end_date or 'today'}"
             return (
                 emiten,
