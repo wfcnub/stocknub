@@ -41,8 +41,9 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     test_feature = test_data[feature_columns].values
     test_target = test_data[target_column].values
     
+    val_length = 40
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[-40:] = 0    
+    split_index[-val_length:] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
