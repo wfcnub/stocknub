@@ -79,13 +79,13 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     }
     
     scoring_method = 'roc_auc'
-    if len(np.unique(train_target[-30:])) == 1:
+    if len(np.unique(train_target[-40:])) == 1:
         scoring_method = 'accuracy'
     
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=25,
+        n_iter=100,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=-1,

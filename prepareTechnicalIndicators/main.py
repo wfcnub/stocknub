@@ -18,14 +18,35 @@ def process_single_ticker(args_tuple):
 
     try:
         historical_path = f"{historical_folder}/{emiten}.csv"
+        additional_historical_path = f"data/stock/additional_historical/{emiten}.csv"
         technical_path = f"{technical_folder}/{emiten}.csv"
 
         if not os.path.exists(historical_path):
-            return (emiten, False, f"Historical data not found for {emiten}", 0)
+            return (
+                emiten, 
+                False, 
+                f"Historical data not found for {emiten}", 
+                0
+            )
 
         historical_df = pd.read_csv(historical_path)
         if historical_df.empty:
-            return (emiten, False, f"Historical data is empty for {emiten}", 0)
+            return (
+                emiten, 
+                False, 
+                f"Historical data is empty for {emiten}", 
+                0
+            )
+
+        additional_historical_df = pd.read_csv(additional_historical_path)
+        if additional_historical_df.empty:
+            return (
+                emiten, 
+                False, 
+                f"Additionalhistorical data is empty for {emiten}", 
+                0
+            )
+        additional_historical_df = pd.merge(historical_df, additional_historical_df, on='Date', how='left')
 
         close_variance = np.var(historical_df["Close"].values)
         if close_variance < 1e-10:
@@ -37,7 +58,9 @@ def process_single_ticker(args_tuple):
             )
 
         historical_df["Date"] = pd.to_datetime(historical_df["Date"]).dt.strftime("%Y-%m-%d")
-        technical_df = generate_all_technical_indicators(historical_df)
+        additional_historical_df["Date"] = pd.to_datetime(additional_historical_df["Date"]).dt.strftime("%Y-%m-%d")
+
+        technical_df = generate_all_technical_indicators(historical_df, additional_historical_df)
         technical_df.reset_index(inplace=True)
         technical_df["Date"] = pd.to_datetime(technical_df["Date"]).dt.strftime("%Y-%m-%d")
         
@@ -51,4 +74,9 @@ def process_single_ticker(args_tuple):
         )
 
     except Exception as e:
-        return (emiten, False, f"Error processing {emiten}: {str(e)}", 0)
+        return (
+            emiten, 
+            False, 
+            f"Error processing {emiten}: {str(e)}", 
+            0
+        )

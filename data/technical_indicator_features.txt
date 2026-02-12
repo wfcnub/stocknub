@@ -1,3 +1,6 @@
+ACUM10 Net Foreign
+ACUM30 Net Foreign
+ACUM60 Net Foreign
 ATR Bearish
 ATR Bullish
 Accumulation Distribution Line Decreasing
@@ -19,6 +22,9 @@ Fisher Reversal
 Fisher Up trend
 Keltner Overbought
 Keltner Oversold
+MA10 Net Foreign
+MA30 Net Foreign
+MA60 Net Foreign
 MACD Near 0
 MACD Non-Near 0 Negative
 MACD Non-Near 0 Positive

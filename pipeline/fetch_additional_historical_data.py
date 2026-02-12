@@ -43,10 +43,10 @@ if __name__ == "__main__":
         weekday_dates = _get_all_weekdays_from_selected_date(latest_date)
 
     elif args.fetch_type == 'all':
-        weekday_dates = _get_all_weekdays_from_selected_date('2025-12-01')
+        weekday_dates = _get_all_weekdays_from_selected_date('2021-01-01')
 
     elif args.fetch_type == 'backfill':
-        all_weekday_dates = _get_all_weekdays_from_selected_date('2025-12-01')
+        all_weekday_dates = _get_all_weekdays_from_selected_date('2021-01-01')
         weekday_dates = _get_all_weekstart_to_backfill(csv_folder_path, all_weekday_dates)
 
     print("=" * 80)
@@ -59,6 +59,8 @@ if __name__ == "__main__":
     results = fetch_additional_emiten_data(weekday_dates, csv_folder_path)
 
     process_additional_historical_data(csv_folder_path, args.processed_folder_path)
+
+
 
     print("\n" + "=" * 80)
     print("FETCH SUMMARY")

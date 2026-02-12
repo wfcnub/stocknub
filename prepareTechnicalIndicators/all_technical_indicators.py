@@ -7,6 +7,7 @@ from prepareTechnicalIndicators.price_channels import calculate_keltner, calcula
 from prepareTechnicalIndicators.oscillators import calculate_relative_strength_index, calculate_stochastic_oscillator
 from prepareTechnicalIndicators.volume_based import calculate_on_balance_volume, calculate_money_flow_index, calculate_chaikin_money_flow, calculate_accumulation_distribution_line
 from prepareTechnicalIndicators.price_transformations import calculate_ehler_fisher_transform, calculate_zig_zag
+from prepareTechnicalIndicators.foreign_volume_based import calculate_foreign_moving_average, calculate_foreign_accumulation
 
 
 def _prepare_data_for_generating_stock_indicators(data: pd.DataFrame) -> list:
@@ -28,7 +29,7 @@ def _prepare_data_for_generating_stock_indicators(data: pd.DataFrame) -> list:
     
     return prepared_data
 
-def _generate_all_technical_indicators(data, prepared_data, technical_indicator):
+def _generate_all_technical_indicators(data, additional_data, prepared_data, technical_indicator):
     if technical_indicator == 'price_trends':
         technical_indicator_data = [
             calculate_atr_trailing_stop(data, prepared_data),
@@ -64,10 +65,16 @@ def _generate_all_technical_indicators(data, prepared_data, technical_indicator)
             calculate_ehler_fisher_transform(prepared_data), 
             calculate_zig_zag(prepared_data)
         ]
+    
+    elif technical_indicator == 'foreign_volume':
+        technical_indicator_data = [
+            calculate_foreign_moving_average(additional_data), 
+            calculate_foreign_accumulation(additional_data)
+        ]
 
     return technical_indicator_data
     
-def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
+def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.DataFrame) -> pd.DataFrame:
     """
     Generates all the technical indicators, each having different unique characteristics of the stock to be measures
 
@@ -88,13 +95,20 @@ def generate_all_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
 
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index('Date', inplace=True)
+
+    additional_data['Date'] = pd.to_datetime(additional_data['Date'])
+    additional_data.set_index('Date', inplace=True)
+
     original_columns = set(data.columns)
 
     all_stock_indicators_data = data.copy()
-    selected_technical_indicators = ['price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations']
+
+    selected_technical_indicators = [
+        'price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations', 'foreign_volume'
+    ]
     
     for technical_indicator in selected_technical_indicators:
-        technical_indicator_data = _generate_all_technical_indicators(data, prepared_data, technical_indicator)
+        technical_indicator_data = _generate_all_technical_indicators(data, additional_data, prepared_data, technical_indicator)
         for d in technical_indicator_data:
             cleaned_d = d.reset_index().drop_duplicates('Date').set_index('Date')
             all_stock_indicators_data = pd.merge(all_stock_indicators_data, cleaned_d, left_index=True, right_index=True, how='left')

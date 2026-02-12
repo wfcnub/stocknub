@@ -16,7 +16,11 @@ def _generate_max_loss(
         np.array: A collection of max loss based on a rolling window
         float: The threshold for the quantile 0.6
     """
-    min_close = data[target_column][::-1].rolling(rolling_window, closed='left').min()[::-1]
+    min_close = data[target_column] \
+                        [::-1] \
+                        .rolling(rolling_window, closed='left') \
+                        .min() \
+                        [::-1]
     max_loss = (
         100 * (min_close - data[target_column].values) / data[target_column].values
     )
@@ -24,7 +28,9 @@ def _generate_max_loss(
     if np.isnan(max_loss).all():
         threshold = np.nan
     else:
-        threshold = np.nanquantile(max_loss, 0.6)
+        test_max_loss_length = 120
+        test_max_loss = max_loss[-1 * (test_max_loss_length + rolling_window): -rolling_window]
+        threshold = np.nanquantile(test_max_loss, 0.6)
 
     return (max_loss, threshold)
 
