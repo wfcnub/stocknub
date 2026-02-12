@@ -19,21 +19,17 @@ def _get_latest_date(download_dir):
 
     return latest_date
 
-def _get_all_weekdays_from_selected_date(selected_date):
-    start_date = datetime.strptime(selected_date, "%Y-%m-%d")
+def _get_all_active_market_date(historical_data_dir='data/stock/historical'):
+    all_historical_data_path = glob.glob(os.path.join(historical_data_dir, "*.csv"))
     
-    today = datetime.now()
-    
-    weekday_dates = []
-    
-    current_date = start_date
-    while current_date <= today:
-        if current_date.weekday() < 5:
-            weekday_dates.append(current_date.strftime("%Y-%m-%d"))
+    all_dates = []
+    for historical_data_path in all_historical_data_path:
+        acquired_date = pd.read_csv(historical_data_path, usecols=['Date'])['Date'].unique().tolist()
+        all_dates = list(set(acquired_date + all_dates))
+
+    all_dates.sort()
         
-        current_date += timedelta(days=1)
-        
-    return weekday_dates
+    return all_dates
 
 def _get_all_weekstart_to_backfill(csv_folder_path, weekday_dates):
     fetched_weekstart_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in Path(csv_folder_path).iterdir() if f.is_file() and f.suffix == '.csv'])

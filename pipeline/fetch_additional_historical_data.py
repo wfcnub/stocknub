@@ -5,7 +5,7 @@ from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from fetchAdditionalHistoricalData.main import fetch_additional_emiten_data, process_additional_historical_data
-from fetchAdditionalHistoricalData.helper import _get_latest_date, _get_all_weekdays_from_selected_date, _get_all_weekstart_to_backfill
+from fetchAdditionalHistoricalData.helper import _get_all_active_market_date, _get_all_weekstart_to_backfill
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,15 +38,11 @@ if __name__ == "__main__":
 
     csv_folder_path = os.path.join(os.getcwd(), args.csv_folder_path)
 
-    if args.fetch_type == 'update':
-        latest_date = _get_latest_date(args.csv_folder_path)
-        weekday_dates = _get_all_weekdays_from_selected_date(latest_date)
-
-    elif args.fetch_type == 'all':
-        weekday_dates = _get_all_weekdays_from_selected_date('2021-01-01')
+    if args.fetch_type == 'all':
+        weekday_dates = _get_all_active_market_date()
 
     elif args.fetch_type == 'backfill':
-        all_weekday_dates = _get_all_weekdays_from_selected_date('2021-01-01')
+        all_weekday_dates = _get_all_active_market_date()
         weekday_dates = _get_all_weekstart_to_backfill(csv_folder_path, all_weekday_dates)
 
     print("=" * 80)
