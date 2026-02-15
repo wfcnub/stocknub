@@ -1,6 +1,3 @@
-ACUM10 Net Foreign
-ACUM30 Net Foreign
-ACUM60 Net Foreign
 ATR Bearish
 ATR Bullish
 Accumulation Distribution Line Decreasing
@@ -15,16 +12,22 @@ Bollinger Oversold
 Bull Power 80% Positives
 Bull Power Up Trend
 Crossover CMF
+Domestic 15 Days Average Price Over Current Price
+Domestic 60 Days Average Price Over Current Price
+Domestic 90 Days Average Price Over Current Price
 Donchian Overbought
 Donchian Oversold
 Fisher Down Trend
 Fisher Reversal
 Fisher Up trend
+Foreign 15 Days Average Price Over Current Price
+Foreign 60 Days Average Price Over Current Price
+Foreign 90 Days Average Price Over Current Price
+Foreign to Domestic 15 Days Ownership
+Foreign to Domestic 60 Days Ownership
+Foreign to Domestic 90 Days Ownership
 Keltner Overbought
 Keltner Oversold
-MA10 Net Foreign
-MA30 Net Foreign
-MA60 Net Foreign
 MACD Near 0
 MACD Non-Near 0 Negative
 MACD Non-Near 0 Positive

@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import yfinance as yf
+from curl_cffi import requests
 from skopt import BayesSearchCV
 from catboost import CatBoostClassifier
 from skopt.space import Real, Categorical, Integer
@@ -9,30 +11,33 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 
+def _get_emiten_market_cap(emiten):
+    session = requests.Session(impersonate="chrome123")
+    try:
+        ticker = yf.Ticker(f"{emiten}.JK", session=session)
+        market_cap = ticker.info.get('marketCap')
+        
+        return market_cap
+        
+    except:
+        return np.nan
+
 def _select_emiten_as_features(industry: str) -> pd.DataFrame:
-    emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
-    all_emiten = emiten_industry_df.loc[emiten_industry_df['Industri'] == industry, 'Kode'].values
+    emiten_industry_df = pd.read_csv('data/emiten_and_industry_with_market_cap_list.csv')
+    emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
+    # emiten_industry_df['Market Cap'] = emiten_industry_df['Kode'].apply(lambda val: _get_emiten_market_cap(val))
 
-    all_average_volumes = []
+    selected_emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
 
-    for emiten in all_emiten:
-        try:
-            emiten_data = pd.read_csv(f'data/stock/label/{emiten}.csv').tail(120)
-            emiten_avg_vol = emiten_data['Volume'].mean()
-            all_average_volumes.append(emiten_avg_vol)
-        except:
-            all_average_volumes.append(np.nan)
+    filter_bool = selected_emiten_industry_df['Market Cap'] >= selected_emiten_industry_df['Market Cap'].quantile(0.8)
+    selected_emiten_industry_df = selected_emiten_industry_df[filter_bool].reset_index(drop=True)
 
-    emiten_avg_vol_df = pd.DataFrame({'Kode': all_emiten, 'Average Volume': all_average_volumes}) \
-                            .sort_values('Average Volume', ascending=False) \
-                            .reset_index(drop=True)
-
-    n_selected_emiten = np.ceil(len(emiten_avg_vol_df) / 2).astype(int)
-    selected_emiten = emiten_avg_vol_df.head(n_selected_emiten)['Kode'].values
+    selected_emiten = selected_emiten_industry_df['Kode'].values
     
     selected_emiten_df = pd.concat((pd.read_csv(f'data/stock/label/{emiten}.csv') for emiten in selected_emiten)) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
+
 
     return selected_emiten_df
 
@@ -124,7 +129,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=100,
+        n_iter=30,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=-1,

@@ -7,7 +7,7 @@ from prepareTechnicalIndicators.price_channels import calculate_keltner, calcula
 from prepareTechnicalIndicators.oscillators import calculate_relative_strength_index, calculate_stochastic_oscillator
 from prepareTechnicalIndicators.volume_based import calculate_on_balance_volume, calculate_money_flow_index, calculate_chaikin_money_flow, calculate_accumulation_distribution_line
 from prepareTechnicalIndicators.price_transformations import calculate_ehler_fisher_transform, calculate_zig_zag
-from prepareTechnicalIndicators.foreign_volume_based import calculate_foreign_moving_average, calculate_foreign_accumulation
+from prepareTechnicalIndicators.additional_technical_indicators import calculate_additional_technical_indicators
 
 
 def _prepare_data_for_generating_stock_indicators(data: pd.DataFrame) -> list:
@@ -66,10 +66,9 @@ def _generate_all_technical_indicators(data, additional_data, prepared_data, tec
             calculate_zig_zag(prepared_data)
         ]
     
-    elif technical_indicator == 'foreign_volume':
+    elif technical_indicator == 'additional_technical_indicators':
         technical_indicator_data = [
-            calculate_foreign_moving_average(additional_data), 
-            calculate_foreign_accumulation(additional_data)
+            calculate_additional_technical_indicators(additional_data)
         ]
 
     return technical_indicator_data
@@ -104,7 +103,7 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
     all_stock_indicators_data = data.copy()
 
     selected_technical_indicators = [
-        'price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations', 'foreign_volume'
+        'price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations', 'additional_technical_indicators'
     ]
     
     for technical_indicator in selected_technical_indicators:
@@ -117,8 +116,6 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
 
     updated_columns = set(all_stock_indicators_data.columns)
     feature_columns = sorted(list(updated_columns - original_columns))
-    for col in feature_columns:
-        all_stock_indicators_data[col] = all_stock_indicators_data[col].astype(int)
 
     output_path = 'data/technical_indicator_features.txt'
     with open(output_path, "w") as file:
