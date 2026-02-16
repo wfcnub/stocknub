@@ -15,7 +15,7 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     This function implements a time-based split crucial for financial forecasting:
     - Training Set: All data preceding the test set
     - Validation Set (for Hyperparameter Tuning): The last 40 days of the training set
-    - Test Set: The last 100 days from current date
+    - Test Set: The last 80 days from current date
 
     Args:
         data (pd.DataFrame): The complete DataFrame containing features and the target
@@ -41,8 +41,9 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     test_feature = test_data[feature_columns].values
     test_target = test_data[target_column].values
     
+    val_length = 40
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[-40:] = 0    
+    split_index[-val_length:] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
@@ -78,7 +79,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     }
     
     scoring_method = 'roc_auc'
-    if len(np.unique(train_target[-30:])) == 1:
+    if len(np.unique(train_target[-40:])) == 1:
         scoring_method = 'accuracy'
     
     hyper_tune_search = BayesSearchCV(
@@ -127,12 +128,12 @@ def measure_model_performance(model, feature: np.array, target: np.array, positi
     
     return all_metrics
 
-def _measure_model_performance(model, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
+def _measure_model_performance(model: any, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
     """
-    Measures and reports the performance of the model on a given dataset
+    (Internal Helper) Measures and reports the performance of the model on a given dataset
 
     Args:
-        model: The trained classifier model
+        model (any): The trained classifier model
         feature (np.array): The feature set (e.g., train_feature or test_feature)
         target (np.array): The corresponding true target labels
         positive_label (str): The positive class of the predicted label

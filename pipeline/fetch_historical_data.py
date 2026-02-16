@@ -1,13 +1,5 @@
 """
-Pipeline Step 0: Fetch Historical Stock Data
-
-This script downloads historical OHLCV (Open, High, Low, Close, Volume) data from Yahoo Finance.
-It reads from data/stock/emiten_list.txt and outputs to data/stock/00_historical/*.csv
-
-The script supports:
-- Batch downloading all tickers in parallel
-- Incremental updates (only fetches new data since last download)
-- Resume from failures
+Pipeline Description: Fetch Historical Stock Data using yfinance
 
 Usage:
     # Full download from 2021
@@ -30,7 +22,7 @@ from fetchHistoricalData.helper import _get_yesterday_date
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Pipeline Step 0: Fetch historical stock data from Yahoo Finance"
+        description="Pipeline Description: Fetch historical stock data from Yahoo Finance"
     )
     parser.add_argument(
         "--start_date",
@@ -88,7 +80,7 @@ if __name__ == "__main__":
 
     mode_str = f"UPDATE mode (until {args.update})" if args.update else "FETCH mode"
     print("=" * 80)
-    print("PIPELINE STEP 0: FETCH HISTORICAL DATA")
+    print("PIPELINE DESCRIPTION: FETCH HISTORICAL DATA")
     print("=" * 80)
     print(
         f"Starting parallel fetch with {args.workers} workers for {len(emiten_list)} emitens ({mode_str})..."

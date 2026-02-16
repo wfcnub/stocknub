@@ -12,11 +12,20 @@ Bollinger Oversold
 Bull Power 80% Positives
 Bull Power Up Trend
 Crossover CMF
+Domestic 15 Days Average Price Over Current Price
+Domestic 60 Days Average Price Over Current Price
+Domestic 90 Days Average Price Over Current Price
 Donchian Overbought
 Donchian Oversold
 Fisher Down Trend
 Fisher Reversal
 Fisher Up trend
+Foreign 15 Days Average Price Over Current Price
+Foreign 60 Days Average Price Over Current Price
+Foreign 90 Days Average Price Over Current Price
+Foreign to Domestic 15 Days Ownership
+Foreign to Domestic 60 Days Ownership
+Foreign to Domestic 90 Days Ownership
 Keltner Overbought
 Keltner Oversold
 MACD Near 0

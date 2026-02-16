@@ -1,13 +1,5 @@
 """
-Pipeline Step 2: Generate Target Labels
-
-This script generates target labels for model training from technical indicator data.
-It reads from data/stock/technical/*.csv and outputs to data/stock/label/*.csv
-
-The script supports:
-- Batch processing all tickers
-- Multiple label types (linear_trend, median_gain, max_loss)
-- Multiple rolling windows (e.g., 5, 10, 15 days)
+Pipeline Description: Generate Target Labels
 
 Usage:
     # Generate labels with default settings
@@ -28,7 +20,7 @@ from generateLabels.main import process_single_ticker
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate target labels for all tickers with technical indicators"
+        description="Pipeline Description: Generate target labels for all tickers with technical indicators"
     )
     parser.add_argument(
         "--technical_folder",
@@ -109,7 +101,7 @@ def main():
         return
 
     print("=" * 80)
-    print("PIPELINE STEP 2: GENERATE TARGET LABELS")
+    print("PIPELINE DESCRIPTION: GENERATE TARGET LABELS")
     print("=" * 80)
     print(f"Found {len(technical_files)} tickers to process")
     if args.tickers:

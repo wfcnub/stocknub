@@ -1,17 +1,12 @@
 """
-Pipeline Step 3: Train Models for Stock Prediction
-
-This script trains machine learning models for stock prediction using multiprocessing.
-It reads from data/stock/label/*.csv and outputs:
-- Trained models to data/stock/model/{label_type}/*.pkl
-- Performance metrics to data/stock/model/performance/{label_type}/{window}dd/{emiten}.csv
+Pipeline Description: Train Model V2 for Stock Prediction
 
 Usage:
     # Develop models with default settings
     python -m pipeline.train_models_v2
     
     # Process specific tickers
-    python -m pipeline.train_models_v2 --tickers BBCA,BBRI,TLKM
+    python -m pipeline.train_models_v2 --industry Financials
 """
 
 import argparse
@@ -30,7 +25,9 @@ from prepareTechnicalIndicators.helper import get_all_technical_indicators
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train ML models for stock prediction")
+    parser = argparse.ArgumentParser(
+        description="Pipeline Description: Train ML models v2 for stock prediction"
+    )
 
     parser.add_argument(
         "--label_types",
@@ -63,8 +60,8 @@ def main():
     parser.add_argument(
         "--industry",
         type=str,
-        default="",
-        help="",
+        default=None,
+        help='The name of the industries desired to be forecasted',
     )
 
     args = parser.parse_args()

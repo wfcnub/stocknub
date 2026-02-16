@@ -1,25 +1,15 @@
 """
-Pipeline Step 4: Forecast Stock Performance
-
-This script generates forecasts using trained models from step 3.
-It reads models from data/stock/{model_version}/{label_type}/*.pkl and outputs:
-- Forecast results to data/stock/forecast_stocks/{label_type}/{window}dd.csv
-
-The script:
-- Filters stocks by minimum test Gini performance
-- Reads technical indicators from existing CSV files (step 1 output)
-- Applies trained models to generate probability predictions
-- Saves forecasts for the most recent date
+Pipeline Description: Forecast Stock Performance using Model V2
 
 Usage:
     # Forecast with default settings (all models with min_test_gini >= 0.3)
-    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain,max_loss --min_test_gini 0.3
+    python -m pipeline.forecast_stocks_v2 --windows 5,10,15 --label_types median_gain,max_loss --min_test_gini 0.3
 
     # Forecast without Gini filter (use all available models)
-    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain
+    python -m pipeline.forecast_stocks_v2 --windows 5,10,15 --label_types median_gain
 
-    # Forecast specific tickers only
-    python -m pipeline.forecast_stocks --tickers BBCA,BBRI,TLKM --windows 5,10,15 --label_types median_gain
+    # Forecast specific industries only
+    python -m pipeline.forecast_stocks_v2 --industry Financials --windows 5,10,15 --label_types median_gain
 """
 
 import argparse
@@ -38,7 +28,7 @@ from forecastStocksV2.helper import _ensure_directories_exist, _clear_forecast_f
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate stock forecasts using trained models",
+        description="Pipeline Description: Generate stock forecasts using trained models v2",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -67,7 +57,7 @@ def main():
         "--industry",
         type=str,
         default=None,
-        help='',
+        help='The name of the industries desired to be forecasted',
     )
 
     parser.add_argument(

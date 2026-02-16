@@ -1,8 +1,5 @@
 """
-Pipeline Step 1: Generate Technical Indicators
-
-This script generates technical indicators from historical stock data.
-It reads from data/stock/historical/*.csv and outputs to data/stock/technical/*.csv
+Pipeline Description: Generate Technical Indicators
 
 Usage:
     # Process all tickers (incremental update)
@@ -19,7 +16,7 @@ from prepareTechnicalIndicators.main import process_single_ticker
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate technical indicators for all downloaded stock data"
+        description="Pipeline Description: Generate technical indicators for all downloaded stock data"
     )
     parser.add_argument(
         "--historical_folder",
@@ -79,7 +76,7 @@ def main():
         return
 
     print("=" * 80)
-    print("PIPELINE STEP 1: GENERATE TECHNICAL INDICATORS")
+    print("PIPELINE DESCRIPTION: GENERATE TECHNICAL INDICATORS")
     print("=" * 80)
     print(f"Found {len(historical_files)} tickers to process")
     if args.tickers:
