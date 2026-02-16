@@ -15,7 +15,7 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     This function implements a time-based split crucial for financial forecasting:
     - Training Set: All data preceding the test set
     - Validation Set (for Hyperparameter Tuning): The last 40 days of the training set
-    - Test Set: The last 100 days from current date
+    - Test Set: The last 80 days from current date
 
     Args:
         data (pd.DataFrame): The complete DataFrame containing features and the target
@@ -85,7 +85,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=100,
+        n_iter=25,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=-1,
@@ -128,12 +128,12 @@ def measure_model_performance(model, feature: np.array, target: np.array, positi
     
     return all_metrics
 
-def _measure_model_performance(model, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
+def _measure_model_performance(model: any, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
     """
-    Measures and reports the performance of the model on a given dataset
+    (Internal Helper) Measures and reports the performance of the model on a given dataset
 
     Args:
-        model: The trained classifier model
+        model (any): The trained classifier model
         feature (np.array): The feature set (e.g., train_feature or test_feature)
         target (np.array): The corresponding true target labels
         positive_label (str): The positive class of the predicted label

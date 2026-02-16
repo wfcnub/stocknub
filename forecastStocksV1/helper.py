@@ -3,37 +3,54 @@ import pandas as pd
 from pathlib import Path
 from camel_converter import to_camel
 
-def _ensure_directories_exist(model_version, label_types, windows):
-    """Ensure all required directories exist before forecasting."""
+def _ensure_directories_exist(model_version: str, label_types: str, windows: int) -> None:
+    """
+    (Internal Helper) Ensure all required directories exist before forecasting, if not then it will create the directory
+
+    Args:
+        model_version (str): The version of model being developed
+        label_types (str): The label used to develop the model
+        windows (int): The rolling window used to create the label
+    """
     for label_type in label_types:
         camel_label = to_camel(label_type)
         for window in windows:
             Path(f"data/stock/forecast/{model_version}/{camel_label}/{window}dd").mkdir(
                 parents=True, exist_ok=True
             )
+        
+    return
 
+def _clear_forecast_files(model_version: str, label_types: str, windows: int) -> None:
+    """
+    (Internal Helper) Clear existing forecast files to avoid duplicates
 
-def _clear_forecast_files(model_version, label_types, windows):
-    """Clear existing forecast files to avoid duplicates."""
+    Args:
+        model_version (str): The version of model being developed
+        label_types (str): The label used to develop the model
+        windows (int): The rolling window used to create the label
+    """
     for label_type in label_types:
         camel_label = to_camel(label_type)
         for window in windows:
             filepath = f"data/stock/forecast/{model_version}/{camel_label}/{window}dd.csv"
             if Path(filepath).exists():
                 Path(filepath).unlink()
+            
+    return
 
-
-def _load_model_performance(model_version, label_type, window, min_test_gini=None):
+def _load_model_performance(model_version: str, label_type: str, window: int, min_test_gini: float = None) -> list:
     """
-    Load model performance data and filter by minimum Gini.
+    (Internal Helper) Load model performance data and filter by minimum Gini.
 
     Args:
-        label_type: Type of label (median_gain, max_loss, linear_trend)
-        window: Forecast window (e.g., 5, 10, 20)
-        min_test_gini: Minimum test Gini threshold (None to include all)
+        model_version (str): The version of model being developed
+        label_type (str): The label used to develop the model
+        window (int): The rolling window used to create the label
+        min_test_gini (float): Minimum test Gini threshold (None to include all)
 
     Returns:
-        List of emiten codes that meet the criteria
+        list: List of emiten codes that meet the criteria
     """
     camel_label = to_camel(label_type)
     performance_path = f"data/stock/{model_version}/performance/{camel_label}/{window}dd.csv"
@@ -52,17 +69,18 @@ def _load_model_performance(model_version, label_type, window, min_test_gini=Non
         return performance_df["Kode"].unique().tolist()
 
 
-def _get_filtered_emiten_list(model_version, label_types, windows, min_test_gini=None):
+def _get_filtered_emiten_list(model_version: str, label_types: str, windows: int, min_test_gini: float = None) -> list:
     """
-    Get intersection of emiten codes that meet criteria across all label types and windows.
+    (Internal Helper) Get intersection of emiten codes that meet criteria across all label types and windows.
 
     Args:
-        label_types: List of label types
-        windows: List of forecast windows
-        min_test_gini: Minimum test Gini threshold
+        model_version (str): The version of model being developed
+        label_types (str): The label used to develop the model
+        windows (int): The rolling window used to create the label
+        min_test_gini (float): Minimum test Gini threshold (None to include all)
 
     Returns:
-        List of emiten codes that have models meeting criteria for all combinations
+        list: List of emiten codes that have models meeting criteria for all combinations
     """
     all_emiten_sets = []
 
@@ -79,8 +97,17 @@ def _get_filtered_emiten_list(model_version, label_types, windows, min_test_gini
     return sorted(list(common_emiten))
 
 
-def _save_forecast(forecast_df, model_version, label_type, window, emiten):
-    """Save or append forecast results to CSV."""
+def _save_forecast(forecast_df: pd.DataFrame, model_version: int, label_type: str, window: int, emiten: str) -> None:
+    """
+    (Internal Helper) Save or append forecast results to CSV
+
+    Args:
+        forecast_df (pd.DataFrame): A pandas dataframe containing the forecasted value
+        model_version (str): The version of model being developed
+        label_type (str): The label used to develop the model
+        window (int): The rolling window used to create the label
+        emiten (str): The name of the emiten inside the forecast_df
+    """
     camel_label = to_camel(label_type)
     filepath = f"data/stock/forecast/{model_version}/{camel_label}/{window}dd/{emiten}.csv"
     forecast_df.to_csv(filepath, index=False)

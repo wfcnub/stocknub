@@ -11,7 +11,16 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 
-def _get_emiten_market_cap(emiten):
+def _get_emiten_market_cap(emiten: str) -> float:
+    """
+    (Internal Helper) Get the emtien market cap utilizng yfinance
+
+    Args:
+        emiten (str): The name of the emiten that it's market cap wants be collected
+    
+    Returns:
+        float: The market cap value of the emiten
+    """
     session = requests.Session(impersonate="chrome123")
     try:
         ticker = yf.Ticker(f"{emiten}.JK", session=session)
@@ -23,6 +32,15 @@ def _get_emiten_market_cap(emiten):
         return np.nan
 
 def _select_emiten_as_features(industry: str) -> pd.DataFrame:
+    """
+    (Internal Helper) Select which emiten will be used as training data based on the emiten market cap
+
+    Args:
+        industry (str): The name of the industry in which the emiten will be selected
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing all the selected emiten
+    """
     emiten_industry_df = pd.read_csv('data/emiten_and_industry_with_market_cap_list.csv')
     emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
     # emiten_industry_df['Market Cap'] = emiten_industry_df['Kode'].apply(lambda val: _get_emiten_market_cap(val))
@@ -48,7 +66,7 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     This function implements a time-based split crucial for financial forecasting:
     - Training Set: All data preceding the test set
     - Validation Set (for Hyperparameter Tuning): The last 40 days of the training set
-    - Test Set: The last 100 days from current date
+    - Test Set: The last 80 days from current date
 
     Args:
         data (pd.DataFrame): The complete DataFrame containing features and the target
@@ -118,7 +136,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     search_spaces = {
         'depth': Integer(1, 5),
         'learning_rate': Real(0.01, 0.1, prior='log-uniform'),
-        'iterations': Integer(250, 750),
+        'iterations': Integer(1000, 1250),
         'l2_leaf_reg': Real(0.5, 3.0)
     }
     
@@ -222,7 +240,21 @@ def _calculate_gini(model: any, target_true: np.array, target_pred_proba: np.arr
 
     return gini
 
-def _measure_model_performance_on_single_emiten(prepared_data, model, target_column, positive_label, negative_label):
+def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, model: any, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
+    """
+    (Internal Helper) Measures and reports the performance of the model on a given emiten
+
+    Args:
+        prepared_data (pd.DataFrame): A pandas dataframe containing the features and target
+        model (any): The trained classifier model
+        feature (np.array): The feature set (e.g., train_feature or test_feature)
+        target (np.array): The corresponding true target labels
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+
+    Returns:
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
+    """
     feature_columns = get_all_technical_indicators()
 
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test(
@@ -237,7 +269,22 @@ def _measure_model_performance_on_single_emiten(prepared_data, model, target_col
     
     return train_metrics_df, test_metrics_df
 
-def _measure_model_performance_for_all_emiten_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col):
+def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label:str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
+    """
+    (Internal Helper) Measures and reports the performance of the model on a given industry
+
+    Args:
+        industry (str): The name of the industry being worked on
+        model (any): The trained classifier model
+        feature (np.array): The feature set (e.g., train_feature or test_feature)
+        target (np.array): The corresponding true target labels
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+        threshold_col (str): The name of the columns used as a threshold during the creation of the label
+
+    Returns:
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
+    """
     emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
     all_emiten = emiten_industry_df.loc[emiten_industry_df['Industri'] == industry, 'Kode'].values
 
@@ -274,7 +321,7 @@ def develop_model(industry: str, target_column: str, positive_label: str, negati
     and evaluates its final performance
 
     Args:
-        industry (str): 
+        industry (str): The name of the industry being worked on
         target_column (str): The name of the target variable column
         positive_label (str): The positive class of the predicted label
         negative_label (str): The negative class of the predicted label

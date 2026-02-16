@@ -5,33 +5,50 @@ from datetime import datetime
 
 from fetchAdditionalHistoricalData.helper import _initialize_driver, _select_year_month_on_web, _select_and_download_specific_date_on_web, _clean_downloaded_data
 
-def fetch_additional_emiten_data(weekday_dates, download_dir):
+def fetch_additional_emiten_data(active_market_dates: list, download_dir: str) -> list:
+    """
+    Perform the process of fetching the additional historical data from the IDX website using web scraping
+
+    Args:
+        active_market_dates (list): A list containing all active market dates
+        download_dir (str): The directory where the downloaded data will be stored
+    
+    Returns:
+        list: A list containing the downloaded data, status of the downloaded data, and status message
+    """
     results = []
 
     driver = _initialize_driver(download_dir)
 
-    for weekday_dt in weekday_dates:
+    for active_market_date in active_market_dates:
         try:
-            year = datetime.strptime(weekday_dt, '%Y-%m-%d').year
-            month = datetime.strptime(weekday_dt, '%Y-%m-%d').month
+            year = datetime.strptime(active_market_date, '%Y-%m-%d').year
+            month = datetime.strptime(active_market_date, '%Y-%m-%d').month
                 
             _select_year_month_on_web(driver, year, month)
                     
-            process_data_bool = _select_and_download_specific_date_on_web(driver, download_dir, weekday_dt)
+            process_data_bool = _select_and_download_specific_date_on_web(driver, download_dir, active_market_date)
 
             if process_data_bool:
-                _clean_downloaded_data(download_dir, weekday_dt)
+                _clean_downloaded_data(download_dir, active_market_date)
 
-            results.append((weekday_dt, True, f"Succesfully fetch data on {weekday_dt}."))
+            results.append((active_market_date, True, f"Succesfully fetch data on {active_market_date}."))
 
         except:
-            results.append((weekday_dt, False, f"No data found on {weekday_dt}."))
+            results.append((active_market_date, False, f"No data found on {active_market_date}."))
             
     driver.close()
 
     return results
 
-def process_additional_historical_data(csv_folder_path, processed_folder_path):
+def process_additional_historical_data(csv_folder_path: str, processed_folder_path: str) -> None:
+    """
+    Clean and reformat the downloaded additional historical data
+
+    Args:
+        csv_folder_path (str): The directory where raw additional historical data is being stored
+        processed_folder_path (str): The directory where the processed additional historical data will be stored
+    """
     csv_files = glob.glob(os.path.join(csv_folder_path, "*.csv"))
     df_list = []
     

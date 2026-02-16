@@ -1,3 +1,14 @@
+"""
+Pipeline Description: Fetch Historical Stock Data by Web Scraping
+
+Usage:
+    # Full download
+    python -m pipeline.fetch_additional_historical_data --fetch_type all
+
+    # Daily update or backfill
+    python -m pipeline.fetch_additional_historical_data --fetch_type backfill
+"""
+
 import os
 import argparse
 from tqdm import tqdm
@@ -9,7 +20,7 @@ from fetchAdditionalHistoricalData.helper import _get_all_active_market_date, _g
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Pipeline Step 0: Fetch historical stock data from Yahoo Finance"
+        description="Pipeline Description: Fetch additional historical stock data from IDX web"
     )
     parser.add_argument(
         "--csv_folder_path",
@@ -26,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--fetch_type",
         type=str,
-        choices=["update", "all", "backfill"],
+        choices=["all", "backfill"],
         default='update',
         help="",
     )
@@ -46,7 +57,7 @@ if __name__ == "__main__":
         weekday_dates = _get_all_weekstart_to_backfill(csv_folder_path, all_weekday_dates)
 
     print("=" * 80)
-    print("PIPELINE STEP 0.2: FETCH ADDITIONAL HISTORICAL DATA")
+    print("PIPELINE DESCRIPTION: FETCH ADDITIONAL HISTORICAL DATA")
     print("=" * 80)
     print(
         f"Starting fetch for {len(weekday_dates)} weekday dates..."

@@ -12,14 +12,32 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 
-def _get_latest_date(download_dir):
+def _get_latest_date(download_dir: str) -> str:
+    """
+    (Internal Helper) Get all file names, named as a date, from a specified directory, then gets the latest date available
+
+    Args:
+        donwload_dir (str): The directory to be looked in to
+    
+    Returns:
+        str: The latest date found on the specified directory
+    """
     files = glob.glob(os.path.join(download_dir, "*.csv"))
     latest_file = max(files)
     latest_date = datetime.strptime(os.path.basename(latest_file).split('.')[0], '%Y%m%d').strftime('%Y-%m-%d')
 
     return latest_date
 
-def _get_all_active_market_date(historical_data_dir='data/stock/historical'):
+def _get_all_active_market_date(historical_data_dir: str = 'data/stock/historical') -> list:
+    """
+    (Internal Helper) Get all unique date from data collected from yfinance. This Dates would serve as an active market date
+
+    Args:
+        historical_data_dir (str): Directory where the historical data gathered from yfinance is stored
+    
+    Returns:
+        list: A list containing all active market dates
+    """
     all_historical_data_path = glob.glob(os.path.join(historical_data_dir, "*.csv"))
     
     all_dates = []
@@ -31,14 +49,36 @@ def _get_all_active_market_date(historical_data_dir='data/stock/historical'):
         
     return all_dates
 
-def _get_all_weekstart_to_backfill(csv_folder_path, weekday_dates):
-    fetched_weekstart_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in Path(csv_folder_path).iterdir() if f.is_file() and f.suffix == '.csv'])
+def _get_all_weekstart_to_backfill(additional_historical_data_dir: str, active_market_dates: str) -> list:
+    """
+    (Internal Helper) Get all market dates that have not yet get collected
 
-    backfill_weekstart_dates = list(set(weekday_dates) - fetched_weekstart_dates)
-
-    return backfill_weekstart_dates
+    Args:
+        additional_historical_data_dir (str): The directory where the additional historical data is stored
+        active_market_dates (list): A list containing all active market dates
     
-def _wait_before_click(driver, tag, attr_name, attr_val):
+    Return:
+        list: A list containing all active market dates to be backfilled
+    """
+    fetched_active_market_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in Path(additional_historical_data_dir).iterdir() if f.is_file() and f.suffix == '.csv'])
+
+    backfill_active_market_dates = list(set(active_market_dates) - fetched_active_market_dates)
+
+    return backfill_active_market_dates
+    
+def _wait_before_click(driver: webdriver.chrome.webdriver.WebDriver, tag: str, attr_name: str, attr_val: str) -> bool:
+    """
+    (Internal Helper) Procedures for the web scraping scripts when about to click a button
+
+    Args:
+        driver (webdriver.chrome.webdriver.WebDriver): Main object for accessing the web for scraping purposes
+        tag (str): The name of the tag for the button about to be clicked
+        attr_name (str): The name of the attribute for the button about to be clicked
+        attr_val (str): The value of the attribute for the button about to be clicked
+    
+    Returns:
+        bool: A Boolean of whether clicking the button was successful
+    """
     wait = WebDriverWait(driver, 5)
     element = f"//{tag}[@{attr_name}='{attr_val}']"
     
@@ -66,7 +106,16 @@ def _wait_before_click(driver, tag, attr_name, attr_val):
     
     return True
 
-def _initialize_driver(download_dir):     
+def _initialize_driver(download_dir: str) -> webdriver.chrome.webdriver.WebDriver:
+    """
+    (Internal Helper) Initalize the driver for accessing the web for scraping purposes
+    
+    Args:
+        download_dir (str): The directory where the downloaded file will be stored instead of storing it directly to the Download directory
+    
+    Returns:
+        webdriver.chrome.webdriver.WebDriver: The driver for accessing the web for scraping purposes
+    """
     chrome_options = webdriver.ChromeOptions()
     prefs = {
         "download.default_directory": download_dir,
@@ -85,7 +134,15 @@ def _initialize_driver(download_dir):
 
     return driver
 
-def _check_if_download_completion(download_dir, weekday_dt, timeout=10):
+def _check_if_download_completion(download_dir: str, weekday_dt: str, timeout: int = 10) -> None:
+    """
+    (Internal Helper) A timeout procedure during the process of downloading the data
+
+    Args:
+        download_dir (str): The directory where the downloaded data is being stored
+        weekday_date (str): The date that will be incorporated inside the name of the file to be checked
+        timeout (int): The duration of the download timeout
+    """
     filename = f"Stock Summary-{weekday_dt.replace('-', '')}.xlsx"
     end_time = time.time() + timeout
 
@@ -99,14 +156,18 @@ def _check_if_download_completion(download_dir, weekday_dt, timeout=10):
     
     return
 
-def _get_latest_date(download_dir):
-    files = glob.glob(os.path.join(download_dir, "*.csv"))
-    latest_file = max(files)
-    latest_date = datetime.strptime(os.path.basename(latest_file).split('.')[0], '%Y%m%d').strftime('%Y-%m-%d')
+def _wait_for_page_stability(driver: webdriver.chrome.webdriver.WebDriver, timeout: int = 30, check_interval: float = 0.5) -> bool:
+    """
+    (Internal Helper) A procedure for waiting until the page is being loaded completely
 
-    return latest_date
-
-def wait_for_page_stability(driver, timeout=30, check_interval=0.5):
+    Args:
+        driver (webdriver.chrome.webdriver.WebDriver): The driver for accessing the web for scraping purposes
+        timeout (int): The timeout duration for waiting until the page is fully loaded
+        check_interval (float): The interval of checking the loading status of the page
+    
+    Returns:
+        bool: A boolean of whether the page is finished being loaded under the given duration
+    """
     end_time = time.time() + timeout
     previous_source = ""
     
@@ -122,7 +183,15 @@ def wait_for_page_stability(driver, timeout=30, check_interval=0.5):
     print("Warning: Page kept changing until timeout.")
     return False
 
-def _select_year_month_on_web(driver, year, month):
+def _select_year_month_on_web(driver: webdriver.chrome.webdriver.WebDriver, year: str, month: str) -> None:
+    """
+    (Internal Helper) A scraping procedure for selecting the year and month on the web
+
+    Args:
+        driver (webdriver.chrome.webdriver.WebDriver): The driver for accessing the web for scraping purposes
+        year (str): The year to be selected on the web
+        month (str): The month to be selected on the web
+    """
     # div for changing the date
     _ = _wait_before_click(driver, 'div', 'class', 'mx-input-wrapper')
     
@@ -137,7 +206,18 @@ def _select_year_month_on_web(driver, year, month):
 
     return
 
-def _select_and_download_specific_date_on_web(driver, download_dir, weekday_dt):
+def _select_and_download_specific_date_on_web(driver: webdriver.chrome.webdriver.WebDriver, download_dir: str, weekday_dt: str) -> bool:
+    """
+    (Internal Helper) A scraping procedure for selecting the specific date of data to be downloaded
+
+    Args:
+        driver (webdriver.chrome.webdriver.WebDriver): The driver for accessing the web for scraping purposes
+        donwload_dir (str): The directory where the downloaded data will be stored
+        weekday_dt (str): The date of the data that will be downloaded
+
+    Returns:
+        bool: A boolean of whether the file is successfully downloaded
+    """
     # div for changing the date
     _ = _wait_before_click(driver, 'div', 'class', 'mx-input-wrapper')
     
@@ -145,7 +225,7 @@ def _select_and_download_specific_date_on_web(driver, download_dir, weekday_dt):
     _ = _wait_before_click(driver, 'td', 'title', weekday_dt)
     
     # wait before everything finished being loaded
-    _ = wait_for_page_stability(driver)
+    _ = _wait_for_page_stability(driver)
 
     # button for downloading the day
     check_data_bool = _wait_before_click(driver, 'button', 'class', 'btn-filter-input mb-8 btn-download text-center')
@@ -157,7 +237,16 @@ def _select_and_download_specific_date_on_web(driver, download_dir, weekday_dt):
     
     return False
 
-def _parse_indo_date(date_str):
+def _parse_indo_date(date_str: str) -> str:
+    """
+    (Internal Helper) Parse date written in Indonesia into a proper datetime format
+
+    Args:
+        date_str (str): A date that wants to be parsed
+    
+    Returns:
+        str: A parsed date in a proper datetime format
+    """
     indo_months = {
         'Mei': 'May',
         'Agt': 'Aug',
@@ -172,7 +261,14 @@ def _parse_indo_date(date_str):
             
     return datetime.strptime(date_str, '%d %b %Y').strftime('%Y-%m-%d')
 
-def _clean_downloaded_data(download_dir, weekday_dt):    
+def _clean_downloaded_data(download_dir: str, weekday_dt: str) -> None:
+    """
+    (Internal Helper) Clean the format and content of the downloaded data
+
+    Args:
+        download_dir (str): The directory where the data is being stored
+        weekday_dt (str): The date that is incorporated inside the file name, specifying which file to process
+    """
     filename = f"Stock Summary-{weekday_dt.replace('-', '')}.xlsx"
     full_path = os.path.join(download_dir, filename)
 

@@ -22,21 +22,26 @@ PIPELINE_STEPS = {
         "description": "Download OHLCV data from Yahoo Finance",
     },
     1: {
+        "name": "Fetch Additional Historical Data",
+        "module": "pipeline.fetch_additional_historical_data",
+        "description": "Download Foreign Volume data from IDX web",
+    },
+    2: {
         "name": "Generate Technical Indicators",
         "module": "pipeline.prepare_technical_indicators",
         "description": "Calculate technical indicators from historical data",
     },
-    2: {
+    3: {
         "name": "Generate Target Labels",
         "module": "pipeline.generate_labels",
         "description": "Create target labels for model training",
     },
-    3: {
+    4: {
         "name": "Train Models",
         "module": "pipeline.train_models_v1",
         "description": "Train machine learning models for stock prediction",
     },
-    4: {
+    5: {
         "name": "Generate Forecasts",
         "module": "pipeline.forecast_stocks_v1",
         "description": "Generate forecasts using trained models",
