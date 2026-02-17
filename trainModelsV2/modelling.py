@@ -11,29 +11,28 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 
-def _get_emiten_market_cap(emiten: str) -> float:
+def _get_emiten_valuation(emiten: str) -> float:
     """
-    (Internal Helper) Get the emtien market cap utilizng yfinance
+    (Internal Helper) Get the emiten valuation utilizng yfinance
 
     Args:
-        emiten (str): The name of the emiten that it's market cap wants be collected
+        emiten (str): The name of the emiten that it's valuation wants be collected
     
     Returns:
-        float: The market cap value of the emiten
+        float: The valuation value of the emiten
     """
-    session = requests.Session(impersonate="chrome123")
     try:
-        ticker = yf.Ticker(f"{emiten}.JK", session=session)
-        market_cap = ticker.info.get('marketCap')
-        
-        return market_cap
-        
+        emiten_data = pd.read_csv(f'data/stock/historical/{emiten}.csv').tail(10)
+        emiten_valuation = (emiten_data['Volume'] * emiten_data[['Open', 'High', 'Close', 'Low']].mean(axis=1)).mean()    
+
+        return emiten_valuation
+    
     except:
         return np.nan
 
 def _select_emiten_as_features(industry: str) -> pd.DataFrame:
     """
-    (Internal Helper) Select which emiten will be used as training data based on the emiten market cap
+    (Internal Helper) Select which emiten will be used as training data based on the emiten valuation
 
     Args:
         industry (str): The name of the industry in which the emiten will be selected
@@ -41,13 +40,13 @@ def _select_emiten_as_features(industry: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A pandas dataframe containing all the selected emiten
     """
-    emiten_industry_df = pd.read_csv('data/emiten_and_industry_with_market_cap_list.csv')
+    emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
     emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
-    # emiten_industry_df['Market Cap'] = emiten_industry_df['Kode'].apply(lambda val: _get_emiten_market_cap(val))
+    emiten_industry_df['Valuation'] = emiten_industry_df['Kode'].apply(lambda val: _get_emiten_valuation(val))
 
     selected_emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
 
-    filter_bool = selected_emiten_industry_df['Market Cap'] >= selected_emiten_industry_df['Market Cap'].quantile(0.8)
+    filter_bool = selected_emiten_industry_df['Valuation'] >= selected_emiten_industry_df['Valuation'].quantile(0.8)
     selected_emiten_industry_df = selected_emiten_industry_df[filter_bool].reset_index(drop=True)
 
     selected_emiten = selected_emiten_industry_df['Kode'].values
