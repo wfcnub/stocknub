@@ -77,6 +77,9 @@ def main():
 
     _ensure_directories_exist(label_types)
 
+    print("=" * 80)
+    print("PIPELINE DESCRIPTION: DEVELOP MODEL V2")
+    print("=" * 80)
     if args.industry:
         specified_industries = [t.strip().title() for t in args.industry.split(",")]
         

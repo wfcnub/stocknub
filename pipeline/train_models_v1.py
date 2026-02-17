@@ -80,6 +80,9 @@ def main():
     label_dir = Path(args.labels_folder)
     all_label_files = sorted(label_dir.glob("*.csv"))
 
+    print("=" * 80)s
+    print("PIPELINE DESCRIPTION: DEVELOP MODEL V1")
+    print("=" * 80)
     if args.tickers:
         specified_tickers = [t.strip().upper() for t in args.tickers.split(",")]
         label_files = [f for f in all_label_files if f.stem in specified_tickers]

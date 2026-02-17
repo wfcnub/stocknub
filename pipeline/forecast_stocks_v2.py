@@ -79,6 +79,9 @@ def main():
             print(f"   Valid types: {', '.join(valid_label_types)}")
             return
 
+    print("=" * 80)
+    print("PIPELINE DESCRIPTION: FORECAST USING MODEL V2")
+    print("=" * 80)
     _ensure_directories_exist(label_types, windows)
 
     print("\nClearing old forecast files...")
