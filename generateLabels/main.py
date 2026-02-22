@@ -6,11 +6,10 @@ from generateLabels.helper import _generate_labels_based_on_label_type
 
 def process_single_ticker(args_tuple):
     """
-    Read technical data, generate labels, and save to label folder.
+    Read technical data, generate labels, and save to label folder
 
     Args:
-        args_tuple: Tuple containing (emiten, technical_folder, labels_folder,
-                    target_column, rolling_windows, label_types)
+        args_tuple: Tuple containing (emiten, technical_folder, labels_folder, target_column, rolling_windows, label_types)
 
     Returns:
         Tuple of (emiten, success, message, num_new_rows)
@@ -35,7 +34,7 @@ def process_single_ticker(args_tuple):
         if technical_df.empty:
             return (emiten, False, f"{emiten} - Technical data file is empty", 0)
 
-        close_variance = np.var(technical_df["Close"].values)
+        close_variance = np.var(technical_df["Close"].tail(60).values)
         if close_variance < 1e-10:
             return (
                 emiten,

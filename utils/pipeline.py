@@ -10,7 +10,7 @@ def get_label_config(label_type: str, window: int) -> tuple:
     Get configuration for a specific label type and window.
 
     Args:
-        label_type (str): Type of label ('linear_trend', 'median_gain', 'max_loss')
+        label_type (str): Type of label ('median_gain', 'median_loss')
         window (int): Forecast window in days
 
     Returns:
@@ -19,26 +19,19 @@ def get_label_config(label_type: str, window: int) -> tuple:
     Raises:
         ValueError: If label_type is not recognized
     """
-    if label_type == "linear_trend":
-        return (
-            f"Linear Trend {window}dd",
-            f"Threshold Linear Trend {window}dd",
-            "Up Trend",
-            "Down Trend",
-        )
-    elif label_type == "median_gain":
+    if label_type == "median_gain":
         return (
             f"Median Gain {window}dd",
             f"Threshold Median Gain {window}dd",
             "High Gain",
             "Low Gain",
         )
-    elif label_type == "max_loss":
+    elif label_type == "median_loss":
         return (
-            f"Max Loss {window}dd",
-            f"Threshold Max Loss {window}dd",
-            "Low Risk",
-            "High Risk",
+            f"Median Loss {window}dd",
+            f"Threshold Median Loss {window}dd",
+            "High Loss",
+            "Low Loss",
         )
     else:
         raise ValueError(f"Unknown label type: {label_type}")

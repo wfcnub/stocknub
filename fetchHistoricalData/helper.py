@@ -80,6 +80,7 @@ def _append_df_to_csv(df: pd.DataFrame, csv_file_path: str):
     else:
         df.to_csv(csv_file_path, mode="a", header=False, index=False)
 
+    return 
 
 def _get_yesterday_date():
     """

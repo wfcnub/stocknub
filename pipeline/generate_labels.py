@@ -3,7 +3,7 @@ Pipeline Description: Generate Target Labels
 
 Usage:
     # Generate labels with default settings
-    python -m pipeline.generate_labels --label_types median_gain,max_loss --windows 5,10,15 
+    python -m pipeline.generate_labels --label_types median_gain,median_loss --windows 5,10
 
     # Process specific tickers
     python -m pipeline.generate_labels --tickers BBCA,BBRI,TLKM
@@ -43,8 +43,8 @@ def main():
     parser.add_argument(
         "--label_types",
         type=str,
-        default="median_gain,max_loss",
-        help="Comma-separated label types (default: median_gain,max_loss)",
+        default="median_gain,median_loss",
+        help="Comma-separated label types (default: median_gain,median_loss)",
     )
     parser.add_argument(
         "--windows",

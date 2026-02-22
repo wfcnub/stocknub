@@ -8,6 +8,7 @@ Usage:
 
 import os
 import argparse
+import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
@@ -37,6 +38,12 @@ def main():
         help="Number of parallel workers (default: CPU count)",
     )
     parser.add_argument(
+        "--selected_emiten_to_process",
+        type=bool,
+        default=True,
+        help="",
+    )
+    parser.add_argument(
         "--tickers",
         type=str,
         default="",
@@ -53,7 +60,24 @@ def main():
         if f.endswith(".csv")
     ]
 
-    if args.tickers:
+    if args.selected_emiten_to_process:
+        selected_emiten_to_process_df = pd.read_csv('data/selected_emiten_and_industry_list.csv')
+        specified_tickers = selected_emiten_to_process_df['Kode'].values
+        historical_files = [t for t in all_historical_files if t in specified_tickers]
+
+        missing_tickers = set(specified_tickers) - set(historical_files)
+        if missing_tickers:
+            print(
+                f"Warning: The following tickers were not found: {', '.join(missing_tickers)}"
+            )
+
+        if not historical_files:
+            print(
+                f"Error: None of the specified tickers found in {args.historical_folder}"
+            )
+            return
+
+    elif args.tickers:
         specified_tickers = [t.strip().upper() for t in args.tickers.split(",")]
         historical_files = [t for t in all_historical_files if t in specified_tickers]
 

@@ -67,8 +67,6 @@ if __name__ == "__main__":
 
     process_additional_historical_data(csv_folder_path, args.processed_folder_path)
 
-
-
     print("\n" + "=" * 80)
     print("FETCH SUMMARY")
     print("=" * 80)

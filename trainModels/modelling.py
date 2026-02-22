@@ -1,64 +1,94 @@
+import os
+import glob
 import numpy as np
 import pandas as pd
-import yfinance as yf
-from curl_cffi import requests
 from skopt import BayesSearchCV
+from skopt.space import Real, Integer
 from catboost import CatBoostClassifier
-from skopt.space import Real, Categorical, Integer
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import PredefinedSplit
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 
-def _get_emiten_valuation(emiten: str) -> float:
+def _combine_multiple_emiten_in_industry(industry: str) -> pd.DataFrame:
     """
-    (Internal Helper) Get the emiten valuation utilizng yfinance
-
-    Args:
-        emiten (str): The name of the emiten that it's valuation wants be collected
-    
-    Returns:
-        float: The valuation value of the emiten
-    """
-    try:
-        emiten_data = pd.read_csv(f'data/stock/historical/{emiten}.csv').tail(10)
-        emiten_valuation = (emiten_data['Volume'] * emiten_data[['Open', 'High', 'Close', 'Low']].mean(axis=1)).mean()    
-
-        return emiten_valuation
-    
-    except:
-        return np.nan
-
-def _select_emiten_as_features(industry: str) -> pd.DataFrame:
-    """
-    (Internal Helper) Select which emiten will be used as training data based on the emiten valuation
+    (Internal Helper) Combine all emiten in an industry will be used as training data
 
     Args:
         industry (str): The name of the industry in which the emiten will be selected
 
     Returns:
-        pd.DataFrame: A pandas dataframe containing all the selected emiten
+        pd.DataFrame: A pandas dataframe containing all the emiten in an industry
     """
-    emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
-    emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
-    emiten_industry_df['Valuation'] = emiten_industry_df['Kode'].apply(lambda val: _get_emiten_valuation(val))
-
+    emiten_industry_df = pd.read_csv('data/selected_emiten_and_industry_list.csv')
+    
     selected_emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
-
-    filter_bool = selected_emiten_industry_df['Valuation'] >= selected_emiten_industry_df['Valuation'].quantile(0.8)
-    selected_emiten_industry_df = selected_emiten_industry_df[filter_bool].reset_index(drop=True)
-
+    
     selected_emiten = selected_emiten_industry_df['Kode'].values
     
     selected_emiten_df = pd.concat((pd.read_csv(f'data/stock/label/{emiten}.csv') for emiten in selected_emiten)) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
+    return selected_emiten_df
+
+def _combine_multiple_emiten() -> pd.DataFrame:
+    """
+    (Internal Helper)
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing all the selected emiten
+    """
+    all_emiten_path = glob.glob(os.path.join('data/stock/label/', "*.csv"))
+    
+    selected_emiten_df = pd.concat((pd.read_csv(emiten_path) for emiten_path in all_emiten_path[:50])) \
+                            .sort_values('Date', ascending=True) \
+                            .reset_index(drop=True)
+
 
     return selected_emiten_df
 
-def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
+def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
+    """
+    (Internal Helper) Splits time-series data into training, validation, and testing sets
+
+    This function implements a time-based split crucial for financial forecasting:
+    - Training Set: All data preceding the test set
+    - Validation Set (for Hyperparameter Tuning): The last 40 days of the training set
+    - Test Set: The last 80 days from current date
+
+    Args:
+        data (pd.DataFrame): The complete DataFrame containing features and the target
+        feature_columns (list): A list of column names to be used as features
+        target_column (str): The name of the column to be used as the target variable
+
+    Returns:
+        tuple: A tuple containing:
+               - train_feature (np.array): Features for the training set
+               - train_target (np.array): Target for the training set
+               - test_feature (np.array): Features for the test set
+               - test_target (np.array): Target for the test set
+               - predefined_split_index (PredefinedSplit): An index for cross-validation
+                 that designates the last 40 days of the training data as the validation set
+    """
+    test_length = 80
+    test_data = data.tail(test_length)
+    train_length = len(data) - test_length
+    train_data = data.head(train_length)
+    
+    train_feature = train_data[feature_columns].values
+    train_target = train_data[target_column].values
+    test_feature = test_data[feature_columns].values
+    test_target = test_data[target_column].values
+    
+    val_length = 40
+    split_index = np.full(len(train_feature), -1, dtype=int)
+    split_index[-val_length:] = 0    
+    predefined_split_index = PredefinedSplit(test_fold=split_index)
+    
+    return train_feature, train_target, test_feature, test_target, predefined_split_index
+
+def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
     """
     (Internal Helper) Splits time-series data into training, validation, and testing sets
 
@@ -109,7 +139,7 @@ def _split_data_to_train_val_test(data: pd.DataFrame, feature_columns: list, tar
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
 
-def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.array, train_target: np.array, predefined_split_index: PredefinedSplit) -> any:
+def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.array, train_target: np.array, predefined_split_index: PredefinedSplit, search_spaces: dict) -> any:
     """
     (Internal Helper) Initializes, fits, and tunes a CatBoost Classifier using Bayesian Optimization
 
@@ -122,6 +152,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
         train_feature (np.array): The feature set for training
         train_target (np.array): The target variable for training
         predefined_split_index (PredefinedSplit): The cross-validation strategy
+        search_spaces (dict): A dictionary containing hyperparameters to be tuned
 
     Returns:
         CatBoostClassifier: The best-performing model found by the search
@@ -132,23 +163,12 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
         logging_level='Silent'
     )
 
-    search_spaces = {
-        'depth': Integer(1, 5),
-        'learning_rate': Real(0.01, 0.1, prior='log-uniform'),
-        'iterations': Integer(1000, 1250),
-        'l2_leaf_reg': Real(0.5, 3.0)
-    }
-    
-    scoring_method = 'roc_auc'
-    if len(np.unique(train_target[-40:])) == 1:
-        scoring_method = 'accuracy'
-    
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=30,
+        n_iter=3,
         cv=predefined_split_index,
-        scoring=scoring_method,
+        scoring='roc_auc',
         n_jobs=-1,
         verbose=0
     )
@@ -157,37 +177,6 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     best_model = hyper_tune_search.best_estimator_
 
     return best_model
-
-def _measure_model_performance(model, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
-    """
-    Measures and reports the performance of the model on a given dataset
-
-    Args:
-        model: The trained classifier model
-        feature (np.array): The feature set (e.g., train_feature or test_feature)
-        target (np.array): The corresponding true target labels
-        positive_label (str): The positive class of the predicted label
-        negative_label (str): The negative class of the predicted label
-
-    Returns:
-        dict: A dictionary containing all calculated performance metrics.
-    """
-    target_pred = model.predict(feature)
-    target_pred_proba = model.predict_proba(feature)
-
-    accuracy, prec_positive, prec_negative, rec_positive, rec_negative = _calculate_classification_metrics(target, target_pred, positive_label, negative_label)
-    gini = _calculate_gini(model, target, target_pred_proba, positive_label)
-
-    all_metrics = {
-        'Accuracy': [accuracy],
-        f'Precision {positive_label}': [prec_positive],
-        f'Precision {negative_label}': [prec_negative],
-        f'Recall {positive_label}': [rec_positive],
-        f'Recall {negative_label}': [rec_negative],
-        'Gini': [gini]
-    }
-    
-    return all_metrics
 
 def _calculate_classification_metrics(target_true: np.array, target_pred: np.array, positive_label: str, negative_label: str) -> (np.array, np.array, np.array, np.array):
     """
@@ -239,6 +228,37 @@ def _calculate_gini(model: any, target_true: np.array, target_pred_proba: np.arr
 
     return gini
 
+def _measure_model_performance(model: any, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
+    """
+    Measures and reports the performance of the model on a given dataset
+
+    Args:
+        model: The trained classifier model
+        feature (np.array): The feature set (e.g., train_feature or test_feature)
+        target (np.array): The corresponding true target labels
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+
+    Returns:
+        dict: A dictionary containing all calculated performance metrics.
+    """
+    target_pred = model.predict(feature)
+    target_pred_proba = model.predict_proba(feature)
+
+    accuracy, prec_positive, prec_negative, rec_positive, rec_negative = _calculate_classification_metrics(target, target_pred, positive_label, negative_label)
+    gini = _calculate_gini(model, target, target_pred_proba, positive_label)
+
+    all_metrics = {
+        'Accuracy': [accuracy],
+        f'Precision {positive_label}': [prec_positive],
+        f'Precision {negative_label}': [prec_negative],
+        f'Recall {positive_label}': [rec_positive],
+        f'Recall {negative_label}': [rec_negative],
+        'Gini': [gini]
+    }
+    
+    return all_metrics
+
 def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, model: any, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given emiten
@@ -256,19 +276,20 @@ def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, mod
     """
     feature_columns = get_all_technical_indicators()
 
-    train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test(
+    train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_multiple(
         prepared_data.dropna(subset=[target_column]), feature_columns, target_column
     )
 
     train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
     test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
 
+    
     train_metrics_df = pd.DataFrame(train_metrics)
     test_metrics_df = pd.DataFrame(test_metrics)
     
     return train_metrics_df, test_metrics_df
 
-def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label:str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given industry
 
@@ -284,9 +305,51 @@ def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: 
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    emiten_industry_df = pd.read_csv('data/emiten_and_industry_list.csv')
+    emiten_industry_df = pd.read_csv('data/selected_emiten_and_industry_list.csv')
     all_emiten = emiten_industry_df.loc[emiten_industry_df['Industri'] == industry, 'Kode'].values
 
+    all_emiten_train_metrics_df = pd.DataFrame()
+    all_emiten_test_metrics_df = pd.DataFrame()
+
+    for emiten in all_emiten:
+        try:
+            prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
+            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, target_column, positive_label, negative_label)
+
+            emiten_train_metrics_df['Kode'] = emiten
+            emiten_test_metrics_df['Kode'] = emiten
+
+            emiten_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+            emiten_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+
+            all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
+            all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
+        except Exception as e:
+            print(e)
+            pass
+
+    all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
+    all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
+
+    return all_emiten_train_metrics, all_emiten_test_metrics
+
+def _measure_model_performance_for_all_emiten(model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
+    """
+    (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation
+
+    Args:s
+        model (any): The trained classifier model
+        feature (np.array): The feature set (e.g., train_feature or test_feature)
+        target (np.array): The corresponding true target labels
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+        threshold_col (str): The name of the columns used as a threshold during the creation of the label
+
+    Returns:
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
+    """
+    all_emiten = [val.split('/')[-1].split('.')[0] for val in glob.glob(os.path.join('data/stock/technical/', "*.csv"))]
+    
     all_emiten_train_metrics_df = pd.DataFrame()
     all_emiten_test_metrics_df = pd.DataFrame()
 
@@ -303,42 +366,11 @@ def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: 
     
             all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
             all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
-        except:
+        except Exception as e:
+            print(e)
             pass
 
     all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
     all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
 
     return all_emiten_train_metrics, all_emiten_test_metrics
-        
-
-def develop_model(industry: str, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (any, dict, dict):
-    """
-    Main orchestration function for the entire model development process
-
-    This function loads the feature names, splits the data, tunes the model,
-    and evaluates its final performance
-
-    Args:
-        industry (str): The name of the industry being worked on
-        target_column (str): The name of the target variable column
-        positive_label (str): The positive class of the predicted label
-        negative_label (str): The negative class of the predicted label
-        
-    Returns:
-        tuple: A tuple containing:
-               - model (CatBoostClassifier): The final, trained model
-               - train_metrics (dict): Performance metrics on the training set
-               - test_metrics (dict): Performance metrics on the testing set
-    """
-    feature_columns = get_all_technical_indicators()
-
-    prepared_data = _select_emiten_as_features(industry)
-    
-    train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test(prepared_data.dropna(subset=[target_column]), feature_columns, target_column)
-
-    model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split)
-
-    train_metrics, test_metrics = _measure_model_performance_for_all_emiten_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
-    
-    return model, train_metrics, test_metrics
