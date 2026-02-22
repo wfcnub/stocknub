@@ -92,7 +92,7 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
     search_spaces = {
         'depth': Integer(1, 5),
         'learning_rate': Real(0.01, 0.1, prior='log-uniform'),
-        'iterations': Integer(1000, 1250),
+        'iterations': Integer(750, 1000),
         'l2_leaf_reg': Real(0.5, 3.0)
     }
 

@@ -166,7 +166,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=3,
+        n_iter=25,
         cv=predefined_split_index,
         scoring='roc_auc',
         n_jobs=-1,
