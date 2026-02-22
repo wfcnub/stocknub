@@ -186,8 +186,6 @@ def process_single_model(args_tuple):
 
                     metrics_list.append((label_type, window, metrics_df))
 
-                    print('finished combining metrics')
-
                 except Exception as e:
                     failed_process.append((identifier, label_type, window, str(e)))
 

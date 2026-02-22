@@ -3,15 +3,9 @@ import argparse
 
 from selectEmitenToProcess.main import select_emiten_to_process
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Select Emiten to Process"
-    )
-    parser.add_argument(
-        "--start_date",
-        type=str,
-        default="",
-        help="Start date in YYYY-MM-DD format (default: earliest available)",
     )
     parser.add_argument(
         "--perc_emiten_in_industry",

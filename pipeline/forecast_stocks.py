@@ -3,13 +3,7 @@ Pipeline Description: Forecast Stock Performance using a Certain Version of The 
 
 Usage:
     # Forecast with default settings (all models with min_test_gini >= 0.3)
-    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain,max_loss --min_test_gini 0.3
-
-    # Forecast without Gini filter (use all available models)
-    python -m pipeline.forecast_stocks --windows 5,10,15 --label_types median_gain 
-
-    # Forecast specific tickers only
-    python -m pipeline.forecast_stocks --tickers BBCA,BBRI,TLKM --windows 5,10,15 --label_types median_gain
+    python -m pipeline.forecast_stocks --windows 5,10 --label_types median_gain,median_loss --min_test_gini 0.3
 """
 
 import argparse
@@ -165,9 +159,11 @@ def main():
     print(f"Failed: {failed}/{total_tasks}")
 
     if successful > 0:
-        print(
-            f"\nForecasts saved to: data/stock/forecast/model_v{args.model_version}/{label_type}/{window}dd"
-        )
+        for label_type in label_types:
+            for window in windows:
+                print(
+                    f"Forecasts saved to: data/stock/forecast/model_v{args.model_version}/{label_type}/{window}dd"
+                )
 
     print("\n" + "=" * 80)
 
