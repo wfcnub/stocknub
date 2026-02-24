@@ -200,7 +200,7 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
     model = LogisticRegression(
         solver='saga',
         penalty='elasticnet',
-        max_iter=100, 
+        max_iter=1000, 
         random_state=42
     )
 
@@ -216,7 +216,7 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=2,
+        n_iter=25,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=-1,
