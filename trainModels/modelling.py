@@ -5,10 +5,12 @@ import pandas as pd
 from skopt import BayesSearchCV
 from skopt.space import Real, Integer
 from catboost import CatBoostClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import PredefinedSplit
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
+from combineForecasts.helper import _get_combined_forecasts_feature_columns
 
 def _combine_multiple_emiten_in_industry(industry: str) -> pd.DataFrame:
     """
@@ -32,16 +34,16 @@ def _combine_multiple_emiten_in_industry(industry: str) -> pd.DataFrame:
 
     return selected_emiten_df
 
-def _combine_multiple_emiten() -> pd.DataFrame:
+def _combine_multiple_emiten(csv_folder_path: str) -> pd.DataFrame:
     """
     (Internal Helper)
 
     Returns:
         pd.DataFrame: A pandas dataframe containing all the selected emiten
     """
-    all_emiten_path = glob.glob(os.path.join('data/stock/label/', "*.csv"))
+    all_emiten_path = glob.glob(os.path.join(csv_folder_path, "*.csv"))
     
-    selected_emiten_df = pd.concat((pd.read_csv(emiten_path) for emiten_path in all_emiten_path[:50])) \
+    selected_emiten_df = pd.concat((pd.read_csv(emiten_path) for emiten_path in all_emiten_path)) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
@@ -166,9 +168,57 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=25,
+        n_iter=2,
         cv=predefined_split_index,
         scoring='roc_auc',
+        n_jobs=-1,
+        verbose=0
+    )
+
+    hyper_tune_search.fit(train_feature, train_target)
+    best_model = hyper_tune_search.best_estimator_
+
+    return best_model
+
+def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature: np.array, train_target: np.array, predefined_split_index: PredefinedSplit) -> any:
+    """
+    (Internal Helper) Initializes, fits, and tunes a Logistic Regression model using Bayesian Optimization.
+
+    This function uses BayesSearchCV to efficiently search for the optimal
+    hyperparameters (C and l1_ratio) for a Logistic Regression model.
+    It validates performance using a predefined time-series split and fits
+    the best-found model on the entire training dataset.
+
+    Args:
+        train_feature (np.array): The feature set for training
+        train_target (np.array): The target variable for training
+        predefined_split_index (PredefinedSplit): The cross-validation strategy
+
+    Returns:
+        LogisticRegression: The best-performing model found by the search
+    """
+    model = LogisticRegression(
+        solver='saga',
+        penalty='elasticnet',
+        max_iter=100, 
+        random_state=42
+    )
+
+    search_spaces = {
+        'C': Real(0.01, 10.0, prior='log-uniform'), 
+        'l1_ratio': Real(0.0, 1.0)
+    }
+    
+    scoring_method = 'roc_auc'
+    if len(np.unique(train_target[-40:])) == 1:
+        scoring_method = 'accuracy'
+    
+    hyper_tune_search = BayesSearchCV(
+        estimator=model,
+        search_spaces=search_spaces,
+        n_iter=2,
+        cv=predefined_split_index,
+        scoring=scoring_method,
         n_jobs=-1,
         verbose=0
     )
@@ -259,7 +309,7 @@ def _measure_model_performance(model: any, feature: np.array, target: np.array, 
     
     return all_metrics
 
-def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, model: any, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, model: any, feature_columns: str, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given emiten
 
@@ -274,8 +324,6 @@ def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, mod
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    feature_columns = get_all_technical_indicators()
-
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_multiple(
         prepared_data.dropna(subset=[target_column]), feature_columns, target_column
     )
@@ -311,10 +359,12 @@ def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: 
     all_emiten_train_metrics_df = pd.DataFrame()
     all_emiten_test_metrics_df = pd.DataFrame()
 
+    feature_columns = get_all_technical_indicators()
+
     for emiten in all_emiten:
         try:
             prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
-            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, target_column, positive_label, negative_label)
+            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
 
             emiten_train_metrics_df['Kode'] = emiten
             emiten_test_metrics_df['Kode'] = emiten
@@ -353,16 +403,69 @@ def _measure_model_performance_for_all_emiten(model: any, target_column: str, po
     all_emiten_train_metrics_df = pd.DataFrame()
     all_emiten_test_metrics_df = pd.DataFrame()
 
+    feature_columns = get_all_technical_indicators()
+
     for emiten in all_emiten:
         try:
             prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
-            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, target_column, positive_label, negative_label)
+            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
     
             emiten_train_metrics_df['Kode'] = emiten
             emiten_test_metrics_df['Kode'] = emiten
 
             emiten_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
             emiten_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+    
+            all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
+            all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
+        except Exception as e:
+            print(e)
+            pass
+
+    all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
+    all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
+
+    return all_emiten_train_metrics, all_emiten_test_metrics
+
+def _measure_model_performance_on_forecast_features_for_all_emiten(model: any, positive_label: str, negative_label: str, label_types: list, rolling_windows: list) -> (pd.DataFrame, pd.DataFrame):
+    """
+    (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation, with the forecasts as the features
+
+    Args:s
+        model (any): The trained classifier model
+        feature (np.array): The feature set (e.g., train_feature or test_feature)
+        target (np.array): The corresponding true target labels
+        positive_label (str): The positive class of the predicted label
+        negative_label (str): The negative class of the predicted label
+        threshold_col (str): The name of the columns used as a threshold during the creation of the label
+
+    Returns:
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
+    """
+    all_emiten = [val.split('/')[-1].split('.')[0] for val in glob.glob(os.path.join('data/stock/combined_forecasts/', "*.csv"))]
+    
+    all_emiten_train_metrics_df = pd.DataFrame()
+    all_emiten_test_metrics_df = pd.DataFrame()
+
+    for emiten in all_emiten:
+        try:
+            prepared_data = pd.read_csv(f'data/stock/combined_forecasts/{emiten}.csv')
+            
+            feature_columns = _get_combined_forecasts_feature_columns()
+            target_column = f'Median Gain {np.max(rolling_windows)}dd'
+            threshold_column = 'Threshold Median Gain 10dd'
+            positive_label = 'High Gain'
+            negative_label = 'Low Gain'
+            
+            cleaned_data = prepared_data.dropna(subset=[target_column])
+
+            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(cleaned_data, model, feature_columns, target_column, positive_label, negative_label)
+    
+            emiten_train_metrics_df['Kode'] = emiten
+            emiten_test_metrics_df['Kode'] = emiten
+
+            emiten_train_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
+            emiten_test_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
     
             all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
             all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))

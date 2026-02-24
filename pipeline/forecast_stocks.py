@@ -18,6 +18,7 @@ simplefilter(action="ignore")
 from forecastStocks.main import process_single_ticker
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 from forecastStocks.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_emiten_list, _save_forecast
+from combineForecasts.helper import _get_combined_forecasts_feature_columns
 
 
 def main():
@@ -88,8 +89,12 @@ def main():
     print("\nClearing old forecast files...")
     _clear_forecast_files(args.model_version, label_types, windows)
 
-    feature_columns = get_all_technical_indicators()
-    print(f"Using {len(feature_columns)} technical indicators as features")
+    if args.model_version in [1, 2, 3]:
+        feature_columns = get_all_technical_indicators()
+        print(f"Using {len(feature_columns)} technical indicators as features")
+    elif args.model_version == 4:
+        feature_columns = _get_combined_forecasts_feature_columns()
+        print(f"Using {len(feature_columns)} forecasts as features")
 
     print("\nFinding emiten with models meeting criteria...")
     if args.min_test_gini is not None:
@@ -112,7 +117,7 @@ def main():
         emiten_industry_df = emiten_industry_df[emiten_industry_df['Kode'].isin(emiten_list)]
         emiten_list = emiten_industry_df['Kode'].values.tolist()
         model_identifier_list = emiten_industry_df['Industri'].values.tolist()
-    elif args.model_version == 3:
+    elif args.model_version in [3, 4]:
         model_identifier_list = ['IHSG' for _ in range(len(emiten_list))]
 
     forecast_tasks = []

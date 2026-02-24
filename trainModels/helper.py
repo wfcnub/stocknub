@@ -71,7 +71,7 @@ def _combine_metrics(emiten: str, model_version: int, train_metrics: pd.DataFram
         threshold_value = pd.read_csv(f'data/stock/label/{emiten}.csv')[threshold_col].iloc[0]
         result["Threshold"] = threshold_value
 
-    elif model_version in [2, 3]:
+    elif model_version in [2, 3, 4]:
         kode_column = [col for col in result.columns if 'Kode' in col]
         threshold_column = [col for col in result.columns if 'Threshold' in col]
 
