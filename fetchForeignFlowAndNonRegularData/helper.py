@@ -1,5 +1,4 @@
 import os
-import glob
 import time
 import calendar
 import pandas as pd
@@ -12,55 +11,40 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 
-def _get_latest_date(download_dir: str) -> str:
+def _get_all_active_market_date(ohlcv_data_dir: str = 'data/stock/OHLCV') -> list:
     """
-    (Internal Helper) Get all file names, named as a date, from a specified directory, then gets the latest date available
+    (Internal Helper) Get all unique dates from data collected from yfinance, serving as the active market dates
 
     Args:
-        donwload_dir (str): The directory to be looked in to
-    
-    Returns:
-        str: The latest date found on the specified directory
-    """
-    files = glob.glob(os.path.join(download_dir, "*.csv"))
-    latest_file = max(files)
-    latest_date = datetime.strptime(os.path.basename(latest_file).split('.')[0], '%Y%m%d').strftime('%Y-%m-%d')
-
-    return latest_date
-
-def _get_all_active_market_date(historical_data_dir: str = 'data/stock/historical') -> list:
-    """
-    (Internal Helper) Get all unique date from data collected from yfinance. This Dates would serve as an active market date
-
-    Args:
-        historical_data_dir (str): Directory where the historical data gathered from yfinance is stored
+        ohlcv_data_dir (str): Directory where the OHLCV data from yfinance is stored
     
     Returns:
         list: A list containing all active market dates
     """
-    all_historical_data_path = glob.glob(os.path.join(historical_data_dir, "*.csv"))
+    all_ohlcv_data_path = list(Path(ohlcv_data_dir).rglob("*.csv"))
     
-    all_dates = []
-    for historical_data_path in all_historical_data_path:
-        acquired_date = pd.read_csv(historical_data_path, usecols=['Date'])['Date'].unique().tolist()
-        all_dates = list(set(acquired_date + all_dates))
+    all_dates = set()
+    for ohlcv_data_path in all_ohlcv_data_path:
+        acquired_dates = set(pd.read_csv(ohlcv_data_path, usecols=['Date'])['Date'].unique().tolist())
+        all_dates.update(acquired_dates)
 
+    all_dates = list(acquired_dates)
     all_dates.sort()
         
     return all_dates
 
-def _get_all_weekstart_to_backfill(additional_historical_data_dir: str, active_market_dates: str) -> list:
+def _get_all_active_market_date_to_backfill(raw_additional_data_dir: str, active_market_dates: str) -> list:
     """
-    (Internal Helper) Get all market dates that have not yet get collected
+    (Internal Helper) Get all active market dates that have not yet get collected
 
     Args:
-        additional_historical_data_dir (str): The directory where the additional historical data is stored
+        raw_additional_data_dir (str): The directory where the additional data is stored
         active_market_dates (list): A list containing all active market dates
     
     Return:
         list: A list containing all active market dates to be backfilled
     """
-    fetched_active_market_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in Path(additional_historical_data_dir).iterdir() if f.is_file() and f.suffix == '.csv'])
+    fetched_active_market_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in Path(raw_additional_data_dir).iterdir() if f.is_file() and f.suffix == '.csv'])
 
     backfill_active_market_dates = list(set(active_market_dates) - fetched_active_market_dates)
 
@@ -117,8 +101,9 @@ def _initialize_driver(download_dir: str) -> webdriver.chrome.webdriver.WebDrive
         webdriver.chrome.webdriver.WebDriver: The driver for accessing the web for scraping purposes
     """
     chrome_options = webdriver.ChromeOptions()
+
     prefs = {
-        "download.default_directory": download_dir,
+        "download.default_directory": str((Path.cwd() / Path(download_dir)).resolve()),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "safebrowsing.enabled": True
