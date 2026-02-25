@@ -77,18 +77,18 @@ if __name__ == "__main__":
     print("=" * 80)
 
     success_count = 0
-    failed_emitens = []
+    failed_tickers = []
 
-    for emiten, success, message in results:
+    for ticker, success, message in results:
         if success:
             success_count += 1
         else:
-            failed_emitens.append((emiten, message))
+            failed_tickers.append((ticker, message))
 
-    if failed_emitens:
+    if failed_tickers:
         print("Failed fetch:")
-        for emiten, message in failed_emitens:
-            print(f"  - {message}")
+        for ticker, message in failed_tickers:
+            print(f"{ticker} - {message}")
     else:
         print("All tickers fetched successfully!")
 
