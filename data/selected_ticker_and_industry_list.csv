@@ -1,28 +1,28 @@
-Kode,Industri
+Ticker,Industry
 ASSA,Transportation & Logistic
-SDMU,Transportation & Logistic
+IMJS,Transportation & Logistic
 SMDR,Transportation & Logistic
-WEHA,Transportation & Logistic
 HATM,Transportation & Logistic
 LAJU,Transportation & Logistic
+KLAS,Transportation & Logistic
 ANTM,Basic Materials
 BRMS,Basic Materials
 BRPT,Basic Materials
 INCO,Basic Materials
 INKP,Basic Materials
 MDKA,Basic Materials
-SMGR,Basic Materials
+PSAB,Basic Materials
 TINS,Basic Materials
 TPIA,Basic Materials
 ARCI,Basic Materials
-PACK,Basic Materials
+NICL,Basic Materials
 AMMN,Basic Materials
 EMAS,Basic Materials
 NCKL,Basic Materials
 MBMA,Basic Materials
-APLN,Properties & Real Estate
 BKSL,Properties & Real Estate
 CTRA,Properties & Real Estate
+ELTY,Properties & Real Estate
 KIJA,Properties & Real Estate
 LPKR,Properties & Real Estate
 PWON,Properties & Real Estate
@@ -30,11 +30,12 @@ PANI,Properties & Real Estate
 REAL,Properties & Real Estate
 TRIN,Properties & Real Estate
 TRUE,Properties & Real Estate
-KOCI,Properties & Real Estate
 CBDK,Properties & Real Estate
+DADA,Properties & Real Estate
 AHAP,Financials
 ARTO,Financials
 BBCA,Financials
+BBKP,Financials
 BBNI,Financials
 BBRI,Financials
 BBTN,Financials
@@ -46,21 +47,20 @@ PNBN,Financials
 PNLF,Financials
 SRTG,Financials
 BRIS,Financials
-BTPS,Financials
 COIN,Financials
 EXCL,Infrastructures
 ISAT,Infrastructures
+SSIA,Infrastructures
 TLKM,Infrastructures
 OASA,Infrastructures
-PPRE,Infrastructures
-PGEO,Infrastructures
+KETR,Infrastructures
 INET,Infrastructures
 BREN,Infrastructures
 CDIA,Infrastructures
 ACES,Consumer Cyclicals
 BUVA,Consumer Cyclicals
 ERAA,Consumer Cyclicals
-ESTI,Consumer Cyclicals
+FAST,Consumer Cyclicals
 INDS,Consumer Cyclicals
 KPIG,Consumer Cyclicals
 MAPI,Consumer Cyclicals
@@ -74,47 +74,47 @@ MAPA,Consumer Cyclicals
 FILM,Consumer Cyclicals
 YELO,Consumer Cyclicals
 ZATA,Consumer Cyclicals
+FUTR,Consumer Cyclicals
 VKTR,Consumer Cyclicals
-ERAL,Consumer Cyclicals
-BAIK,Consumer Cyclicals
-PART,Consumer Cyclicals
+MEJA,Consumer Cyclicals
+GOLF,Consumer Cyclicals
 DOOH,Consumer Cyclicals
 AMRT,Consumer Non-Cyclicals
 BWPT,Consumer Non-Cyclicals
 CPIN,Consumer Non-Cyclicals
+CPRO,Consumer Non-Cyclicals
 DSNG,Consumer Non-Cyclicals
 GGRM,Consumer Non-Cyclicals
 HMSP,Consumer Non-Cyclicals
 ICBP,Consumer Non-Cyclicals
 INDF,Consumer Non-Cyclicals
 JPFA,Consumer Non-Cyclicals
-LAPD,Consumer Non-Cyclicals
-LSIP,Consumer Non-Cyclicals
+MLPL,Consumer Non-Cyclicals
 MYOR,Consumer Non-Cyclicals
 SGRO,Consumer Non-Cyclicals
 UNVR,Consumer Non-Cyclicals
-WIIM,Consumer Non-Cyclicals
 TAPG,Consumer Non-Cyclicals
-CMRY,Consumer Non-Cyclicals
 ASHA,Consumer Non-Cyclicals
+JARR,Consumer Non-Cyclicals
 NSSS,Consumer Non-Cyclicals
+AYAM,Consumer Non-Cyclicals
 ADRO,Energy
 BIPI,Energy
 BULL,Energy
 BUMI,Energy
 DEWA,Energy
+DSSA,Energy
 ENRG,Energy
 MEDC,Energy
 PTRO,Energy
 RAJA,Energy
-RMKE,Energy
+ADMR,Energy
 CUAN,Energy
-AADI,Energy
 RATU,Energy
 EMTK,Technology
-KIOS,Technology
 WIFI,Technology
 BUKA,Technology
+WIRG,Technology
 GOTO,Technology
 IRSX,Technology
 CYBR,Technology
@@ -123,28 +123,25 @@ MIKA,Healthcare
 PYFA,Healthcare
 SIDO,Healthcare
 HEAL,Healthcare
-DKHH,Healthcare
+HALO,Healthcare
 ASII,Industrials
 BNBR,Industrials
 IMPC,Industrials
 UNTR,Industrials
 MARK,Industrials
-BLUE,Industrials
 SINI,Industrials
+PADA,Industrials
 SMIL,Industrials
 PIPA,Industrials
-ADMR,Energy
-INDY,Energy
-DSSA,Energy
-PGAS,Energy
-ELSA,Energy
-HUMI,Energy
-RMKO,Energy
 GTSI,Energy
-PTBA,Energy
+INDY,Energy
+HUMI,Energy
+RMKE,Energy
+AADI,Energy
+PGAS,Energy
 TCPI,Energy
-LEAD,Energy
-NICL,Basic Materials
-SOCI,Energy
-PSAB,Basic Materials
+SMGR,Basic Materials
+TOBA,Energy
+RMKO,Energy
+PGEO,Infrastructures
 HRUM,Energy
