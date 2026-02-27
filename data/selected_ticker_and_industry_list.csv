@@ -20,6 +20,7 @@ AMMN,Basic Materials
 EMAS,Basic Materials
 NCKL,Basic Materials
 MBMA,Basic Materials
+APLN,Properties & Real Estate
 BKSL,Properties & Real Estate
 CTRA,Properties & Real Estate
 ELTY,Properties & Real Estate
@@ -31,7 +32,6 @@ REAL,Properties & Real Estate
 TRIN,Properties & Real Estate
 TRUE,Properties & Real Estate
 CBDK,Properties & Real Estate
-DADA,Properties & Real Estate
 AHAP,Financials
 ARTO,Financials
 BBCA,Financials
@@ -76,8 +76,8 @@ YELO,Consumer Cyclicals
 ZATA,Consumer Cyclicals
 FUTR,Consumer Cyclicals
 VKTR,Consumer Cyclicals
-MEJA,Consumer Cyclicals
 GOLF,Consumer Cyclicals
+KAQI,Consumer Cyclicals
 DOOH,Consumer Cyclicals
 AMRT,Consumer Non-Cyclicals
 BWPT,Consumer Non-Cyclicals
@@ -91,9 +91,9 @@ INDF,Consumer Non-Cyclicals
 JPFA,Consumer Non-Cyclicals
 MLPL,Consumer Non-Cyclicals
 MYOR,Consumer Non-Cyclicals
-SGRO,Consumer Non-Cyclicals
 UNVR,Consumer Non-Cyclicals
 TAPG,Consumer Non-Cyclicals
+CMRY,Consumer Non-Cyclicals
 ASHA,Consumer Non-Cyclicals
 JARR,Consumer Non-Cyclicals
 NSSS,Consumer Non-Cyclicals
@@ -123,7 +123,7 @@ MIKA,Healthcare
 PYFA,Healthcare
 SIDO,Healthcare
 HEAL,Healthcare
-HALO,Healthcare
+MEDS,Healthcare
 ASII,Industrials
 BNBR,Industrials
 IMPC,Industrials
@@ -133,15 +133,16 @@ SINI,Industrials
 PADA,Industrials
 SMIL,Industrials
 PIPA,Industrials
-GTSI,Energy
 INDY,Energy
 HUMI,Energy
+GTSI,Energy
 RMKE,Energy
 AADI,Energy
 PGAS,Energy
 TCPI,Energy
-SMGR,Basic Materials
 TOBA,Energy
+SMGR,Basic Materials
+HRUM,Energy
 RMKO,Energy
 PGEO,Infrastructures
-HRUM,Energy
+COAL,Energy

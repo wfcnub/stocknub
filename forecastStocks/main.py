@@ -6,15 +6,15 @@ from utils.pipeline import get_label_config
 
 def process_single_ticker(args_tuple):
     """
-    Forecast an emiten based on the label_type and window combination using the developed model.
+    Forecast an ticker based on the label_type and window combination using the developed model.
 
     Args:
-        args_tuple: Tuple containing (emiten, label_type, window, feature_columns)
+        args_tuple: Tuple containing (ticker, label_type, window, feature_columns)
 
     Returns:
-        Tuple of (emiten, label_type, window, success, message, forecast_data_dict)
+        Tuple of (ticker, label_type, window, success, message, forecast_data_dict)
     """
-    model_version, technical_folder, model_identifier, emiten, label_type, window, feature_columns = args_tuple
+    model_version, csv_folder_path, model_identifier, ticker, label_type, window, feature_columns = args_tuple
 
     try:
         target_col, threshold_col, positive_label, negative_label = get_label_config(
@@ -22,7 +22,7 @@ def process_single_ticker(args_tuple):
         )
 
         camel_label = to_camel(label_type)
-        model_path = f"data/stock/model_v{model_version}/{camel_label}/{model_identifier}-{window}dd.pkl"
+        model_path = Path(f"data/stock/model_v{model_version}/{camel_label}/{model_identifier}-{window}dd.pkl")
 
         if not Path(model_path).exists():
             return (
@@ -38,31 +38,31 @@ def process_single_ticker(args_tuple):
             model = pickle.load(f)
 
         try:
-            technical_path = f"{technical_folder}/{emiten}.csv"
-            if not Path(technical_path).exists():
+            csv_file_path = Path(f"{csv_folder_path}/{ticker}.csv")
+            if not Path(csv_file_path).exists():
                 return (
-                    emiten,
+                    ticker,
                     label_type,
                     window,
                     False,
-                    f"Technical data not found: {technical_path}",
+                    f"CSV file data not found: {csv_file_path}",
                     None,
                 )
 
-            forecasting_data = pd.read_csv(technical_path)
-            if forecasting_data.empty:
+            csv_data = pd.read_csv(csv_file_path)
+            if csv_data.empty:
                 return (
-                    emiten,
+                    ticker,
                     label_type,
                     window,
                     False,
-                    "Technical data is empty",
+                    "CSV file data is empty",
                     None,
                 )
 
         except Exception as e:
             return (
-                emiten,
+                ticker,
                 label_type,
                 window,
                 False,
@@ -70,12 +70,10 @@ def process_single_ticker(args_tuple):
                 None,
             )
 
-        missing_features = [
-            col for col in feature_columns if col not in forecasting_data.columns
-        ]
+        missing_features = [col for col in feature_columns if col not in csv_data.columns]
         if missing_features:
             return (
-                emiten,
+                ticker,
                 label_type,
                 window,
                 False,
@@ -86,24 +84,23 @@ def process_single_ticker(args_tuple):
         forecast_column_name = f"Forecast {positive_label} {window}dd"
         positive_label_index = list(model.classes_).index(positive_label)
 
-        forecast_proba = model.predict_proba(
-            forecasting_data[feature_columns].values
-        )[:, positive_label_index]
+        forecast_proba = model.predict_proba(csv_data[feature_columns].values) \
+                                [:, positive_label_index]
 
-        forecasting_data[forecast_column_name] = forecast_proba
+        csv_data[forecast_column_name] = forecast_proba
 
         return (
-            emiten,
+            ticker,
             label_type,
             window,
             True,
             "Forecast Succeeded",
-            forecasting_data,
+            csv_data,
         )
 
     except Exception as e:
         return (
-            emiten, 
+            ticker, 
             label_type, 
             window, 
             False, 

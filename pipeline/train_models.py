@@ -1,11 +1,3 @@
-"""
-Pipeline Description: Train Model for Stock Prediction
-
-Usage:
-    # Develop models with default settings
-    python -m pipeline.train_models
-"""
-
 import argparse
 import pandas as pd
 from tqdm import tqdm
@@ -18,8 +10,6 @@ simplefilter(action="ignore")
 
 from trainModels.main import process_single_model
 from trainModels.helper import _ensure_directories_exist
-from prepareTechnicalIndicators.helper import get_all_technical_indicators
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -61,13 +51,6 @@ def main():
         help="The version of model to develop",
     )
 
-    parser.add_argument(
-        "--identifiers",
-        type=str,
-        default="",
-        help="A selected identifiers for developing the model, can be an emiten or an industry",
-    )
-
     args = parser.parse_args()
 
     label_types = [lt.strip() for lt in args.label_types.split(",")]
@@ -84,37 +67,27 @@ def main():
     print("=" * 80)
     print(f"PIPELINE DESCRIPTION: DEVELOP MODEL V{args.model_version}")
     print("=" * 80)
-    if args.identifiers:
-        specified_identifiers = [t.strip() for t in args.identifiers.split(",")]
 
-    else:
-        if args.model_version == 1:
-            specified_identifiers = pd.read_csv('data/selected_emiten_and_industry_list.csv') \
-                                        ['Kode'] \
-                                        .unique() \
-                                        .tolist()
-        elif args.model_version == 2:
-            specified_identifiers = pd.read_csv('data/selected_emiten_and_industry_list.csv') \
-                                        ['Industri'] \
-                                        .unique() \
-                                        .tolist()
-        elif args.model_version == 3:
-            specified_identifiers = ['IHSG']
+    if args.model_version == 1:
+        specified_identifiers = pd.read_csv('data/selected_ticker_and_industry_list.csv') \
+                                    ['Ticker'] \
+                                    .unique() \
+                                    .tolist()
+    elif args.model_version == 2:
+        specified_identifiers = pd.read_csv('data/selected_ticker_and_industry_list.csv') \
+                                    ['Industry'] \
+                                    .unique() \
+                                    .tolist()
+    elif args.model_version in [3, 4]:
+        specified_identifiers = ['IHSG']
     
-        
     print(f"Found {len(specified_identifiers)} identifier to process")
-    if args.identifiers:
-        print(
-            f"Processing specific identifiers: {', '.join(specified_identifiers)}"
-        )
     print(f"Label types: {', '.join(label_types)}")
     print(f"Rolling windows: {', '.join(map(str, rolling_windows))} days")
     print(f"Workers: {args.workers}\n")
 
-    feature_columns = get_all_technical_indicators()
-
     args_list = [
-        (identifier, label_types, rolling_windows, feature_columns, args.model_version)
+        (identifier, label_types, rolling_windows, args.model_version)
         for identifier in specified_identifiers
     ]
 
@@ -154,8 +127,8 @@ def main():
 
     if all_failed_processes:
         print(f"\nFailed trainings ({len(all_failed_processes)}):")
-        for emiten, label_type, window, error in all_failed_processes:
-            print(f"  - {emiten} ({label_type} {window}dd): {error}")
+        for ticker, label_type, window, error in all_failed_processes:
+            print(f"  - {ticker} ({label_type} {window}dd): {error}")
     else:
         print("\nAll trainings successful!")
 

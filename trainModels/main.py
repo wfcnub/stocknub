@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from skopt.space import Real, Integer
 from utils.pipeline import get_label_config
 
 from trainModels.modelling import (
-    _combine_multiple_emiten_in_industry,
-    _combine_multiple_emiten,
+    _combine_multiple_ticker_in_industry,
+    _combine_multiple_ticker,
     _split_data_to_train_val_test_single,
     _split_data_to_train_val_test_multiple, 
     _initializes_fit_tune_catboost_with_bayesian_optimization,
@@ -13,17 +14,17 @@ from trainModels.modelling import (
     _calculate_classification_metrics,
     _calculate_gini,
     _measure_model_performance,
-    _measure_model_performance_on_single_emiten,
-    _measure_model_performance_for_all_emiten_in_industry,
-    _measure_model_performance_for_all_emiten,
-    _measure_model_performance_on_forecast_features_for_all_emiten,
+    _measure_model_performance_on_single_ticker,
+    _measure_model_performance_for_all_ticker_in_industry,
+    _measure_model_performance_for_all_ticker,
+    _measure_model_performance_on_forecast_features_for_all_ticker,
 )
 
 from trainModels.helper import _save_model, _combine_metrics
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
-from combineForecasts.helper import _get_combined_forecasts_feature_columns
+from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
 
-def develop_model_v1(emiten: str, target_column: str, positive_label: str, negative_label: str) -> (any, dict, dict):
+def develop_model_v1(ticker: str, target_column: str, positive_label: str, negative_label: str) -> (any, dict, dict):
     """
     Main orchestration function for the entire model development process
 
@@ -31,7 +32,7 @@ def develop_model_v1(emiten: str, target_column: str, positive_label: str, negat
     and evaluates its final performance
 
     Args:
-        emiten (str): The name of the emiten being worked on
+        ticker (str): The name of the ticker being worked on
         target_column (str): The name of the target variable column
         positive_label (str): The positive class of the predicted label
         negative_label (str): The negative class of the predicted label
@@ -45,7 +46,7 @@ def develop_model_v1(emiten: str, target_column: str, positive_label: str, negat
 
     feature_columns = get_all_technical_indicators()
 
-    prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
+    prepared_data = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))
 
     cleaned_data = prepared_data[feature_columns + [target_column]].dropna(subset=[target_column])
 
@@ -87,7 +88,7 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
     """
     feature_columns = get_all_technical_indicators()
 
-    prepared_data = _combine_multiple_emiten_in_industry(industry)
+    prepared_data = _combine_multiple_ticker_in_industry(industry)
 
     cleaned_data = prepared_data.dropna(subset=[target_column])
 
@@ -102,7 +103,7 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
 
     model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
-    train_metrics, test_metrics = _measure_model_performance_for_all_emiten_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
+    train_metrics, test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
     
     return model, train_metrics, test_metrics
 
@@ -126,7 +127,7 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
     """
     feature_columns = get_all_technical_indicators()
 
-    prepared_data = _combine_multiple_emiten('data/stock/label/')
+    prepared_data = _combine_multiple_ticker('data/stock/label')
 
     cleaned_data = prepared_data.dropna(subset=[target_column])
     
@@ -141,11 +142,11 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
 
     model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
-    train_metrics, test_metrics = _measure_model_performance_for_all_emiten(model, target_column, positive_label, negative_label, threshold_col)
+    train_metrics, test_metrics = _measure_model_performance_for_all_ticker(model, target_column, positive_label, negative_label, threshold_col)
     
     return model, train_metrics, test_metrics
 
-def develop_model_v4(label_types, rolling_windows, positive_label: str, negative_label: str) -> (any, dict, dict):
+def develop_model_v4(label_types: list, rolling_windows: list, positive_label: str, negative_label: str) -> (any, dict, dict, str):
     """
     Main orchestration function for the entire model development process
 
@@ -163,33 +164,31 @@ def develop_model_v4(label_types, rolling_windows, positive_label: str, negative
                - train_metrics (dict): Performance metrics on the training set
                - test_metrics (dict): Performance metrics on the testing set
     """
-    feature_columns = _get_combined_forecasts_feature_columns()
+    feature_columns, target_column, threhsold_column = _get_combined_forecasts_features_target_threshold()
 
-    prepared_data = _combine_multiple_emiten('data/stock/combined_forecasts/')
-
-    target_column = f'Median Gain {np.max(rolling_windows)}dd'
+    prepared_data = _combine_multiple_ticker('data/stock/combined_forecasts')
     
     cleaned_data = prepared_data.dropna(subset=[target_column])
-    
+
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_multiple(cleaned_data, feature_columns, target_column)
 
     model = _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature, train_target, cv_split)
 
-    train_metrics, test_metrics = _measure_model_performance_on_forecast_features_for_all_emiten(model, positive_label, negative_label, label_types, rolling_windows)
-    
-    return model, train_metrics, test_metrics, 'Threshold Median Gain 10dd'
+    train_metrics, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, positive_label, negative_label, label_types, rolling_windows)
+     
+    return model, train_metrics, test_metrics, threhsold_column
 
 def process_single_model(args_tuple):
     """
     Utilize label data to create a machine learning model.
 
     Args:
-        args_tuple: Tuple containing (label_file, label_types, rolling_windows, feature_columns, model_version)
+        args_tuple: Tuple containing (label_file, label_types, rolling_windows, model_version)
 
     Returns:
         Tuple of (failed_process, metrics_list)
     """
-    identifier, label_types, rolling_windows, feature_columns, model_version = args_tuple
+    identifier, label_types, rolling_windows, model_version = args_tuple
  
     failed_process = []
     metrics_list = []
@@ -249,5 +248,3 @@ def process_single_model(args_tuple):
         failed_process.append((identifier, "all", "all", str(e)))
 
     return failed_process, metrics_list
-
-

@@ -2,6 +2,7 @@ import os
 import glob
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from skopt import BayesSearchCV
 from skopt.space import Real, Integer
 from catboost import CatBoostClassifier
@@ -10,45 +11,49 @@ from sklearn.model_selection import PredefinedSplit
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
-from combineForecasts.helper import _get_combined_forecasts_feature_columns
+from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
 
-def _combine_multiple_emiten_in_industry(industry: str) -> pd.DataFrame:
+def _combine_multiple_ticker_in_industry(industry: str) -> pd.DataFrame:
     """
-    (Internal Helper) Combine all emiten in an industry will be used as training data
+    (Internal Helper) Combine all ticker in an industry will be used as training data
 
     Args:
-        industry (str): The name of the industry in which the emiten will be selected
+        industry (str): The name of the industry in which the ticker will be selected
+        label_folder_path (str): The directory path where data containing technical indicators and labels are stored
 
     Returns:
-        pd.DataFrame: A pandas dataframe containing all the emiten in an industry
+        pd.DataFrame: A pandas dataframe containing all the ticker in an industry
     """
-    emiten_industry_df = pd.read_csv('data/selected_emiten_and_industry_list.csv')
+    ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
     
-    selected_emiten_industry_df = emiten_industry_df[emiten_industry_df['Industri'] == industry]
+    selected_ticker_industry_df = ticker_industry_df[ticker_industry_df['Industry'] == industry]
     
-    selected_emiten = selected_emiten_industry_df['Kode'].values
+    selected_ticker = selected_ticker_industry_df['Ticker'].values
     
-    selected_emiten_df = pd.concat((pd.read_csv(f'data/stock/label/{emiten}.csv') for emiten in selected_emiten)) \
+    selected_ticker_df = pd.concat((pd.read_csv(f'data/stock/label/{ticker}.csv')) for ticker in selected_ticker) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
-    return selected_emiten_df
+    return selected_ticker_df
 
-def _combine_multiple_emiten(csv_folder_path: str) -> pd.DataFrame:
+def _combine_multiple_ticker(csv_folder_path: str) -> pd.DataFrame:
     """
-    (Internal Helper)
+    (Internal Helper) Combine data from multiple ticker into a single pandas dataframe
+
+    Args:
+        csv_folder_path (str): The path to the folder containing the data
 
     Returns:
-        pd.DataFrame: A pandas dataframe containing all the selected emiten
+        pd.DataFrame: A pandas dataframe containing all the selected ticker
     """
-    all_emiten_path = glob.glob(os.path.join(csv_folder_path, "*.csv"))
+    all_ticker_path = Path(csv_folder_path).rglob("*.csv")
     
-    selected_emiten_df = pd.concat((pd.read_csv(emiten_path) for emiten_path in all_emiten_path)) \
+    selected_ticker_df = pd.concat((pd.read_csv(ticker_path) for ticker_path in all_ticker_path)) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
 
-    return selected_emiten_df
+    return selected_ticker_df
 
 def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
     """
@@ -168,7 +173,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=2,
+        n_iter=25,
         cv=predefined_split_index,
         scoring='roc_auc',
         n_jobs=-1,
@@ -309,9 +314,9 @@ def _measure_model_performance(model: any, feature: np.array, target: np.array, 
     
     return all_metrics
 
-def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, model: any, feature_columns: str, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_single_ticker(prepared_data: pd.DataFrame, model: any, feature_columns: str, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
-    (Internal Helper) Measures and reports the performance of the model on a given emiten
+    (Internal Helper) Measures and reports the performance of the model on a given ticker
 
     Args:
         prepared_data (pd.DataFrame): A pandas dataframe containing the features and target
@@ -331,13 +336,12 @@ def _measure_model_performance_on_single_emiten(prepared_data: pd.DataFrame, mod
     train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
     test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
 
-    
     train_metrics_df = pd.DataFrame(train_metrics)
     test_metrics_df = pd.DataFrame(test_metrics)
     
     return train_metrics_df, test_metrics_df
 
-def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given industry
 
@@ -353,37 +357,37 @@ def _measure_model_performance_for_all_emiten_in_industry(industry: str, model: 
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    emiten_industry_df = pd.read_csv('data/selected_emiten_and_industry_list.csv')
-    all_emiten = emiten_industry_df.loc[emiten_industry_df['Industri'] == industry, 'Kode'].values
+    ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
+    all_tickers = ticker_industry_df.loc[ticker_industry_df['Industry'] == industry, 'Ticker'].values
 
-    all_emiten_train_metrics_df = pd.DataFrame()
-    all_emiten_test_metrics_df = pd.DataFrame()
+    all_ticker_train_metrics_df = pd.DataFrame()
+    all_ticker_test_metrics_df = pd.DataFrame()
 
     feature_columns = get_all_technical_indicators()
 
-    for emiten in all_emiten:
+    for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
-            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
+            prepared_data = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))
+            ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
 
-            emiten_train_metrics_df['Kode'] = emiten
-            emiten_test_metrics_df['Kode'] = emiten
+            ticker_train_metrics_df['Ticker'] = ticker
+            ticker_test_metrics_df['Ticker'] = ticker
 
-            emiten_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
-            emiten_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+            ticker_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+            ticker_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
 
-            all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
-            all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
+            all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
+            all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
             print(e)
             pass
 
-    all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
-    all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
+    all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
+    all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
 
-    return all_emiten_train_metrics, all_emiten_test_metrics
+    return all_ticker_train_metrics, all_ticker_test_metrics
 
-def _measure_model_performance_for_all_emiten(model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_for_all_ticker(model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation
 
@@ -398,36 +402,36 @@ def _measure_model_performance_for_all_emiten(model: any, target_column: str, po
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    all_emiten = [val.split('/')[-1].split('.')[0] for val in glob.glob(os.path.join('data/stock/technical/', "*.csv"))]
+    all_tickers = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
     
-    all_emiten_train_metrics_df = pd.DataFrame()
-    all_emiten_test_metrics_df = pd.DataFrame()
+    all_ticker_train_metrics_df = pd.DataFrame()
+    all_ticker_test_metrics_df = pd.DataFrame()
 
     feature_columns = get_all_technical_indicators()
 
-    for emiten in all_emiten:
+    for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(f'data/stock/label/{emiten}.csv')
-            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
+            prepared_data = pd.read_csv((Path(f'data/stock/label/{ticker}.csv')))
+            ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
     
-            emiten_train_metrics_df['Kode'] = emiten
-            emiten_test_metrics_df['Kode'] = emiten
+            ticker_train_metrics_df['Ticker'] = ticker
+            ticker_test_metrics_df['Ticker'] = ticker
 
-            emiten_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
-            emiten_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+            ticker_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
+            ticker_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
     
-            all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
-            all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
+            all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
+            all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
             print(e)
             pass
 
-    all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
-    all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
+    all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
+    all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
 
-    return all_emiten_train_metrics, all_emiten_test_metrics
+    return all_ticker_train_metrics, all_ticker_test_metrics
 
-def _measure_model_performance_on_forecast_features_for_all_emiten(model: any, positive_label: str, negative_label: str, label_types: list, rolling_windows: list) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, positive_label: str, negative_label: str, label_types: list, rolling_windows: list) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation, with the forecasts as the features
 
@@ -442,38 +446,36 @@ def _measure_model_performance_on_forecast_features_for_all_emiten(model: any, p
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    all_emiten = [val.split('/')[-1].split('.')[0] for val in glob.glob(os.path.join('data/stock/combined_forecasts/', "*.csv"))]
+    all_tickers = [file.stem for file in Path('data/stock/combined_forecasts').rglob('*.csv')]
     
-    all_emiten_train_metrics_df = pd.DataFrame()
-    all_emiten_test_metrics_df = pd.DataFrame()
+    all_ticker_train_metrics_df = pd.DataFrame()
+    all_ticker_test_metrics_df = pd.DataFrame()
 
-    for emiten in all_emiten:
+    for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(f'data/stock/combined_forecasts/{emiten}.csv')
+            prepared_data = pd.read_csv(Path(f'data/stock/combined_forecasts/{ticker}.csv'))
             
-            feature_columns = _get_combined_forecasts_feature_columns()
-            target_column = f'Median Gain {np.max(rolling_windows)}dd'
-            threshold_column = 'Threshold Median Gain 10dd'
+            feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold()
             positive_label = 'High Gain'
             negative_label = 'Low Gain'
             
             cleaned_data = prepared_data.dropna(subset=[target_column])
 
-            emiten_train_metrics_df, emiten_test_metrics_df = _measure_model_performance_on_single_emiten(cleaned_data, model, feature_columns, target_column, positive_label, negative_label)
+            ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(cleaned_data, model, feature_columns, target_column, positive_label, negative_label)
     
-            emiten_train_metrics_df['Kode'] = emiten
-            emiten_test_metrics_df['Kode'] = emiten
+            ticker_train_metrics_df['Ticker'] = ticker
+            ticker_test_metrics_df['Ticker'] = ticker
 
-            emiten_train_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
-            emiten_test_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
+            ticker_train_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
+            ticker_test_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
     
-            all_emiten_train_metrics_df = pd.concat((all_emiten_train_metrics_df, emiten_train_metrics_df))
-            all_emiten_test_metrics_df = pd.concat((all_emiten_test_metrics_df, emiten_test_metrics_df))
+            all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
+            all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
             print(e)
             pass
 
-    all_emiten_train_metrics = all_emiten_train_metrics_df.to_dict(orient='list')
-    all_emiten_test_metrics = all_emiten_test_metrics_df.to_dict(orient='list')
+    all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
+    all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
 
-    return all_emiten_train_metrics, all_emiten_test_metrics
+    return all_ticker_train_metrics, all_ticker_test_metrics

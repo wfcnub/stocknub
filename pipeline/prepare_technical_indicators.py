@@ -1,11 +1,3 @@
-"""
-Pipeline Description: Generate Technical Indicators
-
-Usage:
-    # Process all tickers (incremental update)
-    python -m pipeline.prepare_technical_indicators
-"""
-
 import os
 import argparse
 import pandas as pd
@@ -44,7 +36,7 @@ if __name__ == "__main__":
         help="Number of parallel workers (default: CPU count)",
     )
     parser.add_argument(
-        "--process_selected_emiten",
+        "--process_selected_ticker",
         type=bool,
         default=True,
         help="",
@@ -59,9 +51,9 @@ if __name__ == "__main__":
     if not all_tickers:
         print(f"Error: No CSV files found in {args.ohlcv_folder_path}")
 
-    if args.process_selected_emiten:
-        selected_emiten_to_process_df = pd.read_csv('data/selected_ticker_and_industry_list.csv')
-        selected_tickers = selected_emiten_to_process_df['Ticker'].values
+    if args.process_selected_ticker:
+        selected_ticker_to_process_df = pd.read_csv('data/selected_ticker_and_industry_list.csv')
+        selected_tickers = selected_ticker_to_process_df['Ticker'].values
 
         all_tickers_to_process = list(set(selected_tickers).intersection(set(all_tickers)))
 

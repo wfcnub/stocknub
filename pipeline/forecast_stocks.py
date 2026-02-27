@@ -1,11 +1,3 @@
-"""
-Pipeline Description: Forecast Stock Performance using a Certain Version of The Model
-
-Usage:
-    # Forecast with default settings (all models with min_test_gini >= 0.3)
-    python -m pipeline.forecast_stocks --windows 5,10 --label_types median_gain,median_loss --min_test_gini 0.3
-"""
-
 import argparse
 import pandas as pd
 from tqdm import tqdm
@@ -17,8 +9,8 @@ simplefilter(action="ignore")
 
 from forecastStocks.main import process_single_ticker
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
-from forecastStocks.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_emiten_list, _save_forecast
-from combineForecasts.helper import _get_combined_forecasts_feature_columns
+from forecastStocks.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_ticker_list, _save_forecast
+from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
 
 
 def main():
@@ -49,10 +41,10 @@ def main():
     )
 
     parser.add_argument(
-        "--technical_folder",
+        "--csv_folder_path",
         type=str,
         default="data/stock/label",
-        help="Folder to save the technical (default: data/stock/technical)",
+        help="Folder to save the technical and label (default: data/stock/technical)",
     )
 
     parser.add_argument(
@@ -93,42 +85,42 @@ def main():
         feature_columns = get_all_technical_indicators()
         print(f"Using {len(feature_columns)} technical indicators as features")
     elif args.model_version == 4:
-        feature_columns = _get_combined_forecasts_feature_columns()
+        feature_columns, _, _ = _get_combined_forecasts_features_target_threshold()
         print(f"Using {len(feature_columns)} forecasts as features")
 
-    print("\nFinding emiten with models meeting criteria...")
+    print("\nFinding ticker with models meeting criteria...")
     if args.min_test_gini is not None:
         print(f"   Min Test Gini: {args.min_test_gini}")
     else:
         print("   Min Test Gini: None (using all available models)")
 
-    emiten_list = _get_filtered_emiten_list(args.model_version, label_types, windows, args.min_test_gini)
+    ticker_list = _get_filtered_ticker_list(args.model_version, label_types, windows, args.min_test_gini)
 
-    if not emiten_list:
-        print("ERROR: No emiten found meeting the criteria")
+    if not ticker_list:
+        print("ERROR: No ticker found meeting the criteria")
         return
 
-    print(f"Found {len(emiten_list)} emiten meeting criteria")
+    print(f"Found {len(ticker_list)} ticker meeting criteria")
 
     if args.model_version == 1:
-        model_identifier_list = emiten_list
+        model_identifier_list = ticker_list
     elif args.model_version == 2:
-        emiten_industry_df = pd.read_csv('data/selected_emiten_and_industry_list.csv')
-        emiten_industry_df = emiten_industry_df[emiten_industry_df['Kode'].isin(emiten_list)]
-        emiten_list = emiten_industry_df['Kode'].values.tolist()
-        model_identifier_list = emiten_industry_df['Industri'].values.tolist()
+        ticker_industry_df = pd.read_csv('data/selected_ticker_and_industry_list.csv')
+        ticker_industry_df = ticker_industry_df[ticker_industry_df['Ticker'].isin(ticker_list)]
+        ticker_list = ticker_industry_df['Ticker'].values.tolist()
+        model_identifier_list = ticker_industry_df['Industry'].values.tolist()
     elif args.model_version in [3, 4]:
-        model_identifier_list = ['IHSG' for _ in range(len(emiten_list))]
+        model_identifier_list = ['IHSG' for _ in range(len(ticker_list))]
 
     forecast_tasks = []
-    for model_identifier, emiten in zip(model_identifier_list, emiten_list):
+    for model_identifier, ticker in zip(model_identifier_list, ticker_list):
         for label_type in label_types:
             for window in windows:
-                forecast_tasks.append((args.model_version, args.technical_folder, model_identifier, emiten, label_type, window, feature_columns))
+                forecast_tasks.append((args.model_version, args.csv_folder_path, model_identifier, ticker, label_type, window, feature_columns))
 
     total_tasks = len(forecast_tasks)
     print(
-        f"\nStarting forecasts for {len(emiten_list)} emiten × {len(label_types)} label types × {len(windows)} windows = {total_tasks} tasks"
+        f"\nStarting forecasts for {len(ticker_list)} ticker × {len(label_types)} label types × {len(windows)} windows = {total_tasks} tasks"
     )
     print(f"Using {args.workers} parallel workers\n")
 
@@ -148,14 +140,14 @@ def main():
     print("FORECAST SUMMARY")
     print("=" * 80)
 
-    for emiten, label_type, window, success, message, forecast_data in results:
+    for ticker, label_type, window, success, message, forecast_data in results:
         if success and forecast_data is not None:
             successful += 1
-            _save_forecast(forecast_data, args.model_version, label_type, window, emiten)
+            _save_forecast(forecast_data, args.model_version, label_type, window, ticker)
         else:
             failed += 1
             if failed <= 10:
-                print(f"FAILED: {emiten} ({label_type}, {window}dd): {message}")
+                print(f"FAILED: {ticker} ({label_type}, {window}dd): {message}")
 
     if failed > 10:
         print(f"   ... and {failed - 10} more failures")

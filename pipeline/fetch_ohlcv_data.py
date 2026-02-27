@@ -8,7 +8,7 @@ from fetchOHLCVData.main import fetch_ticker_data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Pipeline Description: Fetch Emiten's Open, High, Low, Close, and Volume (OHLCV) Historical Data using yfinance"
+        description="Pipeline Description: Fetch Ticker's Open, High, Low, Close, and Volume (OHLCV) Historical Data using yfinance"
     )
     parser.add_argument(
         "--start_date",

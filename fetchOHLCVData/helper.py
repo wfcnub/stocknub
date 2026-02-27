@@ -10,7 +10,7 @@ def _fetch_ticker_data(ticker: str, start_date: str, end_date: str) -> pd.DataFr
     (Internal Helper) fetch OHLCV ticker data from Yahoo Finance for a given ticker
 
     Args:
-        ticker (str): A ticker for an emiten (e.g., 'BBCA')
+        ticker (str): A ticker for an ticker (e.g., 'BBCA')
         start_date (str): The start date for the data in 'YYYY-MM-DD' format
         end_date (str): The end date for the data in 'YYYY-MM-DD' format. If empty, the download will go up to the most recent date
 

@@ -1,14 +1,3 @@
-"""
-Pipeline Description: Fetch Historical Stock Data by Web Scraping
-
-Usage:
-    # Full download
-    python -m pipeline.fetch_additional_historical_data --fetch_type all
-
-    # Daily update or backfill
-    python -m pipeline.fetch_additional_historical_data --fetch_type backfill
-"""
-
 import os
 import argparse
 from tqdm import tqdm
@@ -16,7 +5,7 @@ from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from combineForecasts.main import process_single_ticker
-from combineForecasts.helper import _get_emiten_available_on_all_forecasts, _list_combined_forecasts_feature_columns
+from combineForecasts.helper import _get_ticker_available_on_all_forecasts, _write_combined_forecasts_features_target_threshold
 
 def main():
     parser = argparse.ArgumentParser(
@@ -63,24 +52,26 @@ def main():
     
     csv_folder_path = os.path.join(os.getcwd(), args.csv_folder_path)
 
+    _write_combined_forecasts_features_target_threshold(label_types, rolling_windows, model_versions)
+
     print("=" * 80)
     print("PIPELINE DESCRIPTION: POST PROCESS ALL FORECASTS")
     print("=" * 80)
     
-    print("Selecting emitens that are present on every model types")
-    all_emiten = _get_emiten_available_on_all_forecasts(label_types, rolling_windows)
+    print("Selecting tickers that are present on every model types")
+    all_ticker = _get_ticker_available_on_all_forecasts(label_types, rolling_windows)
 
-    print(f"Acquired {len(all_emiten)} that are present on every model types")
+    print(f"Acquired {len(all_ticker)} that are present on every model types")
 
     process_args = [
         (
-            emiten,
+            ticker,
             label_types,
             rolling_windows, 
             model_versions, 
             args.csv_folder_path
         )
-        for emiten in all_emiten
+        for ticker in all_ticker
     ]
 
     with Pool(processes=args.workers) as pool:
@@ -93,12 +84,6 @@ def main():
             )
         )
     
-    feature_columns = _list_combined_forecasts_feature_columns(label_types, rolling_windows, model_versions)
-    output_path = 'data/forecast_features.txt'
-    with open(output_path, "w") as file:
-        for fea_col in feature_columns:
-            file.write(fea_col + "\n")
-
     print("\n" + "=" * 80)
     print("FETCH SUMMARY")
     print("=" * 80)
@@ -115,7 +100,7 @@ def main():
         else:
             failed_tickers.append((ticker, message))
 
-    print(f"Successfully processed: {success_count}/{len(all_emiten)} tickers")
+    print(f"Successfully processed: {success_count}/{len(all_ticker)} tickers")
     print(f"Total new rows generated: {total_new_rows}")
 
     if failed_tickers:

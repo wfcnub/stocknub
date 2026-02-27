@@ -32,22 +32,22 @@ def _save_model(model: any, model_version: int, label_type: str, identifier: str
     model (any): The machine learning model that has been developed
     model_version (int): The version of machine learning model being developed
     label_type (str): The label used for developing the model
-    identifier (str): An identifier for saving the model, could be emiten or industry
+    identifier (str): An identifier for saving the model, could be ticker or industry
     window (int): The window used for generating the label
     """
     camel_label = to_camel(label_type)
-    filepath = f"data/stock/model_v{model_version}/{camel_label}/{identifier}-{window}dd.pkl"
+    filepath = Path(f"data/stock/model_v{model_version}/{camel_label}/{identifier}-{window}dd.pkl")
     with open(filepath, "wb") as f:
         pickle.dump(model, f)
     
     return
 
-def _combine_metrics(emiten: str, model_version: int, train_metrics: pd.DataFrame, test_metrics: pd.DataFrame, threshold_col: str) -> pd.DataFrame:
+def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFrame, test_metrics: pd.DataFrame, threshold_col: str) -> pd.DataFrame:
     """
     (Internal Helper) Combine train and test metrics into a single DataFrame row.
 
     Args:
-    emiten (str): The name of the emiten being worked on
+    ticker (str): The name of the ticker being worked on
     model_version (int): The version of machine learning model being developed
     train_metrics (pd.DataFrame): The model's performance metrics on training data
     test_metrics (pd.DataFrame): The model's performance metrics on testing data
@@ -66,23 +66,23 @@ def _combine_metrics(emiten: str, model_version: int, train_metrics: pd.DataFram
 
     if model_version == 1:
         result = pd.concat([train_df, test_df], axis=1)
-        result.insert(0, "Kode", emiten)
+        result.insert(0, "Ticker", ticker)
 
-        threshold_value = pd.read_csv(f'data/stock/label/{emiten}.csv')[threshold_col].iloc[0]
+        threshold_value = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))[threshold_col].iloc[0]
         result["Threshold"] = threshold_value
 
     elif model_version in [2, 3, 4]:
-        kode_column = [col for col in result.columns if 'Kode' in col]
+        Ticker_column = [col for col in result.columns if 'Ticker' in col]
         threshold_column = [col for col in result.columns if 'Threshold' in col]
 
-        assert len(kode_column) == 2
+        assert len(Ticker_column) == 2
         assert len(threshold_column) == 2
 
-        assert np.all(result[kode_column[0]].values == result[kode_column[1]].values, axis=0)
+        assert np.all(result[Ticker_column[0]].values == result[Ticker_column[1]].values, axis=0)
         assert np.all(result[threshold_column[0]].values == result[threshold_column[1]].values, axis=0)
 
-        result.insert(0, "Kode", result[kode_column[0]].values)
+        result.insert(0, "Ticker", result[Ticker_column[0]].values)
         result["Threshold"] = result[threshold_column[0]].values
-        result.drop(columns=kode_column + threshold_column, inplace=True)
+        result.drop(columns=Ticker_column + threshold_column, inplace=True)
     
     return result

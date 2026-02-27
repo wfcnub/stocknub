@@ -44,7 +44,7 @@ def _select_percentile_ticker_industry_df(ticker_industry_valuation_df: pd.DataF
     (Internal Helper) Select ticker from each industry that has a average valuation higher than a certain percentile of average valuation on that industry
     
     Args:
-        ticker_industry_valuation_df (pd.DataFrame): A pandas dataframe containing the emiten with its correspoding industry and average valuation
+        ticker_industry_valuation_df (pd.DataFrame): A pandas dataframe containing the ticker with its correspoding industry and average valuation
         perc_ticker_in_industry (float): The percentile value for the threshold of the average valuation
 
     Returns:
@@ -97,8 +97,8 @@ def _combine_both_ticker_df(perc_ticker_industry: pd.DataFrame, perc_ticker: pd.
     Returns:
         pd.DataFrame: A pandas dataframe containing the combined result from the two different ticker selection approach
     """
-    selected_emiten_df = pd.concat((perc_ticker_industry, perc_ticker)) \
+    selected_ticker_df = pd.concat((perc_ticker_industry, perc_ticker)) \
                             .drop_duplicates('Ticker') \
                             .reset_index(drop=True)
                         
-    return selected_emiten_df
+    return selected_ticker_df
