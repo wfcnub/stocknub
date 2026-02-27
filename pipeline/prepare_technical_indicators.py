@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 import pandas as pd
 from tqdm import tqdm
@@ -39,10 +40,13 @@ if __name__ == "__main__":
         "--process_selected_ticker",
         type=bool,
         default=True,
-        help="",
+        help="A boolean enusring that the tickers being processed are just the selected ones",
     )
 
     args = parser.parse_args()
+
+    if Path(args.technical_folder_path).exists():
+        shutil.rmtree(args.technical_folder_path)
 
     Path(args.technical_folder_path).mkdir(parents=True, exist_ok=True)
 

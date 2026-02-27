@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 from tqdm import tqdm
 from pathlib import Path
@@ -9,7 +10,7 @@ from combineForecasts.helper import _get_ticker_available_on_all_forecasts, _wri
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Pipeline Description: Fetch additional historical stock data from IDX web"
+        description="Pipeline Description: Combine forecast data from several model variations into a single file"
     )
     parser.add_argument(
         "--csv_folder_path",
@@ -48,6 +49,9 @@ def main():
     rolling_windows = [int(w.strip()) for w in args.windows.split(",")]
     model_versions = [mv.strip() for mv in args.model_versions.split(",")]
     
+    if Path(args.csv_folder_path).exists():
+        shutil.rmtree(args.csv_folder_path)
+
     Path(args.csv_folder_path).mkdir(parents=True, exist_ok=True)
     
     csv_folder_path = os.path.join(os.getcwd(), args.csv_folder_path)

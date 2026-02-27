@@ -9,9 +9,8 @@ simplefilter(action="ignore")
 
 from forecastStocks.main import process_single_ticker
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
-from forecastStocks.helper import _ensure_directories_exist, _clear_forecast_files, _get_filtered_ticker_list, _save_forecast
 from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
-
+from forecastStocks.helper import _ensure_directories_exist, _get_filtered_ticker_list, _save_forecast
 
 def main():
     parser = argparse.ArgumentParser(
@@ -44,7 +43,7 @@ def main():
         "--csv_folder_path",
         type=str,
         default="data/stock/label",
-        help="Folder to save the technical and label (default: data/stock/technical)",
+        help="Folder to save the technical and label (default: data/stock/data/stock/label)",
     )
 
     parser.add_argument(
@@ -77,9 +76,6 @@ def main():
     print(f"PIPELINE DESCRIPTION: FORECAST USING MODEL V{args.model_version}")
     print("=" * 80)
     _ensure_directories_exist(args.model_version, label_types, windows)
-
-    print("\nClearing old forecast files...")
-    _clear_forecast_files(args.model_version, label_types, windows)
 
     if args.model_version in [1, 2, 3]:
         feature_columns = get_all_technical_indicators()

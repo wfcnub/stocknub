@@ -1,3 +1,4 @@
+import shutil
 import pickle
 import numpy as np
 import pandas as pd
@@ -15,12 +16,16 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
     """
     for label_type in label_types:
         camel_label = to_camel(label_type)
-        Path(f"data/stock/model_v{model_version}/{camel_label}").mkdir(
-            parents=True, exist_ok=True
-        )
-        Path(f"data/stock/model_v{model_version}/performance/{camel_label}").mkdir(
-            parents=True, exist_ok=True
-        )
+        model_pkl_folder_path = Path(f"data/stock/model_v{model_version}/{camel_label}")
+        model_performance_folder_path = Path(f"data/stock/model_v{model_version}/performance/{camel_label}")
+
+        if model_pkl_folder_path.exists():
+            shutil.rmtree(model_pkl_folder_path)
+        model_pkl_folder_path.mkdir(parents=True, exist_ok=True)
+        
+        if model_performance_folder_path.exists():
+            shutil.rmtree(model_performance_folder_path)
+        model_performance_folder_path.mkdir(parents=True, exist_ok=True)
     
     return
 

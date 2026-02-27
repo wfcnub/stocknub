@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 import pandas as pd
 from tqdm import tqdm
@@ -52,6 +53,9 @@ if __name__ == "__main__":
 
     label_types = [lt.strip() for lt in args.label_types.split(",")]
     rolling_windows = [int(w.strip()) for w in args.windows.split(",")]
+
+    if Path(args.labels_folder_path).exists():
+        shutil.rmtree(args.labels_folder_path)
 
     Path(args.labels_folder_path).mkdir(parents=True, exist_ok=True)
 

@@ -31,13 +31,6 @@ def main():
     )
 
     parser.add_argument(
-        "--labels_folder",
-        type=str,
-        default="data/stock/label",
-        help="Folder to save labels (default: data/stock/label)",
-    )
-
-    parser.add_argument(
         "--workers",
         type=int,
         default=cpu_count(),

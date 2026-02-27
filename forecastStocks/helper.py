@@ -1,3 +1,4 @@
+import shutil
 import pickle
 import pandas as pd
 from pathlib import Path
@@ -15,27 +16,13 @@ def _ensure_directories_exist(model_version: int, label_types: str, windows: int
     for label_type in label_types:
         camel_label = to_camel(label_type)
         for window in windows:
-            Path(f"data/stock/forecast/model_v{model_version}/{camel_label}/{window}dd") \
-                .mkdir(parents=True, exist_ok=True)
+            folder_path = Path(f"data/stock/forecast/model_v{model_version}/{camel_label}/{window}dd")
+
+            if folder_path.exists():
+                shutil.rmtree(folder_path)
+                
+            folder_path.mkdir(parents=True, exist_ok=True)
         
-    return
-
-def _clear_forecast_files(model_version: int, label_types: str, windows: int) -> None:
-    """
-    (Internal Helper) Clear existing forecast files to avoid duplicates
-
-    Args:
-        model_version (int): The version of model being developed
-        label_types (str): The label used to develop the model
-        windows (int): The rolling window used to create the label
-    """
-    for label_type in label_types:
-        camel_label = to_camel(label_type)
-        for window in windows:
-            filepath = Path(f"data/stock/forecast/model_v{model_version}/{camel_label}/{window}dd.csv")
-            if filepath.exists():
-                filepath.unlink()
-            
     return
 
 def _load_model_performance(model_version: int, label_type: str, window: int, min_test_gini: float = None) -> list:
