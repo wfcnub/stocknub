@@ -71,12 +71,12 @@ def main():
     print("=" * 80)
 
     if args.model_version == 1:
-        specified_identifiers = pd.read_csv('data/selected_ticker_and_industry_list.csv') \
+        specified_identifiers = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv')) \
                                     ['Ticker'] \
                                     .unique() \
                                     .tolist()
     elif args.model_version == 2:
-        specified_identifiers = pd.read_csv('data/selected_ticker_and_industry_list.csv') \
+        specified_identifiers = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv')) \
                                     ['Industry'] \
                                     .unique() \
                                     .tolist()
@@ -86,8 +86,7 @@ def main():
     print(f"Found {len(specified_identifiers)} identifier to process")
     print(f"Label types: {', '.join(label_types)}")
     print(f"Rolling windows: {', '.join(map(str, rolling_windows))} days")
-    print(f"Workers: {args.workers}\n")
-
+    
     args_list = [
         (identifier, label_types, rolling_windows, args.model_version)
         for identifier in specified_identifiers
@@ -97,6 +96,7 @@ def main():
     all_metrics = {}
 
     if args.with_docker:
+        print(f"Workers: 1\n")
         results = list(
                         tqdm(
                             map(process_single_model, args_list),
@@ -106,6 +106,7 @@ def main():
                     )
         
     else:
+        print(f"Workers: {args.workers}\n")
         with Pool(processes=args.workers) as pool:
             results = list(
                 tqdm(
@@ -129,7 +130,7 @@ def main():
         print("\nSaving performance metrics...")
         for (label_type, window), metrics_dfs in all_metrics.items():
             camel_label = to_camel(label_type)
-            filepath = f"data/stock/model_v{args.model_version}/performance/{camel_label}/{window}dd.csv"
+            filepath = Path(f"data/stock/model_v{args.model_version}/performance/{camel_label}/{window}dd.csv")
 
             combined_metrics = pd.concat(metrics_dfs, ignore_index=True)
             combined_metrics.to_csv(filepath, index=False)

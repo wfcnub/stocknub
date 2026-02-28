@@ -1,3 +1,4 @@
+import gc
 import sys
 import argparse
 import subprocess
@@ -90,7 +91,7 @@ def run_step(step_num, args):
 
     cmd = [sys.executable, "-m", step["module"]]
 
-    if step['module'] == "pipeline.train_models" and args.with_docker:
+    if step['module'] in ["pipeline.train_models", "pipeline.fetch_foreign_flow_non_regular_data"] and args.with_docker:
         cmd.extend(["--with_docker"])
 
     if step_num == 0:
@@ -198,10 +199,13 @@ def main():
     failed_steps = []
     for step_num in steps_to_run:
         success = run_step(step_num, args)
+
         if not success:
             failed_steps.append(step_num)
             print(f"\nStopping pipeline due to failure in step {step_num}")
             break
+        
+        gc.collect()
 
     print("\n" + "=" * 80)
     print("PIPELINE SUMMARY")

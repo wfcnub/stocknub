@@ -1,10 +1,3 @@
-"""
-Pipeline configuration and business logic utilities.
-
-This module contains pipeline-specific configuration functions and business logic
-that don't fit into generic I/O or data fetching categories.
-"""
-
 def get_label_config(label_type: str, window: int) -> tuple:
     """
     Get configuration for a specific label type and window.

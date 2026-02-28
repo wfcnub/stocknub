@@ -102,7 +102,7 @@ def main():
     if args.model_version == 1:
         model_identifier_list = ticker_list
     elif args.model_version == 2:
-        ticker_industry_df = pd.read_csv('data/selected_ticker_and_industry_list.csv')
+        ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
         ticker_industry_df = ticker_industry_df[ticker_industry_df['Ticker'].isin(ticker_list)]
         ticker_list = ticker_industry_df['Ticker'].values.tolist()
         model_identifier_list = ticker_industry_df['Industry'].values.tolist()

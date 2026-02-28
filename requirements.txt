@@ -1,8 +1,8 @@
 camel_converter==5.0.0
 catboost==1.2.8
 curl_cffi==0.13.0
-numpy==2.4.2
-pandas==3.0.1
+numpy==2.2.6
+pandas==2.3.3
 PyYAML==6.0.3
 scikit-learn==1.7.2
 scikit_optimize==0.10.2
@@ -11,3 +11,4 @@ stock_indicators==1.3.5
 tqdm==4.67.1
 yfinance==0.2.66
 openpyxl==3.1.5
+jupyterlab==4.5.4
