@@ -7,6 +7,8 @@ from datetime import datetime, date, timedelta
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
@@ -90,7 +92,7 @@ def _wait_before_click(driver: webdriver.chrome.webdriver.WebDriver, tag: str, a
     
     return True
 
-def _initialize_driver(download_dir: str) -> webdriver.chrome.webdriver.WebDriver:
+def _initialize_driver(download_dir: str, with_docker: bool) -> webdriver.chrome.webdriver.WebDriver:
     """
     (Internal Helper) Initalize the driver for accessing the web for scraping purposes
     
@@ -100,17 +102,52 @@ def _initialize_driver(download_dir: str) -> webdriver.chrome.webdriver.WebDrive
     Returns:
         webdriver.chrome.webdriver.WebDriver: The driver for accessing the web for scraping purposes
     """
-    chrome_options = webdriver.ChromeOptions()
+    if with_docker:
+        chrome_options = Options()
+        chrome_options.binary_location = "/usr/bin/chromium"
+        service = Service("/usr/bin/chromedriver")
 
-    prefs = {
-        "download.default_directory": str((Path.cwd() / Path(download_dir)).resolve()),
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        "safebrowsing.enabled": True
-    }
-    chrome_options.add_experimental_option("prefs", prefs)
+        chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
-    driver = webdriver.Chrome(options=chrome_options)
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+
+        prefs = {
+            "download.default_directory": str((Path.cwd() / Path(download_dir)).resolve()),
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True,
+            "profile.default_content_settings.popups": 0
+        }
+        chrome_options.add_experimental_option("prefs", prefs)
+
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                })
+            """
+        })
+    else:
+        chrome_options = webdriver.ChromeOptions()
+        
+        prefs = {
+            "download.default_directory": download_dir,
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True
+        }
+        chrome_options.add_experimental_option("prefs", prefs)
+
+        driver = webdriver.Chrome(options=chrome_options)
 
     target_url = 'https://www.idx.co.id/en/market-data/trading-summary/stock-summary'
     driver.get(target_url)

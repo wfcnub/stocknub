@@ -12,36 +12,42 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Generate target labels for all tickers with technical indicators"
     )
+
     parser.add_argument(
         "--technical_folder_path",
         type=str,
         default="data/stock/technical",
         help="Folder containing technical indicators (default: data/stock/technical)",
     )
+
     parser.add_argument(
         "--labels_folder_path",
         type=str,
         default="data/stock/label",
         help="Folder to save labels (default: data/stock/label)",
     )
+
     parser.add_argument(
         "--target_column",
         type=str,
         default="Close",
         help="Target column for label generation (default: Close)",
     )
+
     parser.add_argument(
         "--label_types",
         type=str,
         default="median_gain,median_loss",
         help="Comma-separated label types (default: median_gain,median_loss)",
     )
+
     parser.add_argument(
         "--windows",
         type=str,
         default="5,10",
         help="Comma-separated rolling windows in days (default: 5,10)",
     )
+    
     parser.add_argument(
         "--workers",
         type=int,

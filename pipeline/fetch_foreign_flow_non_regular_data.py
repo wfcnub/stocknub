@@ -18,18 +18,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Fetch an additional historical data containing foreign flow and non-regular market from the IDX website"
     )
+
     parser.add_argument(
         "--raw_csv_folder_path",
         type=str,
         default="data/stock/raw_foreign_flow_non_regular",
         help="Directory path where CSV files will be saved (default: data/stock/raw_foreign_flow_non_regular)",
     )
+
     parser.add_argument(
         "--csv_folder_path",
         type=str,
         default="data/stock/foreign_flow_non_regular",
         help="Directory path where CSV files will be saved (default: data/stock/foreign_flow_non_regular)",
     )
+
     parser.add_argument(
         "--fetch_type",
         type=str,
@@ -37,6 +40,7 @@ if __name__ == "__main__":
         default='backfill',
         help="",
     )
+
     parser.add_argument(
         "--workers",
         type=int,
@@ -44,6 +48,15 @@ if __name__ == "__main__":
         help="Number of parallel workers to use (default: CPU count)",
     )
 
+    parser.add_argument(
+        "--with_docker",
+        dest='with_docker', 
+        action='store_true',
+        help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
+    )
+
+    parser.set_defaults(with_docker=False)
+    
     args = parser.parse_args()
 
     Path(args.raw_csv_folder_path).mkdir(parents=True, exist_ok=True)
@@ -64,7 +77,7 @@ if __name__ == "__main__":
     if len(active_market_dates) > 0:
         print(f"Starting fetch for {len(active_market_dates)} active market dates")
 
-        results = fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates, args.raw_csv_folder_path)
+        results = fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates, args.raw_csv_folder_path, args.with_docker)
 
         csv_files = Path(args.raw_csv_folder_path).rglob('*.csv')
         combined_df = pd.concat((pd.read_csv(file) for file in csv_files), ignore_index=True)

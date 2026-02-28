@@ -84,9 +84,9 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
     train_data = data.head(train_length)
     
     train_feature = train_data[feature_columns].values
-    train_target = train_data[target_column].values
+    train_target = np.array(train_data[target_column].values)
     test_feature = test_data[feature_columns].values
-    test_target = test_data[target_column].values
+    test_target = np.array(test_data[target_column].values)
     
     val_length = 40
     split_index = np.full(len(train_feature), -1, dtype=int)
@@ -136,9 +136,9 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
     len_val_data = len(val_data)
      
     train_feature = train_data[feature_columns].values
-    train_target = train_data[target_column].values
+    train_target = np.array(train_data[target_column].values)
     test_feature = test_data[feature_columns].values
-    test_target = test_data[target_column].values
+    test_target = np.array(test_data[target_column].values)
     
     split_index = np.full(len(train_feature), -1, dtype=int)
     split_index[-len_val_data:] = 0    

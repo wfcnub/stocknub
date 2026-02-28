@@ -7,18 +7,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Select Ticker to Process Based on The Recent Average Valuation"
     )
+
     parser.add_argument(
         "--ohlcv_folder_path",
         type=str,
         default="data/stock/OHLCV",
         help="Directory path where the CSV files will be saved (default: data/stock/OHLCV)",
     )
+
     parser.add_argument(
         "--perc_ticker_in_industry",
         type=float,
         default=0.85,
         help="The percentile threshold of the total ticker to select from each industry",
     )
+    
     parser.add_argument(
         "--perc_ticker",
         type=float,

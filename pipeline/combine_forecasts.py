@@ -12,30 +12,35 @@ def main():
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Combine forecast data from several model variations into a single file"
     )
+
     parser.add_argument(
         "--csv_folder_path",
         type=str,
         default="data/stock/combined_forecasts",
         help="Directory path where CSV files will be saved (default: data/stock/combined_forecasts)",
     )
+
     parser.add_argument(
         "--label_types",
         type=str,
         default="median_gain,median_loss",
         help="Comma-separated label types (default: median_gain,median_loss)",
     )
+
     parser.add_argument(
         "--windows",
         type=str,
         default="5,10",
         help="Comma-separated rolling windows in days (default: 5,10)",
     )
+
     parser.add_argument(
         "--model_versions",
         type=str,
         default="1,2,3",
         help="Comma-separated of the model versions (default: 1,2,3)",
     )
+    
     parser.add_argument(
         "--workers",
         type=int,

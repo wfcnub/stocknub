@@ -1,10 +1,11 @@
 import os
 import shutil
 import argparse
+from argparse import BooleanOptionalAction
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, set_start_method
 
 from prepareTechnicalIndicators.main import process_single_ticker
 
@@ -12,39 +13,46 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Generate technical indicators for all downloaded stock data"
     )
+
     parser.add_argument(
         "--ohlcv_folder_path",
         type=str,
         default="data/stock/OHLCV",
         help="Folder containing historical stock data (default: data/stock/OHLCV)",
     )
+
     parser.add_argument(
         "--foreign_flow_non_regular_folder_path",
         type=str,
         default="data/stock/foreign_flow_non_regular",
         help="Folder containing historical stock data (default: data/stock/foreign_flow_non_regular)",
     )
+
     parser.add_argument(
         "--technical_folder_path",
         type=str,
         default="data/stock/technical",
         help="Folder to save technical indicators (default: data/stock/technical)",
     )
+
     parser.add_argument(
         "--workers",
         type=int,
         default=cpu_count(),
         help="Number of parallel workers (default: CPU count)",
     )
+
     parser.add_argument(
         "--process_selected_ticker",
-        type=bool,
-        default=True,
+        dest='process_selected_ticker', 
+        action='store_true',
         help="A boolean enusring that the tickers being processed are just the selected ones",
     )
 
-    args = parser.parse_args()
+    parser.set_defaults(process_selected_ticker=False)
 
+    args = parser.parse_args()
+    
     if Path(args.technical_folder_path).exists():
         shutil.rmtree(args.technical_folder_path)
 
@@ -77,6 +85,8 @@ if __name__ == "__main__":
         (ticker, args.ohlcv_folder_path, args.foreign_flow_non_regular_folder_path, args.technical_folder_path)
         for ticker in all_tickers_to_process
     ]
+
+    set_start_method('spawn')
 
     with Pool(processes=args.workers) as pool:
         results = list(

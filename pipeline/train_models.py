@@ -44,6 +44,15 @@ def main():
         help="The version of model to develop",
     )
 
+    parser.add_argument(
+        "--with_docker",
+        dest='with_docker', 
+        action='store_true',
+        help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
+    )
+
+    parser.set_defaults(with_docker=False)
+
     args = parser.parse_args()
 
     label_types = [lt.strip() for lt in args.label_types.split(",")]
@@ -66,6 +75,7 @@ def main():
                                     ['Ticker'] \
                                     .unique() \
                                     .tolist()
+        specified_identifiers = ['NCKL', 'TRUE']
     elif args.model_version == 2:
         specified_identifiers = pd.read_csv('data/selected_ticker_and_industry_list.csv') \
                                     ['Industry'] \
@@ -87,24 +97,34 @@ def main():
     all_failed_processes = []
     all_metrics = {}
 
-    with Pool(processes=args.workers) as pool:
+    if args.with_docker:
         results = list(
-            tqdm(
-                pool.imap(process_single_model, args_list),
-                total=len(specified_identifiers),
-                desc="Processing single model",
+                        tqdm(
+                            map(process_single_model, args_list),
+                            total=len(specified_identifiers),
+                            desc="Processing single model",
+                        )
+                    )
+        
+    else:
+        with Pool(processes=args.workers) as pool:
+            results = list(
+                tqdm(
+                    pool.imap(process_single_model, args_list),
+                    total=len(specified_identifiers),
+                    desc="Processing single model",
+                )
             )
-        )
 
-        for failed_process, metrics_list in results:
-            all_failed_processes.extend(failed_process)
+    for failed_process, metrics_list in results:
+        all_failed_processes.extend(failed_process)
 
-            for label_type, window, metrics_df in metrics_list:
-                key = (label_type, window)
-                if key not in all_metrics:
-                    all_metrics[key] = []
+        for label_type, window, metrics_df in metrics_list:
+            key = (label_type, window)
+            if key not in all_metrics:
+                all_metrics[key] = []
 
-                all_metrics[key].append(metrics_df)
+            all_metrics[key].append(metrics_df)
 
     if all_metrics:
         print("\nSaving performance metrics...")

@@ -10,7 +10,7 @@ from fetchForeignFlowAndNonRegularData.helper import (
     _clean_downloaded_data
 )
 
-def fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates: list, raw_csv_folder_path: str) -> list:
+def fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates: list, raw_csv_folder_path: str, with_docker: bool) -> list:
     """
     Fetch an additional historical data containing foreign flow and non regular market from the IDX website using web scraping
 
@@ -23,7 +23,7 @@ def fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates: list, ra
     """
     results = []
 
-    driver = _initialize_driver(raw_csv_folder_path)
+    driver = _initialize_driver(raw_csv_folder_path, with_docker)
 
     for active_market_date in active_market_dates:
         try:

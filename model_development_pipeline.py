@@ -90,6 +90,9 @@ def run_step(step_num, args):
 
     cmd = [sys.executable, "-m", step["module"]]
 
+    if step['module'] == "pipeline.train_models" and args.with_docker:
+        cmd.extend(["--with_docker"])
+
     if step_num == 0:
         cmd.extend(["--start_date", '2020-01-01'])
 
@@ -100,7 +103,7 @@ def run_step(step_num, args):
         pass
 
     elif step_num == 3:
-        cmd.extend(["--process_selected_ticker", 'True'])
+        cmd.extend(["--process_selected_ticker"])
 
     elif step_num == 4:
         cmd.extend(["--windows", '5,10'])
@@ -174,6 +177,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     
+    parser.add_argument(
+        "--with_docker",
+        type=bool,
+        default=False,
+        help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing",
+    )
+
     args = parser.parse_args()
 
     steps_to_run = sorted(PIPELINE_STEPS.keys())
@@ -184,7 +194,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run:
+    for step_num in steps_to_run[5:6]:
         success = run_step(step_num, args)
         if not success:
             failed_steps.append(step_num)
