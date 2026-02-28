@@ -1,95 +1,92 @@
-"""
-Pipeline Description: Generate Technical Indicators
-
-Usage:
-    # Process all tickers (incremental update)
-    python -m pipeline.prepare_technical_indicators
-"""
-
 import os
+import shutil
 import argparse
+from argparse import BooleanOptionalAction
+import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, set_start_method
 
 from prepareTechnicalIndicators.main import process_single_ticker
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Generate technical indicators for all downloaded stock data"
     )
+
     parser.add_argument(
-        "--historical_folder",
+        "--ohlcv_folder_path",
         type=str,
-        default="data/stock/historical",
-        help="Folder containing historical stock data (default: data/stock/historical)",
+        default="data/stock/OHLCV",
+        help="Folder containing historical stock data (default: data/stock/OHLCV)",
     )
+
     parser.add_argument(
-        "--technical_folder",
+        "--foreign_flow_non_regular_folder_path",
+        type=str,
+        default="data/stock/foreign_flow_non_regular",
+        help="Folder containing historical stock data (default: data/stock/foreign_flow_non_regular)",
+    )
+
+    parser.add_argument(
+        "--technical_folder_path",
         type=str,
         default="data/stock/technical",
         help="Folder to save technical indicators (default: data/stock/technical)",
     )
+
     parser.add_argument(
         "--workers",
         type=int,
         default=cpu_count(),
         help="Number of parallel workers (default: CPU count)",
     )
+
     parser.add_argument(
-        "--tickers",
-        type=str,
-        default="",
-        help="Comma-separated list of specific tickers to process (e.g., 'BBCA,BBRI,TLKM'). If not provided, all tickers will be processed.",
+        "--process_selected_ticker",
+        dest='process_selected_ticker', 
+        action='store_true',
+        help="A boolean enusring that the tickers being processed are just the selected ones",
     )
 
+    parser.set_defaults(process_selected_ticker=False)
+
     args = parser.parse_args()
+    
+    if Path(args.technical_folder_path).exists():
+        shutil.rmtree(args.technical_folder_path)
 
-    Path(args.technical_folder).mkdir(parents=True, exist_ok=True)
+    Path(args.technical_folder_path).mkdir(parents=True, exist_ok=True)
 
-    all_historical_files = [
-        f.replace(".csv", "")
-        for f in os.listdir(args.historical_folder)
-        if f.endswith(".csv")
-    ]
+    all_tickers = [file.stem for file in Path(args.ohlcv_folder_path).rglob('*.csv')]
 
-    if args.tickers:
-        specified_tickers = [t.strip().upper() for t in args.tickers.split(",")]
-        historical_files = [t for t in all_historical_files if t in specified_tickers]
+    if not all_tickers:
+        print(f"Error: No CSV files found in {args.ohlcv_folder_path}")
 
-        missing_tickers = set(specified_tickers) - set(historical_files)
-        if missing_tickers:
-            print(
-                f"Warning: The following tickers were not found: {', '.join(missing_tickers)}"
-            )
+    if args.process_selected_ticker:
+        selected_ticker_to_process_df = pd.read_csv('data/selected_ticker_and_industry_list.csv')
+        selected_tickers = selected_ticker_to_process_df['Ticker'].values
 
-        if not historical_files:
-            print(
-                f"Error: None of the specified tickers found in {args.historical_folder}"
-            )
-            return
+        all_tickers_to_process = list(set(selected_tickers).intersection(set(all_tickers)))
+
     else:
-        historical_files = all_historical_files
-
-    if not historical_files:
-        print(f"Error: No CSV files found in {args.historical_folder}")
-        return
+        all_tickers_to_process = all_tickers
 
     print("=" * 80)
     print("PIPELINE DESCRIPTION: GENERATE TECHNICAL INDICATORS")
     print("=" * 80)
-    print(f"Found {len(historical_files)} tickers to process")
-    if args.tickers:
-        print(f"Processing specific tickers: {', '.join(historical_files)}")
-    print(f"Historical data folder: {args.historical_folder}")
-    print(f"Technical indicators folder: {args.technical_folder}")
+    print(f"Found {len(all_tickers_to_process)} tickers to process")
+    print(f"Historical data folder: {args.ohlcv_folder_path}")
+    print(f"Technical indicators folder: {args.technical_folder_path}")
     print(f"Workers: {args.workers}")
     print()
 
     process_args = [
-        (ticker, args.historical_folder, args.technical_folder)
-        for ticker in historical_files
+        (ticker, args.ohlcv_folder_path, args.foreign_flow_non_regular_folder_path, args.technical_folder_path)
+        for ticker in all_tickers_to_process
     ]
+
+    set_start_method('spawn')
 
     with Pool(processes=args.workers) as pool:
         results = list(
@@ -118,37 +115,14 @@ def main():
         else:
             failed_tickers.append((ticker, message))
 
-    print(f"Successfully processed: {success_count}/{len(historical_files)} tickers")
+    print(f"Successfully processed: {success_count}/{len(all_tickers_to_process)} tickers")
     print(f"Total new rows generated: {total_new_rows}")
 
     if failed_tickers:
         print(f"\nFailed: {len(failed_tickers)} tickers")
         print("-" * 80)
 
-        suspended_delisted = []
-        other_errors = []
-
         for ticker, message in failed_tickers:
-            if "No price variation" in message or "suspended/delisted" in message:
-                suspended_delisted.append((ticker, message))
-            else:
-                other_errors.append((ticker, message))
-
-        if suspended_delisted:
-            ticker_names = [ticker for ticker, _ in suspended_delisted]
-            print(f"\nSuspended/Delisted ({len(suspended_delisted)} tickers):")
-            print(f"Tickers: {', '.join(ticker_names)}")
-            for ticker, msg in suspended_delisted:
-                print(f"  - {msg}")
-
-        if other_errors:
-            ticker_names = [ticker for ticker, _ in other_errors]
-            print(f"\nOther Errors ({len(other_errors)} tickers):")
-            print(f"Tickers: {', '.join(ticker_names)}")
-            for ticker, msg in other_errors:
-                print(f"  - {msg}")
+            print(f"{ticker} - {message}")
 
     print("=" * 80)
-
-if __name__ == "__main__":
-    main()
