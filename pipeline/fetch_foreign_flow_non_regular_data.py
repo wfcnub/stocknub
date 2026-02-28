@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
         results = fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates, args.raw_csv_folder_path)
 
-        csv_files = Path(args.raw_csv_folder_path).iterdir()
+        csv_files = Path(args.raw_csv_folder_path).rglob('*.csv')
         combined_df = pd.concat((pd.read_csv(file) for file in csv_files), ignore_index=True)
         all_tickers = combined_df['Stock Code'].unique()
 

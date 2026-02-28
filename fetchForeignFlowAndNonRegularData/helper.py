@@ -132,9 +132,9 @@ def _check_if_download_completion(download_dir: str, weekday_dt: str, timeout: i
     end_time = time.time() + timeout
 
     while time.time() < end_time:
-        full_path = os.path.join(download_dir, filename)
+        full_path = Path(download_dir) / filename
         
-        if os.path.isfile(full_path):
+        if full_path.is_file():
             return
         else:
             time.sleep(1)
@@ -255,7 +255,7 @@ def _clean_downloaded_data(download_dir: str, weekday_dt: str) -> None:
         weekday_dt (str): The date that is incorporated inside the file name, specifying which file to process
     """
     filename = f"Stock Summary-{weekday_dt.replace('-', '')}.xlsx"
-    full_path = os.path.join(download_dir, filename)
+    full_path = Path(download_dir) /filename
 
     selected_columns = [
         'Stock Code',
@@ -270,10 +270,10 @@ def _clean_downloaded_data(download_dir: str, weekday_dt: str) -> None:
     data = pd.read_excel(full_path, usecols=selected_columns)
     data['Last Trading Date'] = data['Last Trading Date'].apply(lambda val: _parse_indo_date(val))
 
-    os.remove(full_path)
+    full_path.unlink()
     
     save_filename = f"{data['Last Trading Date'].unique()[0].replace('-', '')}.csv"
-    save_full_path = os.path.join(download_dir, save_filename)
+    save_full_path = Path(download_dir) / save_filename
     
     data.to_csv(save_full_path, index=False)
 

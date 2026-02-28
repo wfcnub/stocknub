@@ -4,13 +4,14 @@ from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
-from warnings import simplefilter
-simplefilter(action="ignore")
-
 from forecastStocks.main import process_single_ticker
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
-from forecastStocks.helper import _ensure_directories_exist, _get_filtered_ticker_list, _save_forecast
+from forecastStocks.helper import (
+    _ensure_directories_exist, 
+    _get_filtered_ticker_list, 
+    _save_forecast
+)
 
 def main():
     parser = argparse.ArgumentParser(

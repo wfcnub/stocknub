@@ -19,61 +19,36 @@ PIPELINE_STEPS = {
         "description": "Fetch an additional historical data containing foreign flow and non-regular market from the IDX website",
     },
     2: {
-        "name": "Select Ticker to Process",
-        "module": "pipeline.select_ticker_to_process",
-        "description": "Select Ticker to Process Based on The Recent Average Valuation",
-    },    
-    3: {
         "name": "Prepare Technical Indicators",
         "module": "pipeline.prepare_technical_indicators",
         "description": "Generate technical indicators for all downloaded stock data",
     },
-    4: {
+    3: {
         "name": "Generate Labels",
         "module": "pipeline.generate_labels",
         "description": "Generate target labels for all tickers with technical indicators",
     },
-    5: {
-        "name": "Train Model V1",
-        "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
-    },
-    6: {
-        "name": "Train Model V2",
-        "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
-    },
-    7: {
-        "name": "Train Model V3",
-        "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
-    },
-    8: {
+    4: {
         "name": "Forecast Stocks V1",
         "module": "pipeline.forecast_stocks",
         "description": "Generate stock forecasts using the trained models",
     },
-    9: {
+    5: {
         "name": "Forecast Stocks V2",
         "module": "pipeline.forecast_stocks",
         "description": "Generate stock forecasts using the trained models",
     },
-    10: {
+    6: {
         "name": "Forecast Stocks V3",
         "module": "pipeline.forecast_stocks",
         "description": "Generate stock forecasts using the trained models",
     },
-    11: {
+    7: {
         "name": "Combine Forecasts",
         "module": "pipeline.combine_forecasts",
         "description": "Combine forecast data from several model variations into a single file",
     },
-    12: {
-        "name": "Train Model V4",
-        "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
-    },
-    13: {
+    8: {
         "name": "Forecast Stocks V4",
         "module": "pipeline.forecast_stocks",
         "description": "Generate stock forecasts using the trained models",
@@ -97,63 +72,40 @@ def run_step(step_num, args):
         pass
     
     elif step_num == 2:
-        pass
-
-    elif step_num == 3:
         cmd.extend(["--process_selected_ticker", 'True'])
 
-    elif step_num == 4:
+    elif step_num == 3:
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--target_column", 'Close'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-
-    elif step_num == 5:
+    
+    elif step_num == 4:
         cmd.extend(["--model_version", '1'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-
-    elif step_num == 6:
+        cmd.extend(["--csv_folder_path", 'data/stock/label'])
+        cmd.extend(["--min_test_gini", '0'])
+    
+    elif step_num == 5:
         cmd.extend(["--model_version", '2'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
+        cmd.extend(["--csv_folder_path", 'data/stock/label'])
+        cmd.extend(["--min_test_gini", '0'])
+    
+    elif step_num == 6:
+        cmd.extend(["--model_version", '3'])
+        cmd.extend(["--windows", '5,10'])
+        cmd.extend(["--label_types", 'median_gain,median_loss'])
+        cmd.extend(["--csv_folder_path", 'data/stock/label'])
+        cmd.extend(["--min_test_gini", '0'])
     
     elif step_num == 7:
-        cmd.extend(["--model_version", '3'])
-        cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain,median_loss'])
-    
-    elif step_num == 8:
-        cmd.extend(["--model_version", '1'])
-        cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain,median_loss'])
-        cmd.extend(["--csv_folder_path", 'data/stock/label'])
-        cmd.extend(["--min_test_gini", '0'])
-    
-    elif step_num == 9:
-        cmd.extend(["--model_version", '2'])
-        cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain,median_loss'])
-        cmd.extend(["--csv_folder_path", 'data/stock/label'])
-        cmd.extend(["--min_test_gini", '0'])
-    
-    elif step_num == 10:
-        cmd.extend(["--model_version", '3'])
-        cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain,median_loss'])
-        cmd.extend(["--csv_folder_path", 'data/stock/label'])
-        cmd.extend(["--min_test_gini", '0'])
-    
-    elif step_num == 11:
         cmd.extend(["--model_versions", '1,2,3'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
     
-    elif step_num == 12:
-        cmd.extend(["--model_version", '4'])
-        cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain,median_loss'])
-    
-    elif step_num == 13:
+    elif step_num == 8:
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
@@ -168,9 +120,10 @@ def run_step(step_num, args):
         print(f"\nStep {step_num} failed with exit code {e.returncode}")
         return False
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Run the stocknub model development pipeline",
+        description="Run the stocknub daily forecasting pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     

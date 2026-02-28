@@ -33,7 +33,7 @@ def fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates: list, ra
             _select_year_month_on_web(driver, year, month)
                     
             process_data_bool = _select_and_download_specific_date_on_web(driver, raw_csv_folder_path, active_market_date)
-
+            
             if process_data_bool:
                 _clean_downloaded_data(raw_csv_folder_path, active_market_date)
 
