@@ -179,10 +179,12 @@ def main():
     
     parser.add_argument(
         "--with_docker",
-        type=bool,
-        default=False,
-        help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing",
+        dest='with_docker', 
+        action='store_true',
+        help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
     )
+
+    parser.set_defaults(with_docker=False)
 
     args = parser.parse_args()
 
@@ -194,7 +196,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run[5:6]:
+    for step_num in steps_to_run:
         success = run_step(step_num, args)
         if not success:
             failed_steps.append(step_num)

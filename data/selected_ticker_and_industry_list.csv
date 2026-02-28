@@ -40,7 +40,6 @@ BBNI,Financials
 BBRI,Financials
 BBTN,Financials
 BBYB,Financials
-BFIN,Financials
 BMRI,Financials
 PADI,Financials
 PNBN,Financials
@@ -57,7 +56,6 @@ KETR,Infrastructures
 INET,Infrastructures
 BREN,Infrastructures
 CDIA,Infrastructures
-ACES,Consumer Cyclicals
 BUVA,Consumer Cyclicals
 ERAA,Consumer Cyclicals
 FAST,Consumer Cyclicals
@@ -76,6 +74,7 @@ YELO,Consumer Cyclicals
 ZATA,Consumer Cyclicals
 FUTR,Consumer Cyclicals
 VKTR,Consumer Cyclicals
+MEJA,Consumer Cyclicals
 GOLF,Consumer Cyclicals
 KAQI,Consumer Cyclicals
 DOOH,Consumer Cyclicals
@@ -93,7 +92,6 @@ MLPL,Consumer Non-Cyclicals
 MYOR,Consumer Non-Cyclicals
 UNVR,Consumer Non-Cyclicals
 TAPG,Consumer Non-Cyclicals
-CMRY,Consumer Non-Cyclicals
 ASHA,Consumer Non-Cyclicals
 JARR,Consumer Non-Cyclicals
 NSSS,Consumer Non-Cyclicals
@@ -137,7 +135,6 @@ INDY,Energy
 HUMI,Energy
 GTSI,Energy
 RMKE,Energy
-AADI,Energy
 PGAS,Energy
 TCPI,Energy
 TOBA,Energy

@@ -75,7 +75,6 @@ def main():
                                     ['Ticker'] \
                                     .unique() \
                                     .tolist()
-        specified_identifiers = ['NCKL', 'TRUE']
     elif args.model_version == 2:
         specified_identifiers = pd.read_csv('data/selected_ticker_and_industry_list.csv') \
                                     ['Industry'] \

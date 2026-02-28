@@ -140,7 +140,7 @@ def _initialize_driver(download_dir: str, with_docker: bool) -> webdriver.chrome
         chrome_options = webdriver.ChromeOptions()
         
         prefs = {
-            "download.default_directory": download_dir,
+            "download.default_directory": str((Path.cwd() / Path(download_dir)).resolve()),
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "safebrowsing.enabled": True
