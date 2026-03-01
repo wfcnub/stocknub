@@ -14,7 +14,13 @@ from analyticsHub.helper import (
 )
 
 @st.cache_data
-def get_all_performances():
+def get_all_performances() -> pd.DataFrame:
+    """
+    Get the overview of the model performance
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing the overview of the model performance
+    """
     model_versions = [1, 2, 3, 4]
     
     all_performance_paths = []
@@ -46,7 +52,13 @@ def get_all_performances():
     return all_df
 
 @st.cache_data
-def get_daily_recommendations():
+def get_daily_recommendations() -> (pd.DataFrame, str):
+    """
+    Get the daily recommendations
+
+    Returns:
+        (pd.DataFrame, str): A tuple containing the daily recommendations dataframe and the forecast date
+    """
     final_performance = pd.read_csv(Path('data/stock/model_v4/performance/medianGain/10dd.csv'))
     
     forecast_paths = Path('data/stock/forecast/model_v4/medianGain/10dd').rglob('*.csv')
@@ -76,7 +88,13 @@ def get_daily_recommendations():
     return forecast_df, forecast_date
 
 @st.cache_data
-def generate_trading_simulation_df():
+def generate_trading_simulation_df() -> pd.DataFrame:
+    """
+    Generate the trading simulation data
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing the trading simulation data
+    """
     forecast_df = _generate_forecast_data_on_test_data()
     label_df = _generate_max_daily_profit()
 
@@ -85,7 +103,16 @@ def generate_trading_simulation_df():
     return trading_simulation_df
 
 @st.cache_data
-def visualize_profit_distribution_for_each_forecast_threshold(trading_simulation_df):
+def visualize_profit_distribution_for_each_forecast_threshold(trading_simulation_df) -> go.Figure:
+    """
+    Visualize the profit distribution for each forecast threshold
+
+    Args:
+        trading_simulation_df (pd.DataFrame): A pandas dataframe containing the trading simulation data
+
+    Returns:
+        go.Figure: A plotly figure containing the profit distribution for each forecast threshold
+    """
     boxplot_df = pd.DataFrame()
     all_forecast_thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1]
     
@@ -123,7 +150,16 @@ def visualize_profit_distribution_for_each_forecast_threshold(trading_simulation
     return fig
 
 @st.cache_data
-def visualize_impact_of_threshold_on_profit(trading_simulation_df):
+def visualize_impact_of_threshold_on_profit(trading_simulation_df) -> go.Figure:
+    """
+    Visualize the impact of threshold on profit
+
+    Args:
+        trading_simulation_df (pd.DataFrame): A pandas dataframe containing the trading simulation data
+
+    Returns:
+        go.Figure: A plotly figure containing the impact of threshold on profit
+    """
     forecast_threshold_10dd = np.arange(0, 1, 0.00075)
     
     average_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].mean() for threshold in forecast_threshold_10dd]

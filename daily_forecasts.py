@@ -65,6 +65,9 @@ def run_step(step_num, args):
 
     cmd = [sys.executable, "-m", step["module"]]
 
+    if step['module'] in ["pipeline.train_models", "pipeline.fetch_foreign_flow_non_regular_data"] and args.with_docker:
+        cmd.extend(["--with_docker"])
+        
     if step_num == 0:
         cmd.extend(["--start_date", '2020-01-01'])
 
@@ -126,6 +129,15 @@ def main():
         description="Run the stocknub daily forecasting pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+
+    parser.add_argument(
+        "--with_docker",
+        dest='with_docker', 
+        action='store_true',
+        help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
+    )
+
+    parser.set_defaults(with_docker=False)
     
     args = parser.parse_args()
 

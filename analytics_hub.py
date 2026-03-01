@@ -14,11 +14,15 @@ from analyticsHub.main import (
     visualize_impact_of_threshold_on_profit
 )
 
-from analyticsHub.helper import _get_chosen_performance_df
+from analyticsHub.helper import (
+    _get_chosen_performance_df,
+    _get_testing_data_date
+)
 
 all_df = get_all_performances()
 forecast_df, forecast_date = get_daily_recommendations()
 trading_simulation_df = generate_trading_simulation_df()
+start_testing_market_date, end_testing_market_date = _get_testing_data_date()
 fig_1 = visualize_profit_distribution_for_each_forecast_threshold(trading_simulation_df)
 fig_2 = visualize_impact_of_threshold_on_profit(trading_simulation_df)
 
@@ -56,7 +60,7 @@ elif app_mode == "2. Daily Recommendation":
 
 elif app_mode == "3. Trading Simulation":
     st.title("Trading Simulation")
-    # st.markdown(f"Daily Recommendation for {forecast_date} from the Final Model")
+    st.markdown(f"Simulating a Trading Activity Following the Output of The Model on the __Testing Data__ (from __{start_testing_market_date}__ to __{end_testing_market_date}__)")
 
     st.plotly_chart(fig_1)
 
