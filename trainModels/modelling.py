@@ -1,5 +1,3 @@
-import os
-import glob
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -19,7 +17,6 @@ def _combine_multiple_ticker_in_industry(industry: str) -> pd.DataFrame:
 
     Args:
         industry (str): The name of the industry in which the ticker will be selected
-        label_folder_path (str): The directory path where data containing technical indicators and labels are stored
 
     Returns:
         pd.DataFrame: A pandas dataframe containing all the ticker in an industry
@@ -55,7 +52,7 @@ def _combine_multiple_ticker(csv_folder_path: str) -> pd.DataFrame:
 
     return selected_ticker_df
 
-def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
+def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: list, target_column: str) -> (pd.DataFrame, pd.Series, pd.DataFrame, pd.Series, PredefinedSplit):
     """
     (Internal Helper) Splits time-series data into training, validation, and testing sets
 
@@ -71,10 +68,10 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
 
     Returns:
         tuple: A tuple containing:
-               - train_feature (np.array): Features for the training set
-               - train_target (np.array): Target for the training set
-               - test_feature (np.array): Features for the test set
-               - test_target (np.array): Target for the test set
+               - train_feature (pd.DataFrame): Features for the training set
+               - train_target (pd.Series): Target for the training set
+               - test_feature (pd.DataFrame): Features for the test set
+               - test_target (pd.Series): Target for the test set
                - predefined_split_index (PredefinedSplit): An index for cross-validation
                  that designates the last 40 days of the training data as the validation set
     """
@@ -83,10 +80,10 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
     train_length = len(data) - test_length
     train_data = data.head(train_length)
     
-    train_feature = train_data[feature_columns].values
-    train_target = np.array(train_data[target_column].values)
-    test_feature = test_data[feature_columns].values
-    test_target = np.array(test_data[target_column].values)
+    train_feature = train_data[feature_columns]
+    train_target = train_data[target_column]
+    test_feature = test_data[feature_columns]
+    test_target = test_data[target_column]
     
     val_length = 40
     split_index = np.full(len(train_feature), -1, dtype=int)
@@ -95,7 +92,7 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
 
-def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: list, target_column: str) -> (np.array, np.array, np.array, np.array, PredefinedSplit):
+def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: list, target_column: str) -> (pd.DataFrame, pd.Series, pd.DataFrame, pd.Series, PredefinedSplit):
     """
     (Internal Helper) Splits time-series data into training, validation, and testing sets
 
@@ -111,10 +108,10 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
 
     Returns:
         tuple: A tuple containing:
-               - train_feature (np.array): Features for the training set
-               - train_target (np.array): Target for the training set
-               - test_feature (np.array): Features for the test set
-               - test_target (np.array): Target for the test set
+               - train_feature (pd.DataFrame): Features for the training set
+               - train_target (pd.Series): Target for the training set
+               - test_feature (pd.DataFrame): Features for the test set
+               - test_target (pd.Series): Target for the test set
                - predefined_split_index (PredefinedSplit): An index for cross-validation
                  that designates the last 40 days of the training data as the validation set
     """
@@ -135,10 +132,10 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
     val_data = train_data.loc[train_data['Date'].isin(val_dates), :]
     len_val_data = len(val_data)
      
-    train_feature = train_data[feature_columns].values
-    train_target = np.array(train_data[target_column].values)
-    test_feature = test_data[feature_columns].values
-    test_target = np.array(test_data[target_column].values)
+    train_feature = train_data[feature_columns]
+    train_target = train_data[target_column]
+    test_feature = test_data[feature_columns]
+    test_target = test_data[target_column]
     
     split_index = np.full(len(train_feature), -1, dtype=int)
     split_index[-len_val_data:] = 0    
@@ -163,11 +160,24 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
 
     Returns:
         CatBoostClassifier: The best-performing model found by the search
-    """
+    """    
+    val_indices = np.where(predefined_split_index.test_fold == 0)[0]
+    train_indices = np.where(predefined_split_index.test_fold != 0)[0]
+
+    if len(np.unique(train_target[train_indices])) == 1:
+        raise ValueError("The train target contains only one unique value")
+    
+    if len(np.unique(train_target[val_indices])) == 1:
+        scoring_method = 'accuracy'
+    else:
+        scoring_method = 'roc_auc'
+
     model = CatBoostClassifier(
         loss_function='Logloss',
         eval_metric='AUC',
-        logging_level='Silent'
+        logging_level='Silent',
+        thread_count=-1,
+        random_seed=10120024
     )
 
     hyper_tune_search = BayesSearchCV(
@@ -175,13 +185,23 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
         search_spaces=search_spaces,
         n_iter=25,
         cv=predefined_split_index,
-        scoring='roc_auc',
-        n_jobs=-1,
+        scoring=scoring_method,
+        n_jobs=1,
+        random_state=10120024,
         verbose=0
     )
 
-    hyper_tune_search.fit(train_feature, train_target)
-    best_model = hyper_tune_search.best_estimator_
+    retries = 3
+    while True:
+        try:
+            hyper_tune_search.fit(train_feature, train_target)
+            best_model = hyper_tune_search.best_estimator_
+            break
+        except Exception as e:
+            print(e)
+            retries -= 1
+            if retries == 0:
+                raise e
 
     return best_model
 
@@ -202,11 +222,22 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
     Returns:
         LogisticRegression: The best-performing model found by the search
     """
+    val_indices = np.where(predefined_split_index.test_fold == 0)[0]
+    train_indices = np.where(predefined_split_index.test_fold != 0)[0]
+
+    if len(np.unique(train_target[train_indices])) == 1:
+        raise ValueError("The train target contains only one unique value.")
+
+    if len(np.unique(train_target[val_indices])) == 1:
+        scoring_method = 'accuracy'
+    else:
+        scoring_method = 'roc_auc'
+
     model = LogisticRegression(
         solver='saga',
         penalty='elasticnet',
         max_iter=1000, 
-        random_state=42
+        random_state=10120024
     )
 
     search_spaces = {
@@ -214,22 +245,28 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
         'l1_ratio': Real(0.0, 1.0)
     }
     
-    scoring_method = 'roc_auc'
-    if len(np.unique(train_target[-40:])) == 1:
-        scoring_method = 'accuracy'
-    
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
         n_iter=25,
         cv=predefined_split_index,
         scoring=scoring_method,
-        n_jobs=-1,
+        n_jobs=1,
+        random_state=10120024,
         verbose=0
     )
 
-    hyper_tune_search.fit(train_feature, train_target)
-    best_model = hyper_tune_search.best_estimator_
+    retries = 3
+    while True:
+        try:
+            hyper_tune_search.fit(train_feature, train_target)
+            best_model = hyper_tune_search.best_estimator_
+            break
+        except Exception as e:
+            print(e)
+            retries -= 1
+            if retries == 0:
+                raise e
 
     return best_model
 
@@ -252,7 +289,7 @@ def _calculate_classification_metrics(target_true: np.array, target_pred: np.arr
     recall_positive = recall_score(target_true, target_pred, pos_label=positive_label, zero_division=0)
     recall_negative = recall_score(target_true, target_pred, pos_label=negative_label, zero_division=0)
 
-    return accuracy, precision_negative, precision_negative, recall_positive, recall_negative
+    return accuracy, precision_positive, precision_negative, recall_positive, recall_negative
 
 def _calculate_gini(model: any, target_true: np.array, target_pred_proba: np.array, positive_label: str) -> float:
     """
@@ -278,6 +315,7 @@ def _calculate_gini(model: any, target_true: np.array, target_pred_proba: np.arr
         positive_class_prob = target_pred_proba[:, positive_class_index]
         auc = roc_auc_score(positive_class_true, positive_class_prob)
         gini = 2 * auc - 1
+
     except (ValueError, IndexError):
         gini = 0.0
 
@@ -431,17 +469,14 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
 
     return all_ticker_train_metrics, all_ticker_test_metrics
 
-def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, positive_label: str, negative_label: str, label_types: list, rolling_windows: list) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation, with the forecasts as the features
 
     Args:s
         model (any): The trained classifier model
-        feature (np.array): The feature set (e.g., train_feature or test_feature)
-        target (np.array): The corresponding true target labels
         positive_label (str): The positive class of the predicted label
         negative_label (str): The negative class of the predicted label
-        threshold_col (str): The name of the columns used as a threshold during the creation of the label
 
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
@@ -456,8 +491,6 @@ def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, p
             prepared_data = pd.read_csv(Path(f'data/stock/combined_forecasts/{ticker}.csv'))
             
             feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold()
-            positive_label = 'High Gain'
-            negative_label = 'Low Gain'
             
             cleaned_data = prepared_data.dropna(subset=[target_column])
 

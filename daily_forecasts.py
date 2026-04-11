@@ -75,7 +75,7 @@ def run_step(step_num, args):
         pass
     
     elif step_num == 2:
-        cmd.extend(["--process_selected_ticker", 'True'])
+        cmd.extend(["--process_selected_ticker"])
 
     elif step_num == 3:
         cmd.extend(["--windows", '5,10'])
@@ -149,7 +149,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run:
+    for step_num in steps_to_run[2:]:
         success = run_step(step_num, args)
         if not success:
             failed_steps.append(step_num)

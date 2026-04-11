@@ -70,7 +70,6 @@ def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFram
     result = pd.concat([train_df, test_df], axis=1)
 
     if model_version == 1:
-        result = pd.concat([train_df, test_df], axis=1)
         result.insert(0, "Ticker", ticker)
 
         threshold_value = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))[threshold_col].iloc[0]

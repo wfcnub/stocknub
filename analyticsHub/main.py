@@ -67,7 +67,7 @@ def get_daily_recommendations() -> (pd.DataFrame, str):
     forecast_df = pd.DataFrame()
     
     for ticker, file in zip(all_ticker, forecast_paths):
-        temp_forecast_df = pd.read_csv(file, usecols=['Date', 'Forecast High Gain 10dd']).tail(1)
+        temp_forecast_df = pd.read_csv(file, usecols=['Date', 'Forecast High Gain 10dd', 'Threshold Median Gain 10dd']).tail(1)
         temp_forecast_df['Ticker'] = ticker
     
         forecast_df = pd.concat((forecast_df, temp_forecast_df))
@@ -189,9 +189,9 @@ def visualize_impact_of_threshold_on_profit(trading_simulation_df) -> go.Figure:
     fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=average_profit, name='Average Profit', mode='lines'))
     fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=max_profit, name='Max Profit', mode='lines'))
     fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=min_profit, name='Min Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_075_profit, name='Quantile 0.75 Profit', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_075_profit, name='Quantile 0.25 Profit', mode='lines'))
     fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_05_profit, name='Quantile 0.5 Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_025_profit, name='Quantile 0.25 Profit', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_025_profit, name='Quantile 0.75 Profit', mode='lines'))
 
     fig.add_hrect(y0=np.min(min_profit)-10, y1=0, fillcolor="red", opacity=0.1, line_width=0)
     fig.add_hrect(y0=0, y1=np.max(max_profit)+10, fillcolor="green", opacity=0.1, line_width=0)
