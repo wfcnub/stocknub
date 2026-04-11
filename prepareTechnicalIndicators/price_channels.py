@@ -13,6 +13,9 @@ def calculate_bollinger_bands(data, prepared_data):
         'Width': [val.width for val in result]
     })
 
+    band_range = result_df['Upper Band'] - result_df['Lower Band']
+    result_df['Bollinger Percent B'] = (pd.Series(data['Close'].values) - result_df['Lower Band']) / band_range.replace(0, np.nan)
+
     result_df['Bollinger Overbought'] = np.array(result_df['Upper Band'].values <= data['Close'].values).astype(int)
     result_df['Bollinger Oversold'] = np.array(result_df['Lower Band'].values >= data['Close'].values).astype(int)
     result_df['Width Bollinger Increasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_up=True)
@@ -32,6 +35,9 @@ def calculate_keltner(data, prepared_data):
         'Width': [val.width for val in result]
     })
 
+    band_range = result_df['Upper Band'] - result_df['Lower Band']
+    result_df['Keltner Percent B'] = (pd.Series(data['Close'].values) - result_df['Lower Band']) / band_range.replace(0, np.nan)
+
     result_df['Keltner Overbought'] = np.array(result_df['Upper Band'].values <= data['Close'].values).astype(int)
     result_df['Keltner Oversold'] = np.array(result_df['Lower Band'].values >= data['Close'].values).astype(int)
     result_df['Width Keltner Increasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_up=True)
@@ -46,11 +52,14 @@ def calculate_donchian(data, prepared_data):
     result = indicators.get_donchian(prepared_data)
     result_df = pd.DataFrame({
         'Date': [val.date for val in result],
-        'Upper Band': np.array([np.nan if val.upper_band == None else val.upper_band for val in result]).astype(float),
-        'Lower Band': np.array([np.nan if val.lower_band == None else val.lower_band for val in result]).astype(float),
-        'Width': np.array([np.nan if val.width == None else val.width for val in result]).astype(float)
+        'Upper Band': np.array([np.nan if val.upper_band is None else val.upper_band for val in result]).astype(float),
+        'Lower Band': np.array([np.nan if val.lower_band is None else val.lower_band for val in result]).astype(float),
+        'Width': np.array([np.nan if val.width is None else val.width for val in result]).astype(float)
     })
-    
+
+    band_range = result_df['Upper Band'] - result_df['Lower Band']
+    result_df['Donchian Percent B'] = (pd.Series(data['Close'].values) - result_df['Lower Band']) / band_range.replace(0, np.nan)
+
     result_df['Donchian Overbought'] = np.array(result_df['Upper Band'].values <= data['Close'].values).astype(int)
     result_df['Donchian Oversold'] = np.array(result_df['Lower Band'].values >= data['Close'].values).astype(int)
     result_df['Width Donchian Increasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_up=True)

@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -36,6 +35,14 @@ def process_single_ticker(args_tuple):
                 ticker, 
                 False, 
                 f"OHLCV data is empty for {ticker}", 
+                0
+            )
+
+        if not foreign_flow_non_regular_path.is_file():
+            return (
+                ticker, 
+                False, 
+                f"Foreign flow and non-regular data not found for {ticker}", 
                 0
             )
 

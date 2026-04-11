@@ -9,6 +9,7 @@ Bear Power 80% Negatives
 Bear Power Trend
 Bollinger Overbought
 Bollinger Oversold
+Bollinger Percent B
 Bull Power 80% Positives
 Bull Power Up Trend
 Crossover CMF
@@ -17,6 +18,7 @@ Domestic 60 Days Average Price Over Current Price
 Domestic 90 Days Average Price Over Current Price
 Donchian Overbought
 Donchian Oversold
+Donchian Percent B
 Fisher Down Trend
 Fisher Reversal
 Fisher Up trend
@@ -28,6 +30,7 @@ Foreign to Domestic 60 Days Ownership
 Foreign to Domestic 90 Days Ownership
 Keltner Overbought
 Keltner Oversold
+Keltner Percent B
 MACD Near 0
 MACD Non-Near 0 Negative
 MACD Non-Near 0 Positive
@@ -35,18 +38,30 @@ MFI Decreasing
 MFI Increasing
 MFI Overbought
 MFI Oversold
+MFI Value
 Negative CMF
+OBV to MA20 Ratio
 On Balance Volume Decreasing
 On Balance Volume Increasing
 Positive CMF
+Price Momentum 10D
+Price Momentum 20D
+Price Momentum 5D
+RSI 21
+RSI 7
 RSI Down Trend
+RSI Rate of Change 10
+RSI Rate of Change 5
 RSI Up Trend
+RSI Value
+Stochastic K Value
 Stochastic Oscillator Overbought
 Stochastic Oscillator Oversold
 Strong Minus Directional Index
 Strong Negative CMF
 Strong Plus Directional Index
 Strong Positive CMF
+Volume Ratio 20D
 Weak Minus Directional Index
 Weak Plus Directional Index
 Width Bollinger Decreasing

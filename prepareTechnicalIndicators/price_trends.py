@@ -8,7 +8,7 @@ def calculate_atr_trailing_stop(data, prepared_data):
     result = indicators.get_atr_stop(prepared_data)
     result_df = pd.DataFrame({
         'Date': [val.date for val in result],
-        'ATR Stop': [val.atr_stop if val.atr_stop != None else np.nan for val in result]
+        'ATR Stop': [val.atr_stop if val.atr_stop is not None else np.nan for val in result]
     })
 
     result_df['ATR Bullish'] = (result_df['ATR Stop'].values >= data['Close'].values).astype(int)
@@ -29,7 +29,7 @@ def calculate_aroon(prepared_data):
 
     result_df.dropna(subset=['Aroon Up'], inplace=True)
     aroon_position = result_df['Aroon Up'].values >= result_df['Aroon Down'].values
-    result_df['Aroon Change Position'] = [np.nan] + (aroon_position[:1] != aroon_position[1:]).astype(int).tolist()
+    result_df['Aroon Change Position'] = [np.nan] + (aroon_position[:-1] != aroon_position[1:]).astype(int).tolist()
     result_df['Aroon Up Trend'] = (result_df['Aroon Up'].values >= 70).astype(int)
     result_df['Aroon Down Trend'] = (result_df['Aroon Down'].values >= 70).astype(int)
 
@@ -86,9 +86,12 @@ def calculate_moving_average_convergence_divergence(prepared_data):
 
     result_df.dropna(subset=['Histogram MACD'], inplace=True)
 
-    result_df['MACD Near 0'] = (np.abs(result_df['Histogram MACD']) < 10).astype(int)
-    result_df['MACD Non-Near 0 Negative'] = (result_df['Histogram MACD'] <= -10).astype(int)
-    result_df['MACD Non-Near 0 Positive'] = (result_df['Histogram MACD'] >= 10).astype(int)
+    macd_threshold = result_df['Histogram MACD'].abs().rolling(window=50, min_periods=10).median()
+    macd_threshold = macd_threshold.fillna(result_df['Histogram MACD'].abs().expanding(min_periods=1).median())
+
+    result_df['MACD Near 0'] = (result_df['Histogram MACD'].abs() < macd_threshold).astype(int)
+    result_df['MACD Non-Near 0 Negative'] = ((result_df['Histogram MACD'] <= -macd_threshold)).astype(int)
+    result_df['MACD Non-Near 0 Positive'] = ((result_df['Histogram MACD'] >= macd_threshold)).astype(int)
 
     result_df.drop(columns=['Histogram MACD'], inplace=True)
 

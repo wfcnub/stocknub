@@ -16,6 +16,10 @@ def calculate_on_balance_volume(prepared_data):
     result_df['On Balance Volume Increasing'] = identify_historical_trends(result_df, 'On Balance Volume', 5, make_bool_up=True)
     result_df['On Balance Volume Decreasing'] = identify_historical_trends(result_df, 'On Balance Volume', 5, make_bool_down=True)
 
+    obv_ma20 = result_df['On Balance Volume'].rolling(window=20).mean()
+    result_df['OBV to MA20 Ratio'] = result_df['On Balance Volume'] / obv_ma20.replace(0, np.nan)
+    result_df['OBV to MA20 Ratio'] = result_df['OBV to MA20 Ratio'].replace([np.inf, -np.inf], np.nan)
+
     result_df.drop(columns=['On Balance Volume'], inplace=True)
 
     return result_df.set_index('Date')
@@ -46,9 +50,9 @@ def calculate_chaikin_money_flow(prepared_data):
     result_df.dropna(subset=['Chaikin Money Flow'], inplace=True)
 
     result_df['Positive CMF'] = (result_df['Chaikin Money Flow'] > 0).astype(int)
-    result_df['Strong Positive CMF'] = (result_df['Chaikin Money Flow'] >= 30).astype(int)
+    result_df['Strong Positive CMF'] = (result_df['Chaikin Money Flow'] >= 0.25).astype(int)
     result_df['Negative CMF'] = (result_df['Chaikin Money Flow'] <= 0).astype(int)
-    result_df['Strong Negative CMF'] = (result_df['Chaikin Money Flow'] <= -30).astype(int)
+    result_df['Strong Negative CMF'] = (result_df['Chaikin Money Flow'] <= -0.25).astype(int)
     result_df['Crossover CMF'] = [np.nan] + ((result_df['Chaikin Money Flow'].values[:-1] * result_df['Chaikin Money Flow'].values[1:]) <= 0).astype(int).tolist()
 
     result_df.drop(columns=['Chaikin Money Flow'], inplace=True)
@@ -63,6 +67,8 @@ def calculate_money_flow_index(prepared_data):
     })
 
     result_df.dropna(subset=['Money Flow Index'], inplace=True)
+    
+    result_df['MFI Value'] = result_df['Money Flow Index']
 
     result_df['MFI Overbought'] = (result_df['Money Flow Index'] >= 80).astype(int)
     result_df['MFI Oversold'] = (result_df['Money Flow Index'] <= 20).astype(int)

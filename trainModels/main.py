@@ -164,7 +164,7 @@ def develop_model_v4(label_types: list, rolling_windows: list, positive_label: s
                - train_metrics (dict): Performance metrics on the training set
                - test_metrics (dict): Performance metrics on the testing set
     """
-    feature_columns, target_column, threhsold_column = _get_combined_forecasts_features_target_threshold()
+    feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold()
 
     prepared_data = _combine_multiple_ticker('data/stock/combined_forecasts')
     
@@ -174,9 +174,9 @@ def develop_model_v4(label_types: list, rolling_windows: list, positive_label: s
 
     model = _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature, train_target, cv_split)
 
-    train_metrics, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, positive_label, negative_label, label_types, rolling_windows)
+    train_metrics, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, positive_label, negative_label)
      
-    return model, train_metrics, test_metrics, threhsold_column
+    return model, train_metrics, test_metrics, threshold_column
 
 def process_single_model(args_tuple):
     """

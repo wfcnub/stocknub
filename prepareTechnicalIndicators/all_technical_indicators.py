@@ -1,10 +1,13 @@
+import os
+import tempfile
 import numpy as np
 import pandas as pd
 from stock_indicators import Quote
 
+from prepareTechnicalIndicators.momentum import calculate_price_momentum
 from prepareTechnicalIndicators.price_trends import calculate_atr_trailing_stop, calculate_aroon, calculate_average_directional_index, calculate_elder_ray_index, calculate_moving_average_convergence_divergence
 from prepareTechnicalIndicators.price_channels import calculate_keltner, calculate_donchian, calculate_bollinger_bands
-from prepareTechnicalIndicators.oscillators import calculate_relative_strength_index, calculate_stochastic_oscillator
+from prepareTechnicalIndicators.oscillators import calculate_relative_strength_index, calculate_stochastic_oscillator, calculate_multi_timeframe_rsi
 from prepareTechnicalIndicators.volume_based import calculate_on_balance_volume, calculate_money_flow_index, calculate_chaikin_money_flow, calculate_accumulation_distribution_line
 from prepareTechnicalIndicators.price_transformations import calculate_ehler_fisher_transform, calculate_zig_zag
 from prepareTechnicalIndicators.additional_technical_indicators import calculate_additional_technical_indicators
@@ -49,7 +52,8 @@ def _generate_all_technical_indicators(data, additional_data, prepared_data, tec
     elif technical_indicator == 'oscillators':
         technical_indicator_data = [
             calculate_relative_strength_index(prepared_data), 
-            calculate_stochastic_oscillator(prepared_data)
+            calculate_stochastic_oscillator(prepared_data),
+            calculate_multi_timeframe_rsi(prepared_data)
         ]
 
     elif technical_indicator == 'volume_based':
@@ -69,6 +73,11 @@ def _generate_all_technical_indicators(data, additional_data, prepared_data, tec
     elif technical_indicator == 'additional_technical_indicators':
         technical_indicator_data = [
             calculate_additional_technical_indicators(additional_data)
+        ]
+
+    elif technical_indicator == 'momentum':
+        technical_indicator_data = [
+            calculate_price_momentum(data)
         ]
 
     return technical_indicator_data
@@ -92,9 +101,11 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
     """
     prepared_data = _prepare_data_for_generating_stock_indicators(data)
 
+    data = data.copy()
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index('Date', inplace=True)
 
+    additional_data = additional_data.copy()
     additional_data['Date'] = pd.to_datetime(additional_data['Date'])
     additional_data.set_index('Date', inplace=True)
 
@@ -103,7 +114,7 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
     all_stock_indicators_data = data.copy()
 
     selected_technical_indicators = [
-        'price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations', 'additional_technical_indicators'
+        'price_trends', 'price_channels', 'oscillators', 'volume_based', 'price_transformations', 'additional_technical_indicators', 'momentum'
     ]
     
     for technical_indicator in selected_technical_indicators:
@@ -118,8 +129,11 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
     feature_columns = sorted(list(updated_columns - original_columns))
 
     output_path = 'data/technical_indicator_features.txt'
-    with open(output_path, "w") as file:
+    dir_name = os.path.dirname(output_path) or '.'
+    with tempfile.NamedTemporaryFile(mode='w', dir=dir_name, suffix='.tmp', delete=False) as tmp_file:
         for fea_col in feature_columns:
-            file.write(fea_col + "\n")
+            tmp_file.write(fea_col + "\n")
+        tmp_path = tmp_file.name
+    os.replace(tmp_path, output_path)
 
     return all_stock_indicators_data
