@@ -1,6 +1,6 @@
-import os
 import shutil
 import argparse
+import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
@@ -57,9 +57,8 @@ def main():
     if Path(args.csv_folder_path).exists():
         shutil.rmtree(args.csv_folder_path)
 
-    Path(args.csv_folder_path).mkdir(parents=True, exist_ok=True)
-    
-    csv_folder_path = os.path.join(os.getcwd(), args.csv_folder_path)
+    csv_folder_path = Path(f'{args.csv_folder_path}_{np.max(rolling_windows)}dd')
+    csv_folder_path.mkdir(parents=True, exist_ok=True)
 
     _write_combined_forecasts_features_target_threshold(label_types, rolling_windows, model_versions)
 
@@ -78,7 +77,7 @@ def main():
             label_types,
             rolling_windows, 
             model_versions, 
-            args.csv_folder_path
+            csv_folder_path
         )
         for ticker in all_ticker
     ]

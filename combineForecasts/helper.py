@@ -7,7 +7,7 @@ from camel_converter import to_camel
 
 from utils.pipeline import get_label_config
 
-def _get_combined_forecasts_features_target_threshold() -> (str, str, str):
+def _get_combined_forecasts_features_target_threshold(rolling_window: int) -> (str, str, str):
     """
     (Internal Helper) Read the yaml file containing the feature columns, target column, and threshold column for modelling v4
 
@@ -17,7 +17,7 @@ def _get_combined_forecasts_features_target_threshold() -> (str, str, str):
         str: Threshold column used to determine the target column
 
     """
-    columns_information_path = Path('data/combined_forecasts_columns_information.yaml')
+    columns_information_path = Path(f'data/combined_forecasts_columns_information_{rolling_window}dd.yaml')
     with open(columns_information_path, 'r') as file:
         columns_information = yaml.safe_load(file)
     
@@ -90,7 +90,7 @@ def _combine_multiple_forecast_for_single_ticker(ticker: str, label_types: list,
                     forecast_df = pd.merge(forecast_df, temp_forecast_df, on='Date', how='inner', suffixes=['', '_drop'])
                     forecast_df.drop(columns=[col for col in forecast_df.columns if col.endswith('_drop')], inplace=True)
     
-    feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold()
+    feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold(np.max(rolling_windows))
     
     columns_order = ['Date'] + feature_columns + [threshold_column] + [target_column]
     forecast_df = forecast_df[columns_order]
@@ -123,7 +123,7 @@ def _write_combined_forecasts_features_target_threshold(label_types: list, rolli
         'threhsold_column': threhsold_column
     }
 
-    columns_information_path = Path('data/combined_forecasts_columns_information.yaml')
+    columns_information_path = Path(f'data/combined_forecasts_columns_information_{np.max(rolling_windows)}dd.yaml')
     with open(columns_information_path, 'w') as file:
         yaml.dump(columns_information, file, default_flow_style=False, sort_keys=False)
 

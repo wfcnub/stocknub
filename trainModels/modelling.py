@@ -177,17 +177,15 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
         eval_metric='AUC',
         logging_level='Silent',
         thread_count=-1,
-        random_seed=10120024
     )
 
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=25,
+        n_iter=10,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=1,
-        random_state=10120024,
         verbose=0
     )
 
@@ -248,7 +246,7 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=25,
+        n_iter=10,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=1,
@@ -386,8 +384,7 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
     Args:
         industry (str): The name of the industry being worked on
         model (any): The trained classifier model
-        feature (np.array): The feature set (e.g., train_feature or test_feature)
-        target (np.array): The corresponding true target labels
+        target_column (str): The name of the target variable column
         positive_label (str): The positive class of the predicted label
         negative_label (str): The negative class of the predicted label
         threshold_col (str): The name of the columns used as a threshold during the creation of the label
@@ -469,7 +466,7 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
 
     return all_ticker_train_metrics, all_ticker_test_metrics
 
-def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, rolling_window: int, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation, with the forecasts as the features
 
@@ -481,16 +478,16 @@ def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, p
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    all_tickers = [file.stem for file in Path('data/stock/combined_forecasts').rglob('*.csv')]
+    all_tickers = [file.stem for file in Path(f'data/stock/combined_forecasts_{rolling_window}dd').rglob('*.csv')]
     
     all_ticker_train_metrics_df = pd.DataFrame()
     all_ticker_test_metrics_df = pd.DataFrame()
 
     for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(Path(f'data/stock/combined_forecasts/{ticker}.csv'))
+            prepared_data = pd.read_csv(Path(f'data/stock/combined_forecasts_{rolling_window}dd/{ticker}.csv'))
             
-            feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold()
+            feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold(rolling_window)
             
             cleaned_data = prepared_data.dropna(subset=[target_column])
 

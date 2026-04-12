@@ -59,13 +59,25 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
         'l2_leaf_reg': Real(0.5, 3.0)
     }
 
-    model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
-
-    train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
-
-    test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
+    all_model = []
+    all_train_metrics = []
+    all_test_metrics = []
     
-    return model, train_metrics, test_metrics
+    for _ in range(3):
+        model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
+
+        train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
+
+        test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
+
+        all_model.append(model)
+        all_train_metrics.append(train_metrics)
+        all_test_metrics.append(test_metrics)
+    
+    all_test_gini = [metrics['Gini'] for metrics in all_test_metrics]
+    best_model_index = np.argmax(all_test_gini)
+    
+    return all_model[best_model_index], all_train_metrics[best_model_index], all_test_metrics[best_model_index]
 
 def develop_model_v2(industry: str, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (any, dict, dict):
     """
@@ -101,11 +113,23 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
         'l2_leaf_reg': Real(0.5, 3.0)
     }
 
-    model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
-
-    train_metrics, test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
+    all_model = []
+    all_train_metrics = []
+    all_test_metrics = []
     
-    return model, train_metrics, test_metrics
+    for _ in range(3):
+        model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
+
+        train_metrics, test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
+
+        all_model.append(model)
+        all_train_metrics.append(train_metrics)
+        all_test_metrics.append(test_metrics)
+    
+    all_test_gini = [np.median(metrics['Gini']) for metrics in all_test_metrics]
+    best_model_index = np.argmax(all_test_gini)
+    
+    return all_model[best_model_index], all_train_metrics[best_model_index], all_test_metrics[best_model_index]
 
 def develop_model_v3(target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (any, dict, dict):
     """
@@ -140,13 +164,25 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
         'l2_leaf_reg': Real(0.5, 3.0)
     }
 
-    model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
-
-    train_metrics, test_metrics = _measure_model_performance_for_all_ticker(model, target_column, positive_label, negative_label, threshold_col)
+    all_model = []
+    all_train_metrics = []
+    all_test_metrics = []
     
-    return model, train_metrics, test_metrics
+    for _ in range(3):
+        model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
-def develop_model_v4(label_types: list, rolling_windows: list, positive_label: str, negative_label: str) -> (any, dict, dict, str):
+        train_metrics, test_metrics = _measure_model_performance_for_all_ticker(model, target_column, positive_label, negative_label, threshold_col)
+
+        all_model.append(model)
+        all_train_metrics.append(train_metrics)
+        all_test_metrics.append(test_metrics)
+    
+    all_test_gini = [np.median(metrics['Gini']) for metrics in all_test_metrics]
+    best_model_index = np.argmax(all_test_gini)
+    
+    return all_model[best_model_index], all_train_metrics[best_model_index], all_test_metrics[best_model_index]
+
+def develop_model_v4(rolling_window: int, positive_label: str, negative_label: str) -> (any, dict, dict, str):
     """
     Main orchestration function for the entire model development process
 
@@ -164,87 +200,81 @@ def develop_model_v4(label_types: list, rolling_windows: list, positive_label: s
                - train_metrics (dict): Performance metrics on the training set
                - test_metrics (dict): Performance metrics on the testing set
     """
-    feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold()
+    feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold(rolling_window)
 
-    prepared_data = _combine_multiple_ticker('data/stock/combined_forecasts')
+    prepared_data = _combine_multiple_ticker(f'data/stock/combined_forecasts_{rolling_window}dd')
     
     cleaned_data = prepared_data.dropna(subset=[target_column])
 
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_multiple(cleaned_data, feature_columns, target_column)
 
-    model = _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature, train_target, cv_split)
+    all_model = []
+    all_train_metrics = []
+    all_test_metrics = []
+    
+    for _ in range(3):
+        model = _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature, train_target, cv_split)
 
-    train_metrics, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, positive_label, negative_label)
-     
-    return model, train_metrics, test_metrics, threshold_column
+        train_metrics, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, rolling_window, positive_label, negative_label)
+
+        all_model.append(model)
+        all_train_metrics.append(train_metrics)
+        all_test_metrics.append(test_metrics)
+    
+    all_test_gini = [np.median(metrics['Gini']) for metrics in all_test_metrics]
+    best_model_index = np.argmax(all_test_gini)
+    
+    return all_model[best_model_index], all_train_metrics[best_model_index], all_test_metrics[best_model_index], threshold_column
 
 def process_single_model(args_tuple):
     """
     Utilize label data to create a machine learning model.
 
     Args:
-        args_tuple: Tuple containing (label_file, label_types, rolling_windows, model_version)
+        args_tuple: Tuple containing (label_file, label_type, rolling_window, model_version)
 
     Returns:
         Tuple of (failed_process, metrics_list)
     """
-    identifier, label_types, rolling_windows, model_version = args_tuple
+    identifier, label_type, rolling_window, model_version = args_tuple
  
+    target_col, threshold_col, pos_label, neg_label = get_label_config(
+            label_type, rolling_window
+        )
     failed_process = []
     metrics_list = []
 
     try:
         if model_version in [1, 2, 3]:
-            for label_type in label_types:
-                for window in rolling_windows:
-                    target_col, threshold_col, pos_label, neg_label = get_label_config(
-                        label_type, window
-                    )
-
-                    try:
-                        if model_version == 1:
-                            model, train_metrics, test_metrics = develop_model_v1(
-                                identifier, target_col, pos_label, neg_label
-                            )
-                        elif model_version == 2:
-                            model, train_metrics, test_metrics = develop_model_v2(
-                                identifier, target_col, pos_label, neg_label, threshold_col
-                            )
-                        
-                        elif model_version == 3:
-                            model, train_metrics, test_metrics = develop_model_v3(
-                                target_col, pos_label, neg_label, threshold_col
-                            )
-                        
-                        _save_model(model, model_version, label_type, identifier, window)
-                        
-                        metrics_df = _combine_metrics(
-                            identifier, model_version, train_metrics, test_metrics, threshold_col
-                        )
-
-                        metrics_list.append((label_type, window, metrics_df))
-
-                    except Exception as e:
-                        failed_process.append((identifier, label_type, window, str(e)))
-            
-        elif model_version == 4:
-            try:
-                model, train_metrics, test_metrics, threshold_column = develop_model_v4(
-                                label_types, rolling_windows, 'High Gain', 'Low Gain'
-                            )
-
-                _save_model(model, model_version, 'median_gain', identifier, np.max(rolling_windows))
-                
-                metrics_df = _combine_metrics(
-                    identifier, model_version, train_metrics, test_metrics, threshold_column
+            if model_version == 1:
+                model, train_metrics, test_metrics = develop_model_v1(
+                    identifier, target_col, pos_label, neg_label
                 )
 
-                metrics_list.append(('median_gain', np.max(rolling_windows), metrics_df))
+            elif model_version == 2:
+                model, train_metrics, test_metrics = develop_model_v2(
+                    identifier, target_col, pos_label, neg_label, threshold_col
+                )
             
-            except Exception as e:
-                failed_process.append((identifier, 'median_gain', np.max(rolling_windows), str(e)))
+            elif model_version == 3:
+                model, train_metrics, test_metrics = develop_model_v3(
+                    target_col, pos_label, neg_label, threshold_col
+                )
+                        
+        elif model_version == 4:
+            model, train_metrics, test_metrics, threshold_col = develop_model_v4(
+                            rolling_window, pos_label, neg_label
+                        )
 
+        _save_model(model, model_version, label_type, identifier, rolling_window)
+        
+        metrics_df = _combine_metrics(
+            identifier, model_version, train_metrics, test_metrics, threshold_col
+        )
+
+        metrics_list.append((label_type, rolling_window, metrics_df))
+            
     except Exception as e:
-        failed_process.append((identifier, "all", "all", str(e)))
+        failed_process.append((identifier, label_type, rolling_window, str(e)))
 
     return failed_process, metrics_list

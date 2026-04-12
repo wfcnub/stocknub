@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import pandas as pd
 import case_conversion
@@ -9,9 +10,21 @@ import plotly.graph_objects as go
 from analyticsHub.helper import (
     _get_chosen_performance_df,
     _generate_forecast_data_on_test_data,
-    _generate_max_daily_profit,
+    _generate_max_daily_performance_metric,
     _generate_trading_simulation_df
 )
+
+@st.cache_data
+def get_pre_market_outlook() -> dict | None:
+    """
+    Load the most recent pre-market outlook JSON from data/pre_market_outlook/.
+
+    Returns:
+        dict | None: The parsed outlook dictionary, or None if no file exists
+    """
+    json_file_path = Path('data/pre_market_outlook.json')
+    with open(json_file_path, "r") as f:
+        return json.load(f)
 
 @st.cache_data
 def get_all_performances() -> pd.DataFrame:
@@ -52,22 +65,22 @@ def get_all_performances() -> pd.DataFrame:
     return all_df
 
 @st.cache_data
-def get_daily_recommendations() -> (pd.DataFrame, str):
+def get_daily_recommendations(rolling_window: str) -> (pd.DataFrame, str):
     """
     Get the daily recommendations
 
     Returns:
         (pd.DataFrame, str): A tuple containing the daily recommendations dataframe and the forecast date
     """
-    final_performance = pd.read_csv(Path('data/stock/model_v4/performance/medianGain/10dd.csv'))
+    final_performance = pd.read_csv(Path(f'data/stock/model_v4/performance/medianGain/{rolling_window}.csv'))
     
-    forecast_paths = Path('data/stock/forecast/model_v4/medianGain/10dd').rglob('*.csv')
-    all_ticker = [file.stem for file in Path('data/stock/forecast/model_v4/medianGain/10dd').rglob('*.csv')]
+    forecast_paths = Path(f'data/stock/forecast/model_v4/medianGain/{rolling_window}').rglob('*.csv')
+    all_ticker = [file.stem for file in Path(f'data/stock/forecast/model_v4/medianGain/{rolling_window}').rglob('*.csv')]
     
     forecast_df = pd.DataFrame()
     
     for ticker, file in zip(all_ticker, forecast_paths):
-        temp_forecast_df = pd.read_csv(file, usecols=['Date', 'Forecast High Gain 10dd', 'Threshold Median Gain 10dd']).tail(1)
+        temp_forecast_df = pd.read_csv(file, usecols=['Date', f'Forecast High Gain {rolling_window}', f'Threshold Median Gain {rolling_window}']).tail(1)
         temp_forecast_df['Ticker'] = ticker
     
         forecast_df = pd.concat((forecast_df, temp_forecast_df))
@@ -77,7 +90,7 @@ def get_daily_recommendations() -> (pd.DataFrame, str):
                         final_performance[['Ticker', 'Test - Gini']],
                         on='Ticker',
                         how='inner'
-                    ).sort_values('Forecast High Gain 10dd', ascending=False)
+                    ).sort_values(f'Forecast High Gain {rolling_window}', ascending=False)
     
     assert forecast_df['Date'].nunique() == 1
     forecast_date = forecast_df['Date'].unique()[0]
@@ -88,41 +101,42 @@ def get_daily_recommendations() -> (pd.DataFrame, str):
     return forecast_df, forecast_date
 
 @st.cache_data
-def generate_trading_simulation_df() -> pd.DataFrame:
+def generate_trading_simulation_df(rolling_window: str) -> pd.DataFrame:
     """
     Generate the trading simulation data
 
     Returns:
         pd.DataFrame: A pandas dataframe containing the trading simulation data
     """
-    forecast_df = _generate_forecast_data_on_test_data()
-    label_df = _generate_max_daily_profit()
+    forecast_df = _generate_forecast_data_on_test_data(rolling_window)
+    max_daily_profit_df = _generate_max_daily_performance_metric(rolling_window, 'Profit')
+    max_daily_loss_df = _generate_max_daily_performance_metric(rolling_window, 'Loss')
 
-    trading_simulation_df = _generate_trading_simulation_df(forecast_df, label_df)
+    trading_simulation_df = _generate_trading_simulation_df(forecast_df, max_daily_profit_df, max_daily_loss_df, rolling_window)
 
     return trading_simulation_df
 
 @st.cache_data
-def visualize_profit_distribution_for_each_forecast_threshold(trading_simulation_df) -> go.Figure:
+def visualize_performance_metric_distribution_for_each_forecast_threshold(trading_simulation_df: pd.DataFrame, rolling_window: str, performance_metric: str) -> go.Figure:
     """
-    Visualize the profit distribution for each forecast threshold
+    Visualize the performance metric distribution for each forecast threshold
 
     Args:
         trading_simulation_df (pd.DataFrame): A pandas dataframe containing the trading simulation data
 
     Returns:
-        go.Figure: A plotly figure containing the profit distribution for each forecast threshold
+        go.Figure: A plotly figure containing the performance metric distribution for each forecast threshold
     """
     boxplot_df = pd.DataFrame()
     all_forecast_thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1]
     
     for lower_forecast_thres, upper_forecast_thres in zip(all_forecast_thresholds[:-1], all_forecast_thresholds[1:]):
         thres_bool = np.all((
-            trading_simulation_df['Forecast High Gain 10dd'] >= lower_forecast_thres,
-            trading_simulation_df['Forecast High Gain 10dd'] < upper_forecast_thres
+            trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= lower_forecast_thres,
+            trading_simulation_df[f'Forecast High Gain {rolling_window}'] < upper_forecast_thres
         ), axis=0)
     
-        temp_boxplot_df = trading_simulation_df.loc[thres_bool, ['Profit']]
+        temp_boxplot_df = trading_simulation_df.loc[thres_bool, [performance_metric]]
         temp_boxplot_df['Forecast Threshold'] = f'{lower_forecast_thres} <= x < {upper_forecast_thres}'
     
         boxplot_df = pd.concat((boxplot_df, temp_boxplot_df))
@@ -130,55 +144,54 @@ def visualize_profit_distribution_for_each_forecast_threshold(trading_simulation
     fig = px.box(
         boxplot_df, 
         y="Forecast Threshold", 
-        x="Profit",
-        title="Profit's Distribution for Each Forecast Threhshold",
+        x=performance_metric,
+        title=f"{performance_metric}'s Distribution for Each Forecast Threshold",
         points=False
     )
 
     fig.update_layout(
         xaxis=dict(
-            title="Profit (%)",
+            title="Percentage (%)",
             gridcolor='lightgrey'
         ),
         width=1000, 
         height=500)
     
-    fig.add_vrect(x0=boxplot_df['Profit'].min()-0.1, x1=0, fillcolor="red", opacity=0.1, line_width=0)
-    
-    fig.add_vrect(x0=0, x1=boxplot_df['Profit'].max()+0.1, fillcolor="green", opacity=0.1, line_width=0)
+    fig.add_vrect(x0=boxplot_df[performance_metric].min()-0.1, x1=0, fillcolor="red", opacity=0.1, line_width=0)
+    fig.add_vrect(x0=0, x1=boxplot_df[performance_metric].max()+0.1, fillcolor="green", opacity=0.1, line_width=0)
 
     return fig
 
 @st.cache_data
-def visualize_impact_of_threshold_on_profit(trading_simulation_df) -> go.Figure:
+def visualize_impact_of_threshold_on_performance_metric(trading_simulation_df: pd.DataFrame, rolling_window: str, performance_metric: str) -> go.Figure:
     """
-    Visualize the impact of threshold on profit
+    Visualize the impact of threshold on performance metric
 
     Args:
         trading_simulation_df (pd.DataFrame): A pandas dataframe containing the trading simulation data
 
     Returns:
-        go.Figure: A plotly figure containing the impact of threshold on profit
+        go.Figure: A plotly figure containing the impact of threshold on performance metric
     """
-    forecast_threshold_10dd = np.arange(0, 1, 0.00075)
+    forecast_threshold = np.arange(0, 1, 0.00075)
     
-    average_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].mean() for threshold in forecast_threshold_10dd]
-    max_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].max() for threshold in forecast_threshold_10dd]
-    min_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].min() for threshold in forecast_threshold_10dd]
-    quantile_075_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].quantile(0.75) for threshold in forecast_threshold_10dd]
-    quantile_05_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].quantile(0.5) for threshold in forecast_threshold_10dd]
-    quantile_025_profit = [trading_simulation_df.loc[trading_simulation_df['Forecast High Gain 10dd'] >= threshold, 'Profit'].quantile(0.25) for threshold in forecast_threshold_10dd]
+    average_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].mean() for threshold in forecast_threshold]
+    max_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].max() for threshold in forecast_threshold]
+    min_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].min() for threshold in forecast_threshold]
+    quantile_075_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].quantile(0.75) for threshold in forecast_threshold]
+    quantile_05_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].quantile(0.5) for threshold in forecast_threshold]
+    quantile_025_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].quantile(0.25) for threshold in forecast_threshold]
 
     fig = go.Figure()
 
     fig.update_layout(
-        title="Profit's Statistic on Different Forecast Threhsold",
+        title=f"{performance_metric}'s Statistic on Different Forecast Threshold",
         xaxis=dict(
             title="Forecast Threshold",
             gridcolor='lightgrey'
         ),
         yaxis=dict(
-            title="Profit (%)",
+            title=f"Percentage (%)",
             zerolinecolor='black'
         ),
         width=1500,
@@ -186,14 +199,14 @@ def visualize_impact_of_threshold_on_profit(trading_simulation_df) -> go.Figure:
         template="plotly_white"
     )
     
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=average_profit, name='Average Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=max_profit, name='Max Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=min_profit, name='Min Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_075_profit, name='Quantile 0.25 Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_05_profit, name='Quantile 0.5 Profit', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold_10dd, y=quantile_025_profit, name='Quantile 0.75 Profit', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=average_performance, name=f'Average {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=max_performance, name=f'Max {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=min_performance, name=f'Min {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_075_performance, name=f'Quantile 0.25 {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_05_performance, name=f'Quantile 0.5 {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_025_performance, name=f'Quantile 0.75 {performance_metric}', mode='lines'))
 
-    fig.add_hrect(y0=np.min(min_profit)-10, y1=0, fillcolor="red", opacity=0.1, line_width=0)
-    fig.add_hrect(y0=0, y1=np.max(max_profit)+10, fillcolor="green", opacity=0.1, line_width=0)
+    fig.add_hrect(y0=min_performance[0]-10, y1=0, fillcolor="red", opacity=0.1, line_width=0)
+    fig.add_hrect(y0=0, y1=max_performance[0]+10, fillcolor="green", opacity=0.1, line_width=0)
     
     return fig

@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
@@ -82,7 +83,7 @@ def main():
         feature_columns = get_all_technical_indicators()
         print(f"Using {len(feature_columns)} technical indicators as features")
     elif args.model_version == 4:
-        feature_columns, _, _ = _get_combined_forecasts_features_target_threshold()
+        feature_columns, _, _ = _get_combined_forecasts_features_target_threshold(np.max(windows))
         print(f"Using {len(feature_columns)} forecasts as features")
 
     print("\nFinding ticker with models meeting criteria...")

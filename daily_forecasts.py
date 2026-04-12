@@ -44,14 +44,29 @@ PIPELINE_STEPS = {
         "description": "Generate stock forecasts using the trained models",
     },
     7: {
-        "name": "Combine Forecasts",
+        "name": "Combine Forecasts 5dd",
         "module": "pipeline.combine_forecasts",
         "description": "Combine forecast data from several model variations into a single file",
     },
     8: {
-        "name": "Forecast Stocks V4",
+        "name": "Combine Forecasts 10dd",
+        "module": "pipeline.combine_forecasts",
+        "description": "Combine forecast data from several model variations into a single file",
+    },
+    9: {
+        "name": "Forecast Stocks V4 5dd",
         "module": "pipeline.forecast_stocks",
         "description": "Generate stock forecasts using the trained models",
+    },
+    10: {
+        "name": "Forecast Stocks V4 10dd",
+        "module": "pipeline.forecast_stocks",
+        "description": "Generate stock forecasts using the trained models",
+    },
+    11: {
+        "name": "Pre-Market Outlook",
+        "module": "pipeline.pre_market_outlook",
+        "description": "Generate pre-market outlook for all tickers",
     }
 }
 
@@ -105,15 +120,30 @@ def run_step(step_num, args):
     
     elif step_num == 7:
         cmd.extend(["--model_versions", '1,2,3'])
-        cmd.extend(["--windows", '5,10'])
+        cmd.extend(["--windows", '5'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-    
+
     elif step_num == 8:
+        cmd.extend(["--model_versions", '1,2,3'])
+        cmd.extend(["--windows", '5,10'])
+        cmd.extend(["--label_types", 'median_gain'])
+    
+    elif step_num == 9:
+        cmd.extend(["--model_version", '4'])
+        cmd.extend(["--windows", '5'])
+        cmd.extend(["--label_types", 'median_gain'])
+        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts_5dd'])
+        cmd.extend(["--min_test_gini", '0'])
+
+    elif step_num == 10:
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
-        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts'])
+        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts_10dd'])
         cmd.extend(["--min_test_gini", '0'])
+    
+    elif step_num == 11:
+        pass
 
     try:
         subprocess.run(cmd, check=True)
@@ -149,7 +179,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run[2:]:
+    for step_num in steps_to_run:
         success = run_step(step_num, args)
         if not success:
             failed_steps.append(step_num)

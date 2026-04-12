@@ -88,10 +88,11 @@ def main():
     print(f"Label types: {', '.join(label_types)}")
     print(f"Rolling windows: {', '.join(map(str, rolling_windows))} days")
     
-    args_list = [
-        (identifier, label_types, rolling_windows, args.model_version)
-        for identifier in specified_identifiers
-    ]
+    args_list = []
+    for identifier in specified_identifiers:
+        for label_type in label_types:
+            for window in rolling_windows:
+                args_list.append((identifier, label_type, window, args.model_version))
 
     all_failed_processes = []
     all_metrics = {}
@@ -101,7 +102,7 @@ def main():
         results = list(
                         tqdm(
                             map(process_single_model, args_list),
-                            total=len(specified_identifiers),
+                            total=len(args_list),
                             desc="Processing single model",
                         )
                     )
@@ -112,7 +113,7 @@ def main():
             results = list(
                 tqdm(
                     pool.imap(process_single_model, args_list),
-                    total=len(specified_identifiers),
+                    total=len(args_list),
                     desc="Processing single model",
                 )
             )

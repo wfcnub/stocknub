@@ -1,0 +1,9 @@
+feature_columns:
+- Forecast High Gain 5dd - V1
+- Forecast High Loss 5dd - V1
+- Forecast High Gain 5dd - V2
+- Forecast High Loss 5dd - V2
+- Forecast High Gain 5dd - V3
+- Forecast High Loss 5dd - V3
+target_column: Median Gain 5dd
+threhsold_column: Threshold Median Gain 5dd

@@ -37,17 +37,17 @@ PIPELINE_STEPS = {
     5: {
         "name": "Train Model V1",
         "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
+        "description": "Develop the first version of the model",
     },
     6: {
         "name": "Train Model V2",
         "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
+        "description": "Develop the second version of the model",
     },
     7: {
         "name": "Train Model V3",
         "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
+        "description": "Develop the third version of the model",
     },
     8: {
         "name": "Forecast Stocks V1",
@@ -65,17 +65,27 @@ PIPELINE_STEPS = {
         "description": "Generate stock forecasts using the trained models",
     },
     11: {
-        "name": "Combine Forecasts",
+        "name": "Combine Forecasts 5dd",
         "module": "pipeline.combine_forecasts",
         "description": "Combine forecast data from several model variations into a single file",
     },
     12: {
-        "name": "Train Model V4",
-        "module": "pipeline.train_models",
-        "description": "Generate target labels for all tickers with technical indicators",
+        "name": "Combine Forecasts 10dd",
+        "module": "pipeline.combine_forecasts",
+        "description": "Combine forecast data from several model variations into a single file",
     },
     13: {
-        "name": "Forecast Stocks V4",
+        "name": "Train Model V4",
+        "module": "pipeline.train_models",
+        "description": "Develop the fourth version of the model",
+    },
+    14: {
+        "name": "Forecast Stocks V4 5dd",
+        "module": "pipeline.forecast_stocks",
+        "description": "Generate stock forecasts using the trained models",
+    },
+    15: {
+        "name": "Forecast Stocks V4 10dd",
         "module": "pipeline.forecast_stocks",
         "description": "Generate stock forecasts using the trained models",
     }
@@ -149,19 +159,31 @@ def run_step(step_num, args):
     
     elif step_num == 11:
         cmd.extend(["--model_versions", '1,2,3'])
-        cmd.extend(["--windows", '5,10'])
+        cmd.extend(["--windows", '5'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-    
+
     elif step_num == 12:
-        cmd.extend(["--model_version", '4'])
+        cmd.extend(["--model_versions", '1,2,3'])
         cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain,median_loss'])
+        cmd.extend(["--label_types", 'median_gain'])
     
     elif step_num == 13:
         cmd.extend(["--model_version", '4'])
+        cmd.extend(["--windows", '5,10'])
+        cmd.extend(["--label_types", 'median_gain'])
+    
+    elif step_num == 14:
+        cmd.extend(["--model_version", '4'])
+        cmd.extend(["--windows", '5'])
+        cmd.extend(["--label_types", 'median_gain'])
+        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts_5dd'])
+        cmd.extend(["--min_test_gini", '0'])
+
+    elif step_num == 15:
+        cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
-        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts'])
+        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts_10dd'])
         cmd.extend(["--min_test_gini", '0'])
 
     try:
