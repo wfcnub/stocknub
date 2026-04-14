@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-04-12 18:28:55",
+  "timestamp": "2026-04-14 08:34:37",
   "vix": {
-    "date": "2026-04-10",
-    "value": 19.229999542236328,
-    "percentile_rank": 68.79,
+    "date": "2026-04-13",
+    "value": 19.1200008392334,
+    "percentile_rank": 68.21,
     "classification": {
       "tier": "Normal",
       "sentiment": "Neutral",
@@ -11,43 +11,43 @@
     }
   },
   "usdidr": {
-    "date": "2026-04-11",
-    "value": 17090.0,
+    "date": "2026-04-14",
+    "value": 17117.0,
     "percentile_rank": 99.44,
     "classification": {
-      "change_pct": 0.1817,
-      "vs_sma_20_pct": 0.7914,
+      "change_pct": 0.199,
+      "vs_sma_20_pct": 0.9039,
       "tier": "Mild IDR Weakening",
       "sentiment": "Slightly Bearish",
-      "description": "Rupiah mildly weaker (+0.18% vs prev close) \u2014 minor headwind for IDX."
+      "description": "Rupiah mildly weaker (+0.20% vs prev close) \u2014 minor headwind for IDX."
     }
   },
   "sp500": {
-    "date": "2026-04-10",
-    "value": 6816.89013671875,
-    "percentile_rank": 60.12,
+    "date": "2026-04-13",
+    "value": 6886.240234375,
+    "percentile_rank": 78.61,
     "classification": {
-      "change_pct": -0.1139,
-      "tier": "Mild Decline",
-      "sentiment": "Slightly Bearish",
-      "description": "S&P 500 edged lower (-0.11%) \u2014 mild caution, limited directional impact."
+      "change_pct": 1.0173,
+      "tier": "Strong Rally",
+      "sentiment": "Bullish",
+      "description": "S&P 500 rallied (+1.02%) \u2014 positive risk appetite, likely tailwind for IDX."
     }
   },
   "nikkei": {
-    "timestamp": "2026-04-10 15:29:00+09:00",
-    "value": 56892.5390625,
+    "timestamp": "2026-04-14 10:19:00+09:00",
+    "value": 57931.55859375,
     "is_live": true,
-    "percentile_rank": 93.41,
+    "percentile_rank": 97.6,
     "classification": {
-      "change_pct": 1.7841,
+      "change_pct": 1.7698,
       "tier": "Strong Rally",
       "sentiment": "Bullish",
-      "description": "Nikkei 225 rallied (+1.78%) \u2014 positive risk appetite, likely tailwind for IDX."
+      "description": "Nikkei 225 rallied (+1.77%) \u2014 positive risk appetite, likely tailwind for IDX."
     }
   },
   "overall_outlook": {
-    "composite_score": 0.0,
+    "composite_score": 0.38,
     "outlook": "Neutral-to-Bullish",
-    "rationale": "VIX is Neutral (score +0.0), USD/IDR is Slightly Bearish (score -0.5), S&P 500 is Slightly Bearish (score -0.5), Nikkei 225 is Bullish (score +1.0). Composite score: +0.00 \u2192 Overall outlook: Neutral-to-Bullish."
+    "rationale": "VIX is Neutral (score +0.0), USD/IDR is Slightly Bearish (score -0.5), S&P 500 is Bullish (score +1.0), Nikkei 225 is Bullish (score +1.0). Composite score: +0.38 \u2192 Overall outlook: Neutral-to-Bullish."
   }
 }

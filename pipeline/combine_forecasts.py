@@ -54,10 +54,11 @@ def main():
     rolling_windows = [int(w.strip()) for w in args.windows.split(",")]
     model_versions = [mv.strip() for mv in args.model_versions.split(",")]
     
-    if Path(args.csv_folder_path).exists():
-        shutil.rmtree(args.csv_folder_path)
-
     csv_folder_path = Path(f'{args.csv_folder_path}_{np.max(rolling_windows)}dd')
+
+    if Path(csv_folder_path).exists():
+        shutil.rmtree(csv_folder_path)
+
     csv_folder_path.mkdir(parents=True, exist_ok=True)
 
     _write_combined_forecasts_features_target_threshold(label_types, rolling_windows, model_versions)
