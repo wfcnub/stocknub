@@ -4,7 +4,7 @@ import pandas as pd
 from generateLabels.median_gain import _generate_all_median_gain
 from generateLabels.median_loss import _generate_all_median_loss
 
-def _generate_labels_based_on_label_type(data: pd.DataFrame, target_column: str, rolling_windows: list, label_types: list) -> pd.DataFrame:
+def _generate_labels_based_on_label_type(data: pd.DataFrame, target_column: str, rolling_windows: list, label_types: list, test_length: int = 80, val_length: int = 40) -> pd.DataFrame:
     """
     (Internal Helper) Generates a label following the requested label type for each day based on a rolling window
 
@@ -20,8 +20,8 @@ def _generate_labels_based_on_label_type(data: pd.DataFrame, target_column: str,
     for label_type in label_types:
         for window in rolling_windows:
             if label_type == 'median_gain':
-                data = _generate_all_median_gain(data, target_column, window)
+                data = _generate_all_median_gain(data, target_column, window, test_length, val_length)
             elif label_type == 'median_loss':
-                data = _generate_all_median_loss(data, target_column, window)
+                data = _generate_all_median_loss(data, target_column, window, test_length, val_length)
         
     return data

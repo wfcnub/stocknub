@@ -21,7 +21,9 @@ def process_single_ticker(args_tuple):
         labels_folder_path,
         target_column,
         rolling_windows,
-        label_types
+        label_types,
+        test_length,
+        val_length
     ) = args_tuple
 
     try:
@@ -45,7 +47,7 @@ def process_single_ticker(args_tuple):
             )
 
         technical_df["Date"] = pd.to_datetime(technical_df["Date"]).dt.strftime("%Y-%m-%d")
-        labels_df = _generate_labels_based_on_label_type(technical_df, target_column, rolling_windows, label_types)
+        labels_df = _generate_labels_based_on_label_type(technical_df, target_column, rolling_windows, label_types, test_length, val_length)
 
         if labels_df is None or labels_df.empty:
             return (

@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -75,19 +76,27 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
                - predefined_split_index (PredefinedSplit): An index for cross-validation
                  that designates the last 40 days of the training data as the validation set
     """
-    test_length = 80
-    test_data = data.tail(test_length)
-    train_length = len(data) - test_length
-    train_data = data.head(train_length)
+    window_dd = target_column.split(" ")[-1]
+    json_path = Path(f"data/split_dates_{window_dd}.json")
     
+    with open(json_path, 'r') as f:
+        splits = json.load(f)
+
+    train_val_mask = (data['Date'] >= splits['train']['start_date']) & (data['Date'] <= splits['val']['end_date'])
+    train_data = data[train_val_mask].copy()
+
+    test_mask = (data['Date'] >= splits['test']['start_date']) & (data['Date'] <= splits['test']['end_date'])
+    test_data = data[test_mask].copy()
+
     train_feature = train_data[feature_columns]
     train_target = train_data[target_column]
     test_feature = test_data[feature_columns]
     test_target = test_data[target_column]
     
-    val_length = 40
+    val_mask = (train_data['Date'] >= splits['val']['start_date']) & (train_data['Date'] <= splits['val']['end_date'])
+    
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[-val_length:] = 0    
+    split_index[val_mask.values] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
@@ -116,29 +125,27 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
                  that designates the last 40 days of the training data as the validation set
     """
 
-    all_dates = np.sort(data['Date'].unique())
+    window_dd = target_column.split(" ")[-1]
+    json_path = Path(f"data/split_dates_{window_dd}.json")
     
-    test_length = 80
-    test_dates = all_dates[-test_length:]
-    
-    test_data = data.loc[data['Date'].isin(test_dates), :]
-    train_data = data.loc[~data['Date'].isin(test_dates), :]
-    
-    train_dates = np.sort(train_data['Date'].unique())
+    with open(json_path, 'r') as f:
+        splits = json.load(f)
 
-    val_length = 40
-    val_dates = train_dates[-val_length:]
+    train_val_mask = (data['Date'] >= splits['train']['start_date']) & (data['Date'] <= splits['val']['end_date'])
+    train_data = data[train_val_mask].copy()
 
-    val_data = train_data.loc[train_data['Date'].isin(val_dates), :]
-    len_val_data = len(val_data)
-     
+    test_mask = (data['Date'] >= splits['test']['start_date']) & (data['Date'] <= splits['test']['end_date'])
+    test_data = data[test_mask].copy()
+    
     train_feature = train_data[feature_columns]
     train_target = train_data[target_column]
     test_feature = test_data[feature_columns]
     test_target = test_data[target_column]
     
+    val_mask = (train_data['Date'] >= splits['val']['start_date']) & (train_data['Date'] <= splits['val']['end_date'])
+    
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[-len_val_data:] = 0    
+    split_index[val_mask.values] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
@@ -182,7 +189,7 @@ def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=10,
+        n_iter=30,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=1,
@@ -246,7 +253,7 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
     hyper_tune_search = BayesSearchCV(
         estimator=model,
         search_spaces=search_spaces,
-        n_iter=10,
+        n_iter=30,
         cv=predefined_split_index,
         scoring=scoring_method,
         n_jobs=1,
@@ -267,6 +274,60 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
                 raise e
 
     return best_model
+
+def _initializes_fit_catboost(train_feature: np.array, train_target: np.array, best_params: dict) -> any:
+    """
+    (Internal Helper) Initializes and fits a CatBoost Classifier using given parameters
+
+    Args:
+        train_feature (np.array): The feature set for training
+        train_target (np.array): The target variable for training
+        best_params (dict): The hyperparameters identified from previous tuning
+
+    Returns:
+        CatBoostClassifier: The fitted model
+    """
+    model = CatBoostClassifier(**best_params)
+
+    retries = 3
+    while True:
+        try:
+            model.fit(train_feature, train_target, verbose=False)
+            break
+        except Exception as e:
+            print(e)
+            retries -= 1
+            if retries == 0:
+                raise e
+    
+    return model
+
+def _initializes_fit_logistic_regression(train_feature: np.array, train_target: np.array, best_params: dict) -> any:
+    """
+    (Internal Helper) Initializes and fits a Logistic Regression using given parameters
+
+    Args:
+        train_feature (np.array): The feature set for training
+        train_target (np.array): The target variable for training
+        best_params (dict): The hyperparameters identified from previous tuning
+
+    Returns:
+        LogisticRegression: The fitted model
+    """
+    model = LogisticRegression(**best_params)
+
+    retries = 3
+    while True:
+        try:
+            model.fit(train_feature, train_target)
+            break
+        except Exception as e:
+            print(e)
+            retries -= 1
+            if retries == 0:
+                raise e
+    
+    return model
 
 def _calculate_classification_metrics(target_true: np.array, target_pred: np.array, positive_label: str, negative_label: str) -> (np.array, np.array, np.array, np.array):
     """

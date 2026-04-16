@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-def _generate_median_loss(data: pd.DataFrame, target_column: str, rolling_window: int) -> (np.array, float):
+def _generate_median_loss(data: pd.DataFrame, target_column: str, rolling_window: int, test_length: int = 80, val_length: int = 40) -> (np.array, float):
     """
     (Internal Helper) Calculates the median loss of a target column based on a rolling window
 
@@ -24,7 +24,7 @@ def _generate_median_loss(data: pd.DataFrame, target_column: str, rolling_window
     if np.isnan(median_loss).all():
         threshold = np.nan
     else:
-        test_median_loss_length = 120
+        test_median_loss_length = test_length
         test_median_loss = median_loss[-1 * (test_median_loss_length + rolling_window): -rolling_window]
         threshold = np.nanquantile(test_median_loss, 0.1)
 
@@ -50,7 +50,7 @@ def _bin_median_loss(threshold: float, val: float) -> str:
         return "Low Loss"
 
 
-def _generate_all_median_loss(data: pd.DataFrame, target_column: str, rolling_window: int) -> pd.DataFrame:
+def _generate_all_median_loss(data: pd.DataFrame, target_column: str, rolling_window: int, test_length: int = 80, val_length: int = 40) -> pd.DataFrame:
     """
     (Internal Helper) Generates a median loss label for each day based on a rolling window
 
@@ -63,7 +63,7 @@ def _generate_all_median_loss(data: pd.DataFrame, target_column: str, rolling_wi
         pd.DataFrame: The DataFrame with the new future median loss column added
     """
     column_name = f"Median Loss {rolling_window}dd"
-    median_loss, threshold = _generate_median_loss(data, target_column, rolling_window)
+    median_loss, threshold = _generate_median_loss(data, target_column, rolling_window, test_length, val_length)
     data[column_name] = [_bin_median_loss(threshold, val) for val in median_loss]
     data["Threshold " + column_name] = threshold
 
