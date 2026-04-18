@@ -47,31 +47,27 @@ def _save_model(model: any, model_version: int, label_type: str, identifier: str
     
     return
 
-def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFrame, val_metrics: pd.DataFrame, test_metrics: pd.DataFrame, threshold_col: str) -> pd.DataFrame:
+def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFrame, test_metrics: pd.DataFrame, threshold_col: str) -> pd.DataFrame:
     """
-    (Internal Helper) Combine train, val, and test metrics into a single DataFrame row.
+    (Internal Helper) Combine train and test metrics into a single DataFrame row.
 
     Args:
     ticker (str): The name of the ticker being worked on
     model_version (int): The version of machine learning model being developed
     train_metrics (pd.DataFrame): The model's performance metrics on training data
-    val_metrics (pd.DataFrame): The model's performance metrics on validation data
     test_metrics (pd.DataFrame): The model's performance metrics on testing data
     threshold_col (str): The name of the threshold column
 
     Returns:
-    pd.DataFrame: A pandas dataframe containing all the training, validation, and testing metrics of the model
+    pd.DataFrame: A pandas dataframe containing all the training and testing metrics of the model
     """
     train_df = pd.DataFrame(train_metrics)
     train_df.columns = [f"Train - {col}" for col in train_df.columns]
 
-    val_df = pd.DataFrame(val_metrics)
-    val_df.columns = [f"Val - {col}" for col in val_df.columns]
-
     test_df = pd.DataFrame(test_metrics)
     test_df.columns = [f"Test - {col}" for col in test_df.columns]
 
-    result = pd.concat([train_df, val_df, test_df], axis=1)
+    result = pd.concat([train_df, test_df], axis=1)
 
     if model_version == 1:
         result.insert(0, "Ticker", ticker)
@@ -83,11 +79,11 @@ def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFram
         Ticker_column = [col for col in result.columns if 'Ticker' in col]
         threshold_column = [col for col in result.columns if 'Threshold' in col]
 
-        assert len(Ticker_column) == 3
-        assert len(threshold_column) == 3
+        assert len(Ticker_column) == 2
+        assert len(threshold_column) == 2
 
-        assert np.all(result[Ticker_column[0]].values == result[Ticker_column[1]].values, axis=0) and np.all(result[Ticker_column[0]].values == result[Ticker_column[2]].values, axis=0)
-        assert np.all(result[threshold_column[0]].values == result[threshold_column[1]].values, axis=0) and np.all(result[threshold_column[0]].values == result[threshold_column[2]].values, axis=0)
+        assert np.all(result[Ticker_column[0]].values == result[Ticker_column[1]].values, axis=0)
+        assert np.all(result[threshold_column[0]].values == result[threshold_column[1]].values, axis=0)
 
         result.insert(0, "Ticker", result[Ticker_column[0]].values)
         result["Threshold"] = result[threshold_column[0]].values

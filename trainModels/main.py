@@ -11,6 +11,7 @@ from trainModels.modelling import (
     _split_data_to_train_val_test_multiple, 
     _initializes_fit_tune_catboost_with_bayesian_optimization,
     _initializes_fit_tune_logistic_regression_with_bayesian_optimization,
+    _measure_model_performance,
     _measure_model_performance_on_single_ticker,
     _measure_model_performance_for_all_ticker_in_industry,
     _measure_model_performance_for_all_ticker,
@@ -47,7 +48,7 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
 
     prepared_data = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))
 
-    cleaned_data = prepared_data[feature_columns + [target_column]].dropna(subset=[target_column])
+    cleaned_data = prepared_data.dropna(subset=[target_column])
 
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_single(cleaned_data, feature_columns, target_column)
 
@@ -64,7 +65,9 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
     for _ in range(10):
         model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
-        _, _, test_metrics = _measure_model_performance_on_single_ticker(ticker, model, target_column, positive_label, negative_label)
+        test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
+
+        test_metrics_df = pd.DataFrame(test_metrics)
 
         all_model.append(model)
         all_test_metrics.append(test_metrics)
@@ -77,9 +80,10 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
     
     final_model = _initializes_fit_catboost(train_feature, train_target, best_params)
     
-    final_train_metrics, final_val_metrics, final_test_metrics = _measure_model_performance_on_single_ticker(ticker, final_model, target_column, positive_label, negative_label)
+    final_train_metrics = _measure_model_performance(final_model, train_feature, train_target, positive_label, negative_label)
+    final_test_metrics = _measure_model_performance(final_model, test_feature, test_target, positive_label, negative_label)
     
-    return final_model, final_train_metrics, final_val_metrics, final_test_metrics
+    return final_model, final_train_metrics, final_test_metrics
 
 def develop_model_v2(industry: str, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (any, dict, dict):
     """
@@ -121,7 +125,7 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
     for _ in range(10):
         model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
-        _, _, test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
+        _, test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
 
         all_model.append(model)
         all_test_metrics.append(test_metrics)
@@ -134,9 +138,9 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
     
     final_model = _initializes_fit_catboost(train_feature, train_target, best_params)
     
-    final_train_metrics, final_val_metrics, final_test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, final_model, target_column, positive_label, negative_label, threshold_col)
+    final_train_metrics, final_test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, final_model, target_column, positive_label, negative_label, threshold_col)
     
-    return final_model, final_train_metrics, final_val_metrics, final_test_metrics
+    return final_model, final_train_metrics, final_test_metrics
 
 def develop_model_v3(target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (any, dict, dict):
     """
@@ -177,7 +181,7 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
     for _ in range(10):
         model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
-        _, _, test_metrics = _measure_model_performance_for_all_ticker(model, target_column, positive_label, negative_label, threshold_col)
+        _, test_metrics = _measure_model_performance_for_all_ticker(model, target_column, positive_label, negative_label, threshold_col)
 
         all_model.append(model)
         all_test_metrics.append(test_metrics)
@@ -190,9 +194,9 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
     
     final_model = _initializes_fit_catboost(train_feature, train_target, best_params)
     
-    final_train_metrics, final_val_metrics, final_test_metrics = _measure_model_performance_for_all_ticker(final_model, target_column, positive_label, negative_label, threshold_col)
+    final_train_metrics, final_test_metrics = _measure_model_performance_for_all_ticker(final_model, target_column, positive_label, negative_label, threshold_col)
 
-    return final_model, final_train_metrics, final_val_metrics, final_test_metrics
+    return final_model, final_train_metrics, final_test_metrics
 
 def develop_model_v4(rolling_window: int, positive_label: str, negative_label: str) -> (any, dict, dict, str):
     """
@@ -226,7 +230,7 @@ def develop_model_v4(rolling_window: int, positive_label: str, negative_label: s
     for _ in range(10):
         model = _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature, train_target, cv_split)
 
-        _, _, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, rolling_window, positive_label, negative_label)
+        _, test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(model, rolling_window, positive_label, negative_label)
 
         all_model.append(model)
         all_test_metrics.append(test_metrics)
@@ -239,9 +243,9 @@ def develop_model_v4(rolling_window: int, positive_label: str, negative_label: s
     
     final_model = _initializes_fit_logistic_regression(train_feature, train_target, best_params)
     
-    final_train_metrics, final_val_metrics, final_test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(final_model, rolling_window, positive_label, negative_label)
+    final_train_metrics, final_test_metrics = _measure_model_performance_on_forecast_features_for_all_ticker(final_model, rolling_window, positive_label, negative_label)
     
-    return final_model, final_train_metrics, final_val_metrics, final_test_metrics, threshold_column
+    return final_model, final_train_metrics, final_test_metrics, threshold_column
 
 def process_single_model(args_tuple):
     """
@@ -261,37 +265,37 @@ def process_single_model(args_tuple):
     failed_process = []
     metrics_list = []
 
-    try:
-        if model_version in [1, 2, 3]:
-            if model_version == 1:
-                model, train_metrics, val_metrics, test_metrics = develop_model_v1(
-                    identifier, target_col, pos_label, neg_label
-                )
+    # try:
+    if model_version in [1, 2, 3]:
+        if model_version == 1:
+            model, train_metrics, test_metrics = develop_model_v1(
+                identifier, target_col, pos_label, neg_label
+            )
 
-            elif model_version == 2:
-                model, train_metrics, val_metrics, test_metrics = develop_model_v2(
-                    identifier, target_col, pos_label, neg_label, threshold_col
-                )
-            
-            elif model_version == 3:
-                model, train_metrics, val_metrics, test_metrics = develop_model_v3(
-                    target_col, pos_label, neg_label, threshold_col
-                )
-                        
-        elif model_version == 4:
-            model, train_metrics, val_metrics, test_metrics, threshold_col = develop_model_v4(
-                            rolling_window, pos_label, neg_label
-                        )
-
-        _save_model(model, model_version, label_type, identifier, rolling_window)
+        elif model_version == 2:
+            model, train_metrics, test_metrics = develop_model_v2(
+                identifier, target_col, pos_label, neg_label, threshold_col
+            )
         
-        metrics_df = _combine_metrics(
-            identifier, model_version, train_metrics, val_metrics, test_metrics, threshold_col
-        )
+        elif model_version == 3:
+            model, train_metrics, test_metrics = develop_model_v3(
+                target_col, pos_label, neg_label, threshold_col
+            )
+                    
+    elif model_version == 4:
+        model, train_metrics, test_metrics, threshold_col = develop_model_v4(
+                        rolling_window, pos_label, neg_label
+                    )
 
-        metrics_list.append((label_type, rolling_window, metrics_df))
+    _save_model(model, model_version, label_type, identifier, rolling_window)
+    
+    metrics_df = _combine_metrics(
+        identifier, model_version, train_metrics, test_metrics, threshold_col
+    )
+
+    metrics_list.append((label_type, rolling_window, metrics_df))
             
-    except Exception as e:
-        failed_process.append((identifier, label_type, rolling_window, str(e)))
+    # except Exception as e:
+    #     failed_process.append((identifier, label_type, rolling_window, str(e)))
 
     return failed_process, metrics_list

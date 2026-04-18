@@ -430,7 +430,7 @@ def _measure_model_performance(model: any, feature: np.array, target: np.array, 
     
     return all_metrics
 
-def _measure_model_performance_on_single_ticker(prepared_data: pd.DataFrame, model: any, feature_columns: str, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_single_ticker(prepared_data: pd.DataFrame, model: any, feature_columns: str, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given ticker
 
@@ -443,32 +443,21 @@ def _measure_model_performance_on_single_ticker(prepared_data: pd.DataFrame, mod
         negative_label (str): The negative class of the predicted label
 
     Returns:
-        Tuple: A tuple containing the model's performance on trainings, validation, and testing data, stored as a pandas dataframe
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_multiple(
         prepared_data.dropna(subset=[target_column]), feature_columns, target_column
     )
 
-    val_indices = np.where(cv_split.test_fold == 0)[0]
-    train_indices = np.where(cv_split.test_fold == -1)[0]
-    
-    real_train_feature = train_feature.iloc[train_indices] if isinstance(train_feature, pd.DataFrame) else train_feature[train_indices]
-    real_train_target = train_target.iloc[train_indices] if isinstance(train_target, pd.Series) else train_target[train_indices]
-
-    val_feature = train_feature.iloc[val_indices] if isinstance(train_feature, pd.DataFrame) else train_feature[val_indices]
-    val_target = train_target.iloc[val_indices] if isinstance(train_target, pd.Series) else train_target[val_indices]
-
-    train_metrics = _measure_model_performance(model, real_train_feature, real_train_target, positive_label, negative_label)
-    val_metrics = _measure_model_performance(model, val_feature, val_target, positive_label, negative_label)
+    train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
     test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
 
     train_metrics_df = pd.DataFrame(train_metrics)
-    val_metrics_df = pd.DataFrame(val_metrics)
     test_metrics_df = pd.DataFrame(test_metrics)
     
-    return train_metrics_df, val_metrics_df, test_metrics_df
+    return train_metrics_df, test_metrics_df
 
-def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given industry
 
@@ -481,13 +470,12 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
         threshold_col (str): The name of the columns used as a threshold during the creation of the label
 
     Returns:
-        Tuple: A tuple containing the model's performance on trainings, validation and testing data
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
     ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
     all_tickers = ticker_industry_df.loc[ticker_industry_df['Industry'] == industry, 'Ticker'].values
 
     all_ticker_train_metrics_df = pd.DataFrame()
-    all_ticker_val_metrics_df = pd.DataFrame()
     all_ticker_test_metrics_df = pd.DataFrame()
 
     feature_columns = get_all_technical_indicators()
@@ -495,30 +483,26 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
     for ticker in all_tickers:
         try:
             prepared_data = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))
-            ticker_train_metrics_df, ticker_val_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
+            ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
 
             ticker_train_metrics_df['Ticker'] = ticker
-            ticker_val_metrics_df['Ticker'] = ticker
             ticker_test_metrics_df['Ticker'] = ticker
 
             ticker_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
-            ticker_val_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
             ticker_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
 
             all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
-            all_ticker_val_metrics_df = pd.concat((all_ticker_val_metrics_df, ticker_val_metrics_df))
             all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
             print(e)
             pass
 
     all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
-    all_ticker_val_metrics = all_ticker_val_metrics_df.to_dict(orient='list')
     all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
 
-    return all_ticker_train_metrics, all_ticker_val_metrics, all_ticker_test_metrics
+    return all_ticker_train_metrics, all_ticker_test_metrics
 
-def _measure_model_performance_for_all_ticker(model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_for_all_ticker(model: any, target_column: str, positive_label: str, negative_label: str, threshold_col: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation
 
@@ -531,12 +515,11 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
         threshold_col (str): The name of the columns used as a threshold during the creation of the label
 
     Returns:
-        Tuple: A tuple containing the model's performance on trainings, validation and testing data
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
     all_tickers = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
     
     all_ticker_train_metrics_df = pd.DataFrame()
-    all_ticker_val_metrics_df = pd.DataFrame()
     all_ticker_test_metrics_df = pd.DataFrame()
 
     feature_columns = get_all_technical_indicators()
@@ -544,30 +527,26 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
     for ticker in all_tickers:
         try:
             prepared_data = pd.read_csv((Path(f'data/stock/label/{ticker}.csv')))
-            ticker_train_metrics_df, ticker_val_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
+            ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
     
             ticker_train_metrics_df['Ticker'] = ticker
-            ticker_val_metrics_df['Ticker'] = ticker
             ticker_test_metrics_df['Ticker'] = ticker
 
             ticker_train_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
-            ticker_val_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
             ticker_test_metrics_df['Threshold'] = prepared_data[threshold_col].iloc[0]
     
             all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
-            all_ticker_val_metrics_df = pd.concat((all_ticker_val_metrics_df, ticker_val_metrics_df))
             all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
             print(e)
             pass
 
     all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
-    all_ticker_val_metrics = all_ticker_val_metrics_df.to_dict(orient='list')
     all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
 
-    return all_ticker_train_metrics, all_ticker_val_metrics, all_ticker_test_metrics
+    return all_ticker_train_metrics, all_ticker_test_metrics
 
-def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, rolling_window: int, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, rolling_window: int, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
     (Internal Helper) Measures and reports the performance of the model on a given top IHSG valuation, with the forecasts as the features
 
@@ -577,12 +556,11 @@ def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, r
         negative_label (str): The negative class of the predicted label
 
     Returns:
-        Tuple: A tuple containing the model's performance on trainings, validation and testing data
+        Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
     all_tickers = [file.stem for file in Path(f'data/stock/combined_forecasts_{rolling_window}dd').rglob('*.csv')]
     
     all_ticker_train_metrics_df = pd.DataFrame()
-    all_ticker_val_metrics_df = pd.DataFrame()
     all_ticker_test_metrics_df = pd.DataFrame()
 
     for ticker in all_tickers:
@@ -593,25 +571,21 @@ def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, r
             
             cleaned_data = prepared_data.dropna(subset=[target_column])
 
-            ticker_train_metrics_df, ticker_val_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(cleaned_data, model, feature_columns, target_column, positive_label, negative_label)
+            ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(cleaned_data, model, feature_columns, target_column, positive_label, negative_label)
     
             ticker_train_metrics_df['Ticker'] = ticker
-            ticker_val_metrics_df['Ticker'] = ticker
             ticker_test_metrics_df['Ticker'] = ticker
 
             ticker_train_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
-            ticker_val_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
             ticker_test_metrics_df['Threshold'] = prepared_data[threshold_column].iloc[0]
     
             all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
-            all_ticker_val_metrics_df = pd.concat((all_ticker_val_metrics_df, ticker_val_metrics_df))
             all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
             print(e)
             pass
 
     all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
-    all_ticker_val_metrics = all_ticker_val_metrics_df.to_dict(orient='list')
     all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
 
-    return all_ticker_train_metrics, all_ticker_val_metrics, all_ticker_test_metrics
+    return all_ticker_train_metrics, all_ticker_test_metrics

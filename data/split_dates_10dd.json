@@ -1,14 +1,14 @@
 {
     "train": {
         "start_date": "2020-05-13",
-        "end_date": "2025-09-26"
+        "end_date": "2025-09-30"
     },
     "val": {
-        "start_date": "2025-09-29",
-        "end_date": "2025-11-21"
+        "start_date": "2025-10-01",
+        "end_date": "2025-11-25"
     },
     "test": {
-        "start_date": "2025-11-24",
-        "end_date": "2026-03-31"
+        "start_date": "2025-11-26",
+        "end_date": "2026-04-02"
     }
 }
