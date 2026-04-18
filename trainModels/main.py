@@ -265,37 +265,37 @@ def process_single_model(args_tuple):
     failed_process = []
     metrics_list = []
 
-    # try:
-    if model_version in [1, 2, 3]:
-        if model_version == 1:
-            model, train_metrics, test_metrics = develop_model_v1(
-                identifier, target_col, pos_label, neg_label
-            )
+    try:
+        if model_version in [1, 2, 3]:
+            if model_version == 1:
+                model, train_metrics, test_metrics = develop_model_v1(
+                    identifier, target_col, pos_label, neg_label
+                )
 
-        elif model_version == 2:
-            model, train_metrics, test_metrics = develop_model_v2(
-                identifier, target_col, pos_label, neg_label, threshold_col
-            )
-        
-        elif model_version == 3:
-            model, train_metrics, test_metrics = develop_model_v3(
-                target_col, pos_label, neg_label, threshold_col
-            )
-                    
-    elif model_version == 4:
-        model, train_metrics, test_metrics, threshold_col = develop_model_v4(
-                        rolling_window, pos_label, neg_label
-                    )
-
-    _save_model(model, model_version, label_type, identifier, rolling_window)
-    
-    metrics_df = _combine_metrics(
-        identifier, model_version, train_metrics, test_metrics, threshold_col
-    )
-
-    metrics_list.append((label_type, rolling_window, metrics_df))
+            elif model_version == 2:
+                model, train_metrics, test_metrics = develop_model_v2(
+                    identifier, target_col, pos_label, neg_label, threshold_col
+                )
             
-    # except Exception as e:
-    #     failed_process.append((identifier, label_type, rolling_window, str(e)))
+            elif model_version == 3:
+                model, train_metrics, test_metrics = develop_model_v3(
+                    target_col, pos_label, neg_label, threshold_col
+                )
+                        
+        elif model_version == 4:
+            model, train_metrics, test_metrics, threshold_col = develop_model_v4(
+                            rolling_window, pos_label, neg_label
+                        )
+
+        _save_model(model, model_version, label_type, identifier, rolling_window)
+        
+        metrics_df = _combine_metrics(
+            identifier, model_version, train_metrics, test_metrics, threshold_col
+        )
+
+        metrics_list.append((label_type, rolling_window, metrics_df))
+                
+    except Exception as e:
+        failed_process.append((identifier, label_type, rolling_window, str(e)))
 
     return failed_process, metrics_list
