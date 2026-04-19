@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-19 07:10:07",
+  "timestamp": "2026-04-19 10:08:54",
   "vix": {
     "date": "2026-04-17",
     "value": 17.479999542236328,
@@ -49,5 +49,25 @@
     "composite_score": -0.12,
     "outlook": "Neutral-to-Bearish",
     "rationale": "VIX is Neutral (score +0.0), USD/IDR is Slightly Bearish (score -0.5), S&P 500 is Bullish (score +1.0), Nikkei 225 is Bearish (score -1.0). Composite score: -0.12 \u2192 Overall outlook: Neutral-to-Bearish."
+  },
+  "micro_outlook_5dd": {
+    "count": 23.0,
+    "mean": 0.9570101984413708,
+    "std": 2.152420664262948,
+    "min": -2.402391671071286,
+    "25%": -0.6625671640870874,
+    "50%": 0.6950798777345527,
+    "75%": 2.4220832426543026,
+    "max": 6.126878528967174
+  },
+  "micro_outlook_10dd": {
+    "count": 23.0,
+    "mean": 0.6788611984366864,
+    "std": 2.4153594613701124,
+    "min": -3.3495037675055874,
+    "25%": -0.6697870602781169,
+    "50%": 0.539812747956105,
+    "75%": 2.665654229511219,
+    "max": 5.28479415739863
   }
 }

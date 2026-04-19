@@ -16,7 +16,8 @@ from analyticsHub.main import (
 )
 
 from analyticsHub.helper import (
-    _get_chosen_performance_df
+    _get_chosen_performance_df,
+    _visualize_micro_outlook_boxplot
 )
 
 from utils.pipeline import get_split_dates
@@ -39,7 +40,7 @@ st.sidebar.markdown("---")
 st.sidebar.info("The Model Used for __Daily Recommendations__ and __Trading Simulation__ is the __Ensemble of Specific Ticker, Specific Industry, and IHSG Model__")
 
 if app_mode == "1. Pre-Market Outlook":
-    st.title("Pre-Market Macro Outlook")
+    st.title("Pre-Market Outlook")
     st.markdown(f"**Generated at:** {pre_market_outlook['timestamp']}")
 
     overall = pre_market_outlook["overall_outlook"]
@@ -53,7 +54,7 @@ if app_mode == "1. Pre-Market Outlook":
     }
     outlook_icon = outlook_colors.get(outlook_label, "⚪")
 
-    st.markdown(f"### {outlook_icon} Overall Outlook: **{outlook_label}** (Score: {overall['composite_score']:+.2f})")
+    st.markdown(f"### 🇮🇩 IHSG Macro Outlook: **{outlook_icon} {outlook_label}** (Score: {overall['composite_score']:+.2f})")
     st.caption(overall["rationale"])
 
     st.markdown("---")
@@ -114,6 +115,29 @@ if app_mode == "1. Pre-Market Outlook":
         st.markdown(f"**Sentiment:** {nikkei['classification']['sentiment']}")
         st.markdown(f"**Percentile:** {nikkei['percentile_rank']:.1f}th")
         st.caption(nikkei["classification"]["description"])
+
+    st.markdown("---")
+    st.markdown("### 🇮🇩 IHSG Micro Outlook")
+    
+    col_micro1, col_micro2 = st.columns(2)
+    
+    with col_micro1:
+        st.markdown("#### ⏳ 5-Day Window")
+        mo_5dd = pre_market_outlook.get("micro_outlook_5dd", {})
+        if mo_5dd:
+            fig_5dd = _visualize_micro_outlook_boxplot(mo_5dd, "5-Day Window", "royalblue")
+            st.plotly_chart(fig_5dd, use_container_width=True)
+        else:
+            st.info("Data not available.")
+            
+    with col_micro2:
+        st.markdown("#### ⌛ 10-Day Window")
+        mo_10dd = pre_market_outlook.get("micro_outlook_10dd", {})
+        if mo_10dd:
+            fig_10dd = _visualize_micro_outlook_boxplot(mo_10dd, "10-Day Window", "indianred")
+            st.plotly_chart(fig_10dd, use_container_width=True)
+        else:
+            st.info("Data not available.")
 
 elif app_mode == "2. Model Performance":
     st.title("Model Performance")

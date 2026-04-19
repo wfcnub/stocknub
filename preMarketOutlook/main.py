@@ -1,5 +1,8 @@
 from datetime import datetime
+from pathlib import Path
 
+import pandas as pd
+import yfinance as yf
 from preMarketOutlook.helper import (
     _create_session,
     _fetch_indicator_history,
@@ -17,6 +20,47 @@ from preMarketOutlook.helper import (
     NIKKEI_TICKER,
     LOOKBACK_DAYS,
 )
+
+def _fetch_ihsg_data(period="1y"):
+    ticker_symbol = "^JKSE"
+    ihsg_data = yf.download(ticker_symbol, period=period, interval="1d")
+    return ihsg_data
+
+def _calculate_micro_outlook(rolling_window: int) -> dict:
+    ihsg_data = _fetch_ihsg_data(period="1y")
+    if isinstance(ihsg_data.columns, pd.MultiIndex) or (len(ihsg_data.columns) > 0 and isinstance(ihsg_data.columns[0], tuple)):
+        ihsg_data.columns = [col[0] for col in ihsg_data.columns]
+
+    median_close = ihsg_data['Close'] \
+                        [::-1] \
+                        .rolling(rolling_window, closed='left') \
+                        .quantile(0.4) \
+                        [::-1]
+
+    median_gain = (100 * (median_close - ihsg_data['Close'].values) / ihsg_data['Close'].values)
+
+    ihsg_data[f'Median Gain {rolling_window}dd'] = median_gain
+    ihsg_data.index = pd.to_datetime(ihsg_data.index).strftime('%Y-%m-%d')
+
+    all_score_paths = list(Path(f'data/stock/score/{rolling_window}dd').rglob('*.csv'))
+    if not all_score_paths:
+        return {}
+
+    score_test_data = pd.concat((pd.read_csv(file) for file in all_score_paths)).groupby('Date')[f'Score {rolling_window}dd'].mean().to_frame(f'Average Score {rolling_window}dd')
+
+    joined_ihsg_score_data = pd.merge(ihsg_data.dropna(), score_test_data, left_index=True, right_index=True, how='inner')[[f'Median Gain {rolling_window}dd', f'Average Score {rolling_window}dd']]
+    
+    if joined_ihsg_score_data.empty:
+        return {}
+
+    latest_score_data = score_test_data.tail(1)
+    latest_avg_score = latest_score_data[f'Average Score {rolling_window}dd'].values[0]
+    ihsg_micro_outlook = joined_ihsg_score_data.loc[
+        joined_ihsg_score_data[f'Average Score {rolling_window}dd'] >= latest_avg_score, 
+        f'Median Gain {rolling_window}dd'
+    ].describe()
+    
+    return ihsg_micro_outlook.to_dict()
 
 def generate_pre_market_outlook() -> dict:
     """
@@ -63,6 +107,9 @@ def generate_pre_market_outlook() -> dict:
         "Nikkei 225": nikkei_classification["sentiment"],
     })
 
+    micro_outlook_5dd = _calculate_micro_outlook(5)
+    micro_outlook_10dd = _calculate_micro_outlook(10)
+
     result = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "vix": {
@@ -91,6 +138,8 @@ def generate_pre_market_outlook() -> dict:
             "classification": nikkei_classification,
         },
         "overall_outlook": overall_outlook,
+        "micro_outlook_5dd": micro_outlook_5dd,
+        "micro_outlook_10dd": micro_outlook_10dd,
     }
 
     _save_outlook_to_json(result)

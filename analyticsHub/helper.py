@@ -130,3 +130,21 @@ def _generate_trading_simulation_df(score_df: pd.DataFrame, max_daily_profit_df:
     trading_simulation_df['Loss'] = 100 * (trading_simulation_df[f'Min Close {rolling_window}'] - trading_simulation_df['Close']) / trading_simulation_df['Close']
 
     return trading_simulation_df
+
+def _visualize_micro_outlook_boxplot(mo_data: dict, xaxis_title: str, color: str) -> go.Figure:
+    """
+    (Internal Helper) Generate a boxplot for the Micro Outlook statistics
+    """
+    fig = go.Figure(go.Box(
+        name="Median Gain",
+        q1=[mo_data.get("25%", 0)],
+        median=[mo_data.get("50%", 0)],
+        q3=[mo_data.get("75%", 0)],
+        lowerfence=[mo_data.get("min", 0)],
+        upperfence=[mo_data.get("max", 0)],
+        mean=[mo_data.get("mean", 0)],
+        marker_color=color
+    ))
+    fig.update_layout(height=280, margin=dict(l=20, r=20, t=30, b=20), yaxis_title="Gain (%)", xaxis_title=xaxis_title)
+    
+    return fig
