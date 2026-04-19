@@ -16,9 +16,10 @@ from analyticsHub.main import (
 )
 
 from analyticsHub.helper import (
-    _get_chosen_performance_df,
-    _get_testing_data_date
+    _get_chosen_performance_df
 )
+
+from utils.pipeline import get_split_dates
 
 all_df = get_all_performances()
 pre_market_outlook = get_pre_market_outlook()
@@ -29,8 +30,8 @@ app_mode = st.sidebar.radio(
     [
         "1. Pre-Market Outlook",
         "2. Model Performance", 
-        "3. Daily Recommendation", 
-        "4. Trading Simulation"
+        "3. Trading Simulation",
+        "4. Daily Recommendation",
     ]
 )
 
@@ -127,25 +128,16 @@ elif app_mode == "2. Model Performance":
         st.write(f"### {model_identifier}")
         st.dataframe(performance_df)
 
-elif app_mode == "3. Daily Recommendation":
-    st.title("Daily Recommendation")
-        
-    daily_recommend_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in Path('data/stock/forecast/model_v4/medianGain').iterdir()])
-    
-    forecast_df, forecast_date = get_daily_recommendations(daily_recommend_rolling_window)
-
-    st.markdown(f"Daily Recommendation on __{forecast_date}__")
-
-    st.dataframe(forecast_df)
-
-elif app_mode == "4. Trading Simulation":
+elif app_mode == "3. Trading Simulation":
     st.title("Trading Simulation")
 
     trading_simulation_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in Path('data/stock/forecast/model_v4/medianGain').iterdir()])
 
     trading_simulation_df = generate_trading_simulation_df(trading_simulation_rolling_window)
 
-    start_testing_market_date, end_testing_market_date = _get_testing_data_date()
+    splits = get_split_dates(f'Median Gain {trading_simulation_rolling_window}')
+    start_testing_market_date = splits['test']['start_date']
+    end_testing_market_date = splits['test']['end_date']
 
     fig_1_profit = visualize_performance_metric_distribution_for_each_forecast_threshold(trading_simulation_df, trading_simulation_rolling_window, 'Profit')
     fig_1_loss = visualize_performance_metric_distribution_for_each_forecast_threshold(trading_simulation_df, trading_simulation_rolling_window, 'Loss')
@@ -160,3 +152,14 @@ elif app_mode == "4. Trading Simulation":
 
     st.plotly_chart(fig_2_profit)
     st.plotly_chart(fig_2_loss)
+
+elif app_mode == "4. Daily Recommendation":
+    st.title("Daily Recommendation")
+        
+    daily_recommend_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in Path('data/stock/forecast/model_v4/medianGain').iterdir()])
+    
+    forecast_df, forecast_date = get_daily_recommendations(daily_recommend_rolling_window)
+
+    st.markdown(f"Daily Recommendation on __{forecast_date}__")
+
+    st.dataframe(forecast_df)

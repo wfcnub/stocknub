@@ -67,6 +67,16 @@ PIPELINE_STEPS = {
         "name": "Pre-Market Outlook",
         "module": "pipeline.pre_market_outlook",
         "description": "Generate pre-market outlook for all tickers",
+    },
+    12: {
+        "name": "Generate Scores 5dd",
+        "module": "pipeline.generate_score",
+        "description": "Generate composite score using score card models",
+    },
+    13: {
+        "name": "Generate Scores 10dd",
+        "module": "pipeline.generate_score",
+        "description": "Generate composite score using score card models",
     }
 }
 
@@ -126,7 +136,7 @@ def run_step(step_num, args):
     elif step_num == 8:
         cmd.extend(["--model_versions", '1,2,3'])
         cmd.extend(["--windows", '5,10'])
-        cmd.extend(["--label_types", 'median_gain'])
+        cmd.extend(["--label_types", 'median_gain,median_loss'])
     
     elif step_num == 9:
         cmd.extend(["--model_version", '4'])
@@ -144,6 +154,16 @@ def run_step(step_num, args):
     
     elif step_num == 11:
         pass
+
+    elif step_num == 12:
+        cmd.extend(["--model_version", '4'])
+        cmd.extend(["--windows", '5'])
+        cmd.extend(["--label_types", 'median_gain'])
+
+    elif step_num == 13:
+        cmd.extend(["--model_version", '4'])
+        cmd.extend(["--windows", '10'])
+        cmd.extend(["--label_types", 'median_gain'])
 
     try:
         subprocess.run(cmd, check=True)

@@ -7,6 +7,11 @@ import plotly.express as px
 from datetime import datetime
 import plotly.graph_objects as go
 
+from utils.pipeline import (
+    get_split_dates, 
+    get_split_masks
+)
+
 def _get_chosen_performance_df(all_df: pd.DataFrame, chosen_model_versions: list, chosen_model_label_types: list, chosed_model_windows: list) -> (list, list):
     """
     (Internal Helper) Get the selected overview of the model performance based on the user's selection
@@ -31,34 +36,38 @@ def _get_chosen_performance_df(all_df: pd.DataFrame, chosen_model_versions: list
     
     return selected_model_identifier, selected_performance_df
 
-def _generate_forecast_data_on_test_data(rolling_window: str) -> pd.DataFrame:
+def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
     """
-    (Internal Helper) Generate the forecast data on the test data
+    (Internal Helper) Generate the score data on the test data
 
     Returns:
-        pd.DataFrame: A pandas dataframe containing the forecast data on the test data
+        pd.DataFrame: A pandas dataframe containing the score data on the test data
     """
-    forecast_paths = Path(f'data/stock/forecast/model_v4/medianGain/{rolling_window}').rglob('*.csv')
-    all_ticker = [file.stem for file in Path(f'data/stock/forecast/model_v4/medianGain/{rolling_window}').rglob('*.csv')]
+    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
+    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
     
-    forecast_df = pd.DataFrame()
+    test_score_df = pd.DataFrame()
     
-    for ticker, file in zip(all_ticker, forecast_paths):
-        temp_forecast_df = pd.read_csv(file, usecols=['Date', f'Forecast High Gain {rolling_window}']).dropna().tail(90).head(80)
-        temp_forecast_df['Ticker'] = ticker
+    for ticker, file in zip(all_ticker, score_paths):
+        splits = get_split_dates(f'Median Gain {rolling_window}')
+        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}'])
+        _, _, _, test_mask, _ = get_split_masks(temp_score_df, splits)
+        
+        temp_test_score_df = temp_score_df.loc[test_mask]
+        temp_test_score_df['Ticker'] = ticker
     
-        forecast_df = pd.concat((forecast_df, temp_forecast_df))
+        test_score_df = pd.concat((test_score_df, temp_test_score_df))
     
     final_performance = pd.read_csv(Path(f'data/stock/model_v4/performance/medianGain/{rolling_window}.csv'))
     
-    forecast_df = pd.merge(
-        forecast_df,
+    test_score_df = pd.merge(
+        test_score_df,
         final_performance[['Ticker', 'Test - Gini']],
         on='Ticker',
         how='inner'
     )
 
-    return forecast_df
+    return test_score_df
 
 def _generate_max_daily_performance_metric(rolling_window: str, performance_metric: str) -> pd.DataFrame:
     """
@@ -93,12 +102,12 @@ def _generate_max_daily_performance_metric(rolling_window: str, performance_metr
 
     return label_df
 
-def _generate_trading_simulation_df(forecast_df: pd.DataFrame, max_daily_profit_df: pd.DataFrame, max_daily_loss_df: pd.DataFrame, rolling_window: str) -> pd.DataFrame:
+def _generate_trading_simulation_df(score_df: pd.DataFrame, max_daily_profit_df: pd.DataFrame, max_daily_loss_df: pd.DataFrame, rolling_window: str) -> pd.DataFrame:
     """
     (Internal Helper) Generate the trading simulation data
 
     Args:
-        forecast_df (pd.DataFrame): A pandas dataframe containing the forecast data
+        score_df (pd.DataFrame): A pandas dataframe containing the score data
         max_daily_profit_df (pd.DataFrame): A pandas dataframe containing the max daily profit data
         max_daily_loss_df (pd.DataFrame): A pandas dataframe containing the max daily loss data
 
@@ -107,7 +116,7 @@ def _generate_trading_simulation_df(forecast_df: pd.DataFrame, max_daily_profit_
     """
     trading_simulation_df = pd.merge(
                                         pd.merge(
-                                                    forecast_df,
+                                                    score_df,
                                                     max_daily_profit_df,
                                                     on=['Ticker', 'Date'],
                                                     how='inner' 
@@ -121,18 +130,3 @@ def _generate_trading_simulation_df(forecast_df: pd.DataFrame, max_daily_profit_
     trading_simulation_df['Loss'] = 100 * (trading_simulation_df[f'Min Close {rolling_window}'] - trading_simulation_df['Close']) / trading_simulation_df['Close']
 
     return trading_simulation_df
-
-def _get_testing_data_date() -> (str, str):
-    """
-    (Internal Helper) Get the testing data date
-
-    Returns:
-        (str, str): A tuple containing the start and end testing market dates
-    """
-    active_market_dates = np.sort([datetime.strptime(file.stem, '%Y%m%d').strftime('%Y-%m-%d') for file in Path('data/stock/raw_foreign_flow_non_regular').rglob('*.csv')])
-    testing_market_dates = active_market_dates[-90:-10]
-
-    start_testing_market_date = testing_market_dates[0]
-    end_testing_market_date = testing_market_dates[-1]
-
-    return start_testing_market_date, end_testing_market_date

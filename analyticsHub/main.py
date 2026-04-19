@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 
 from analyticsHub.helper import (
     _get_chosen_performance_df,
-    _generate_forecast_data_on_test_data,
+    _generate_score_data_on_test_data,
     _generate_max_daily_performance_metric,
     _generate_trading_simulation_df
 )
@@ -72,33 +72,24 @@ def get_daily_recommendations(rolling_window: str) -> (pd.DataFrame, str):
     Returns:
         (pd.DataFrame, str): A tuple containing the daily recommendations dataframe and the forecast date
     """
-    final_performance = pd.read_csv(Path(f'data/stock/model_v4/performance/medianGain/{rolling_window}.csv'))
+    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
+    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
     
-    forecast_paths = Path(f'data/stock/forecast/model_v4/medianGain/{rolling_window}').rglob('*.csv')
-    all_ticker = [file.stem for file in Path(f'data/stock/forecast/model_v4/medianGain/{rolling_window}').rglob('*.csv')]
+    score_df = pd.DataFrame()
     
-    forecast_df = pd.DataFrame()
+    for ticker, file in zip(all_ticker, score_paths):
+        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}']).tail(1)
+        temp_score_df['Ticker'] = ticker
     
-    for ticker, file in zip(all_ticker, forecast_paths):
-        temp_forecast_df = pd.read_csv(file, usecols=['Date', f'Forecast High Gain {rolling_window}', f'Threshold Median Gain {rolling_window}']).tail(1)
-        temp_forecast_df['Ticker'] = ticker
+        score_df = pd.concat((score_df, temp_score_df))
     
-        forecast_df = pd.concat((forecast_df, temp_forecast_df))
+    assert score_df['Date'].nunique() == 1
+    score_date = score_df['Date'].unique()[0]
     
-    forecast_df = pd.merge(
-                        forecast_df,
-                        final_performance[['Ticker', 'Test - Gini']],
-                        on='Ticker',
-                        how='inner'
-                    ).sort_values(f'Forecast High Gain {rolling_window}', ascending=False)
-    
-    assert forecast_df['Date'].nunique() == 1
-    forecast_date = forecast_df['Date'].unique()[0]
-    
-    forecast_df.set_index('Ticker', inplace=True)
-    forecast_df.drop(columns=['Date'], inplace=True)
+    score_df.set_index('Ticker', inplace=True)
+    score_df.drop(columns=['Date'], inplace=True)
 
-    return forecast_df, forecast_date
+    return score_df.sort_values(f'Score {rolling_window}', ascending=False), score_date
 
 @st.cache_data
 def generate_trading_simulation_df(rolling_window: str) -> pd.DataFrame:
@@ -108,11 +99,11 @@ def generate_trading_simulation_df(rolling_window: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A pandas dataframe containing the trading simulation data
     """
-    forecast_df = _generate_forecast_data_on_test_data(rolling_window)
+    score_df = _generate_score_data_on_test_data(rolling_window)
     max_daily_profit_df = _generate_max_daily_performance_metric(rolling_window, 'Profit')
     max_daily_loss_df = _generate_max_daily_performance_metric(rolling_window, 'Loss')
 
-    trading_simulation_df = _generate_trading_simulation_df(forecast_df, max_daily_profit_df, max_daily_loss_df, rolling_window)
+    trading_simulation_df = _generate_trading_simulation_df(score_df, max_daily_profit_df, max_daily_loss_df, rolling_window)
 
     return trading_simulation_df
 
@@ -128,24 +119,24 @@ def visualize_performance_metric_distribution_for_each_forecast_threshold(tradin
         go.Figure: A plotly figure containing the performance metric distribution for each forecast threshold
     """
     boxplot_df = pd.DataFrame()
-    all_forecast_thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1]
+    all_score_thresholds = [0.0, 0.2, 0.4, 0.6, 0.8, 1]
     
-    for lower_forecast_thres, upper_forecast_thres in zip(all_forecast_thresholds[:-1], all_forecast_thresholds[1:]):
+    for lower_score_thres, upper_score_thres in zip(all_score_thresholds[:-1], all_score_thresholds[1:]):
         thres_bool = np.all((
-            trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= lower_forecast_thres,
-            trading_simulation_df[f'Forecast High Gain {rolling_window}'] < upper_forecast_thres
+            trading_simulation_df[f'Score {rolling_window}'] >= lower_score_thres,
+            trading_simulation_df[f'Score {rolling_window}'] < upper_score_thres
         ), axis=0)
     
         temp_boxplot_df = trading_simulation_df.loc[thres_bool, [performance_metric]]
-        temp_boxplot_df['Forecast Threshold'] = f'{lower_forecast_thres} <= x < {upper_forecast_thres}'
+        temp_boxplot_df['Score Threshold'] = f'{lower_score_thres} <= x < {upper_score_thres}'
     
         boxplot_df = pd.concat((boxplot_df, temp_boxplot_df))
         
     fig = px.box(
         boxplot_df, 
-        y="Forecast Threshold", 
+        y="Score Threshold", 
         x=performance_metric,
-        title=f"{performance_metric}'s Distribution for Each Forecast Threshold",
+        title=f"{performance_metric}'s Distribution for Each Score Threshold",
         points=False
     )
 
@@ -175,19 +166,19 @@ def visualize_impact_of_threshold_on_performance_metric(trading_simulation_df: p
     """
     forecast_threshold = np.arange(0, 1, 0.00075)
     
-    average_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].mean() for threshold in forecast_threshold]
-    max_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].max() for threshold in forecast_threshold]
-    min_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].min() for threshold in forecast_threshold]
-    quantile_075_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].quantile(0.75) for threshold in forecast_threshold]
-    quantile_05_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].quantile(0.5) for threshold in forecast_threshold]
-    quantile_025_performance = [trading_simulation_df.loc[trading_simulation_df[f'Forecast High Gain {rolling_window}'] >= threshold, performance_metric].quantile(0.25) for threshold in forecast_threshold]
+    average_performance = [trading_simulation_df.loc[trading_simulation_df[f'Score {rolling_window}'] >= threshold, performance_metric].mean() for threshold in forecast_threshold]
+    max_performance = [trading_simulation_df.loc[trading_simulation_df[f'Score {rolling_window}'] >= threshold, performance_metric].max() for threshold in forecast_threshold]
+    min_performance = [trading_simulation_df.loc[trading_simulation_df[f'Score {rolling_window}'] >= threshold, performance_metric].min() for threshold in forecast_threshold]
+    quantile_075_performance = [trading_simulation_df.loc[trading_simulation_df[f'Score {rolling_window}'] >= threshold, performance_metric].quantile(0.75) for threshold in forecast_threshold]
+    quantile_05_performance = [trading_simulation_df.loc[trading_simulation_df[f'Score {rolling_window}'] >= threshold, performance_metric].quantile(0.5) for threshold in forecast_threshold]
+    quantile_025_performance = [trading_simulation_df.loc[trading_simulation_df[f'Score {rolling_window}'] >= threshold, performance_metric].quantile(0.25) for threshold in forecast_threshold]
 
     fig = go.Figure()
 
     fig.update_layout(
-        title=f"{performance_metric}'s Statistic on Different Forecast Threshold",
+        title=f"{performance_metric}'s Statistic on Different Score Threshold",
         xaxis=dict(
-            title="Forecast Threshold",
+            title="Score Threshold",
             gridcolor='lightgrey'
         ),
         yaxis=dict(

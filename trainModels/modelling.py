@@ -13,6 +13,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
+from utils.pipeline import get_split_dates, get_split_masks
+
 
 def _combine_multiple_ticker_in_industry(industry: str) -> pd.DataFrame:
     """
@@ -78,16 +80,10 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
                - predefined_split_index (PredefinedSplit): An index for cross-validation
                  that designates the last 40 days of the training data as the validation set
     """
-    window_dd = target_column.split(" ")[-1]
-    json_path = Path(f"data/split_dates_{window_dd}.json")
-    
-    with open(json_path, 'r') as f:
-        splits = json.load(f)
+    splits = get_split_dates(target_column)
+    train_val_mask, train_mask, val_mask, test_mask, _ = get_split_masks(data, splits)
 
-    train_val_mask = (data['Date'] >= splits['train']['start_date']) & (data['Date'] <= splits['val']['end_date'])
     train_data = data[train_val_mask].copy()
-
-    test_mask = (data['Date'] >= splits['test']['start_date']) & (data['Date'] <= splits['test']['end_date'])
     test_data = data[test_mask].copy()
 
     train_feature = train_data[feature_columns]
@@ -95,10 +91,10 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
     test_feature = test_data[feature_columns]
     test_target = test_data[target_column]
     
-    val_mask = (train_data['Date'] >= splits['val']['start_date']) & (train_data['Date'] <= splits['val']['end_date'])
+    val_mask_train = val_mask[train_val_mask]
     
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[val_mask.values] = 0    
+    split_index[val_mask_train.values] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
@@ -127,16 +123,10 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
                  that designates the last 40 days of the training data as the validation set
     """
 
-    window_dd = target_column.split(" ")[-1]
-    json_path = Path(f"data/split_dates_{window_dd}.json")
-    
-    with open(json_path, 'r') as f:
-        splits = json.load(f)
+    splits = get_split_dates(target_column)
+    train_val_mask, train_mask, val_mask, test_mask, _ = get_split_masks(data, splits)
 
-    train_val_mask = (data['Date'] >= splits['train']['start_date']) & (data['Date'] <= splits['val']['end_date'])
     train_data = data[train_val_mask].copy()
-
-    test_mask = (data['Date'] >= splits['test']['start_date']) & (data['Date'] <= splits['test']['end_date'])
     test_data = data[test_mask].copy()
     
     train_feature = train_data[feature_columns]
@@ -144,10 +134,10 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
     test_feature = test_data[feature_columns]
     test_target = test_data[target_column]
     
-    val_mask = (train_data['Date'] >= splits['val']['start_date']) & (train_data['Date'] <= splits['val']['end_date'])
+    val_mask_train = val_mask[train_val_mask]
     
     split_index = np.full(len(train_feature), -1, dtype=int)
-    split_index[val_mask.values] = 0    
+    split_index[val_mask_train.values] = 0    
     predefined_split_index = PredefinedSplit(test_fold=split_index)
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
