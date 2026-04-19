@@ -2,7 +2,10 @@ import argparse
 import sys
 import gc
 
-from generateScore.main import process_generate_score
+from generateScore.main import (
+    process_generate_score,
+    process_generate_trading_simulation
+)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -24,8 +27,13 @@ def main():
     for window in windows:
         if not window.endswith('dd'):
             window = f"{window}dd"
+
         print(f"\nProcessing generating score for {window}...")
         process_generate_score(window)
+
+        print(f"\nProcessing generating trading simulation for {window}...")
+        process_generate_trading_simulation(window)
+        
         gc.collect()
 
     print(f"\nProcessing generating score for all windows completed")

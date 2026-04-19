@@ -10,7 +10,6 @@ from analyticsHub.main import (
     get_all_performances,
     get_daily_recommendations,
     get_pre_market_outlook,
-    generate_trading_simulation_df,
     visualize_performance_metric_distribution_for_each_forecast_threshold,
     visualize_impact_of_threshold_on_performance_metric
 )
@@ -157,7 +156,8 @@ elif app_mode == "3. Trading Simulation":
 
     trading_simulation_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in Path('data/stock/forecast/model_v4/medianGain').iterdir()])
 
-    trading_simulation_df = generate_trading_simulation_df(trading_simulation_rolling_window)
+    trading_simulation_path = Path(f'data/stock/score/trading_simulation_{trading_simulation_rolling_window}.csv')
+    trading_simulation_df = pd.read_csv(trading_simulation_path)
 
     splits = get_split_dates(f'Median Gain {trading_simulation_rolling_window}')
     start_testing_market_date = splits['test']['start_date']

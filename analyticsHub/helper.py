@@ -1,16 +1,7 @@
 import numpy as np
 import pandas as pd
-import case_conversion
-import streamlit as st
 from pathlib import Path
-import plotly.express as px
-from datetime import datetime
 import plotly.graph_objects as go
-
-from utils.pipeline import (
-    get_split_dates, 
-    get_split_masks
-)
 
 def _get_chosen_performance_df(all_df: pd.DataFrame, chosen_model_versions: list, chosen_model_label_types: list, chosed_model_windows: list) -> (list, list):
     """
@@ -36,101 +27,6 @@ def _get_chosen_performance_df(all_df: pd.DataFrame, chosen_model_versions: list
     
     return selected_model_identifier, selected_performance_df
 
-def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
-    """
-    (Internal Helper) Generate the score data on the test data
-
-    Returns:
-        pd.DataFrame: A pandas dataframe containing the score data on the test data
-    """
-    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
-    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
-    
-    test_score_df = pd.DataFrame()
-    
-    for ticker, file in zip(all_ticker, score_paths):
-        splits = get_split_dates(f'Median Gain {rolling_window}')
-        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}'])
-        _, _, _, test_mask, _ = get_split_masks(temp_score_df, splits)
-        
-        temp_test_score_df = temp_score_df.loc[test_mask]
-        temp_test_score_df['Ticker'] = ticker
-    
-        test_score_df = pd.concat((test_score_df, temp_test_score_df))
-    
-    final_performance = pd.read_csv(Path(f'data/stock/model_v4/performance/medianGain/{rolling_window}.csv'))
-    
-    test_score_df = pd.merge(
-        test_score_df,
-        final_performance[['Ticker', 'Test - Gini']],
-        on='Ticker',
-        how='inner'
-    )
-
-    return test_score_df
-
-def _generate_max_daily_performance_metric(rolling_window: str, performance_metric: str) -> pd.DataFrame:
-    """
-    (Internal Helper) Generate the max daily profit data
-
-    Returns:
-        pd.DataFrame: A pandas dataframe containing the max daily profit data
-    """
-    label_paths = Path('data/stock/label').rglob('*.csv')
-    all_ticker = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
-    
-    label_df = pd.DataFrame()
-    
-    for ticker, file in zip(all_ticker, label_paths):
-        temp_label_df = pd.read_csv(file, usecols=['Date', 'Close'])
-        temp_label_df['Ticker'] = ticker
-
-        if performance_metric == 'Profit':
-            temp_label_df[f'Max Close {rolling_window}'] = temp_label_df['Close'] \
-                                                        [::-1] \
-                                                        .rolling(int(rolling_window[:-2]), closed='left') \
-                                                        .max() \
-                                                        [::-1]
-        elif performance_metric == 'Loss':
-            temp_label_df[f'Min Close {rolling_window}'] = temp_label_df['Close'] \
-                                                    [::-1] \
-                                                    .rolling(int(rolling_window[:-2]), closed='left') \
-                                                    .min() \
-                                                    [::-1]
-    
-        label_df = pd.concat((label_df, temp_label_df))
-
-    return label_df
-
-def _generate_trading_simulation_df(score_df: pd.DataFrame, max_daily_profit_df: pd.DataFrame, max_daily_loss_df: pd.DataFrame, rolling_window: str) -> pd.DataFrame:
-    """
-    (Internal Helper) Generate the trading simulation data
-
-    Args:
-        score_df (pd.DataFrame): A pandas dataframe containing the score data
-        max_daily_profit_df (pd.DataFrame): A pandas dataframe containing the max daily profit data
-        max_daily_loss_df (pd.DataFrame): A pandas dataframe containing the max daily loss data
-
-    Returns:
-        pd.DataFrame: A pandas dataframe containing the trading simulation data
-    """
-    trading_simulation_df = pd.merge(
-                                        pd.merge(
-                                                    score_df,
-                                                    max_daily_profit_df,
-                                                    on=['Ticker', 'Date'],
-                                                    how='inner' 
-                                                ),
-                                        max_daily_loss_df.drop(columns=['Close']),
-                                        on=['Ticker', 'Date'],
-                                        how='inner'
-                                    )
-    
-    trading_simulation_df['Profit'] = 100 * (trading_simulation_df[f'Max Close {rolling_window}'] - trading_simulation_df['Close']) / trading_simulation_df['Close']
-    trading_simulation_df['Loss'] = 100 * (trading_simulation_df[f'Min Close {rolling_window}'] - trading_simulation_df['Close']) / trading_simulation_df['Close']
-
-    return trading_simulation_df
-
 def _visualize_micro_outlook_boxplot(mo_data: dict, xaxis_title: str, color: str) -> go.Figure:
     """
     (Internal Helper) Generate a boxplot for the Micro Outlook statistics
@@ -148,3 +44,86 @@ def _visualize_micro_outlook_boxplot(mo_data: dict, xaxis_title: str, color: str
     fig.update_layout(height=280, margin=dict(l=20, r=20, t=30, b=20), yaxis_title="Gain (%)", xaxis_title=xaxis_title)
     
     return fig
+
+def _apply_bin_scores(val):
+    """
+    (Internal Helper) Apply bin scores for simulation grouping.
+    """
+    bin_scores = [0.2, 0.4, 0.6, 0.8, 1]
+    for i, upper in enumerate(bin_scores):
+        if val <= upper:
+            return i
+    return len(bin_scores)
+
+def _generate_score_data(rolling_window: str) -> (pd.DataFrame, str):
+    """
+    (Internal Helper) Generate the score data for daily recommendations
+    """
+    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
+    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
+    
+    score_df = pd.DataFrame()
+    for ticker, file in zip(all_ticker, score_paths):
+        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}']).tail(1)
+        temp_score_df['Ticker'] = ticker
+        score_df = pd.concat((score_df, temp_score_df))
+    
+    assert score_df['Date'].nunique() == 1
+    score_date = score_df['Date'].unique()[0]
+    
+    score_df.set_index('Ticker', inplace=True)
+    score_df.drop(columns=['Date'], inplace=True)
+    
+    score_df[f'Score {rolling_window} Bin'] = score_df[f'Score {rolling_window}'].apply(lambda val: _apply_bin_scores(val))
+    
+    return score_df, score_date
+
+def _generate_close_data() -> pd.DataFrame:
+    """
+    (Internal Helper) Generate the close price data for daily recommendations
+    """
+    label_paths = Path('data/stock/label').rglob('*.csv')
+    all_tickers = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
+
+    all_close_df = pd.DataFrame()
+    for ticker, file in zip(all_tickers, label_paths):
+        close_df = pd.read_csv(file, usecols=['Date', 'Close']).tail(1)
+        close_df['Ticker'] = ticker
+        all_close_df = pd.concat((all_close_df, close_df))
+    
+    assert all_close_df['Date'].nunique() == 1
+    all_close_df.drop(columns=['Date'], inplace=True)
+    all_close_df.reset_index(drop=True, inplace=True)
+    
+    return all_close_df
+
+def _generate_buy_sell_percentage_data(rolling_window: str) -> pd.DataFrame:
+    """
+    (Internal Helper) Generate the simulation buy/sell percentages
+    """
+    simulation_df = pd.read_csv(f'data/stock/score/trading_simulation_{rolling_window}.csv')
+    simulation_df[f'Score {rolling_window} Bin'] = simulation_df[f'Score {rolling_window}'].apply(lambda val: _apply_bin_scores(val))
+
+    buy_percentage = simulation_df.groupby(f'Score {rolling_window} Bin')['Loss'].quantile(0.25).to_dict()
+    sell_percentage = simulation_df.groupby(f'Score {rolling_window} Bin')['Profit'].quantile(0.50).to_dict()
+    
+    return buy_percentage, sell_percentage
+
+def _generate_recommendation_data(score_df: pd.DataFrame, all_close_df: pd.DataFrame, buy_percentage: dict, sell_percentage: dict, rolling_window: str) -> pd.DataFrame:
+    """
+    (Internal Helper) Generate final daily recommendation targets
+    """
+    recommendation_df = pd.merge(
+        score_df,
+        all_close_df,
+        on='Ticker',
+        how='inner'
+    )
+    
+    recommendation_df['Buy Percentage'] = recommendation_df[f'Score {rolling_window} Bin'].apply(lambda val: buy_percentage[val])
+    recommendation_df['Sell Percentage'] = recommendation_df[f'Score {rolling_window} Bin'].apply(lambda val: sell_percentage[val])
+
+    recommendation_df['Target Buy Price'] = recommendation_df.apply(lambda row: np.floor(row['Close'] * (100 - np.abs(row['Buy Percentage'])) / 100), axis=1)
+    recommendation_df['Target Sell Price'] = recommendation_df.apply(lambda row: np.ceil(row['Close'] * (100 + np.abs(row['Sell Percentage'])) / 100), axis=1)
+    
+    return recommendation_df

@@ -70,6 +70,15 @@ if __name__ == "__main__":
         help="Length of the validation data split (default: 40)",
     )
 
+    parser.add_argument(
+        "--forecast_bool",
+        dest='forecast_bool', 
+        action='store_true',
+        help="A boolean for stating whether the system uses forecast. If True, then do not execute the process of generating split dates"
+    )
+
+    parser.set_defaults(forecast_bool=False)
+
     args = parser.parse_args()
 
     label_types = [lt.strip() for lt in args.label_types.split(",")]
@@ -147,6 +156,13 @@ if __name__ == "__main__":
             print(f'{ticker} - {message}')
 
     print("=" * 80)
+
+    if args.forecast_bool:
+        print("\n" + "=" * 80)
+        print("FORECAST BOOL IS TRUE: SKIPPING DATA SPLITS GENERATION")
+        print("=" * 80)
+        import sys
+        sys.exit(0)
 
     print("\n" + "=" * 80)
     print("GENERATING DATA SPLITS")

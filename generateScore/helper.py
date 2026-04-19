@@ -137,3 +137,98 @@ def _infer_and_export(model: LogisticRegression, joined_test_data: pd.DataFrame,
         ticker_test_data.to_csv(save_dir / f'{ticker}.csv', index=False)
 
     return
+
+def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
+    """
+    (Internal Helper) Generate the score data on the test data
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing the score data on the test data
+    """
+    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
+    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
+    
+    test_score_df = pd.DataFrame()
+    
+    for ticker, file in zip(all_ticker, score_paths):
+        splits = get_split_dates(f'Median Gain {rolling_window}')
+        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}'])
+        _, _, _, test_mask, _ = get_split_masks(temp_score_df, splits)
+        
+        temp_test_score_df = temp_score_df.loc[test_mask]
+        temp_test_score_df['Ticker'] = ticker
+    
+        test_score_df = pd.concat((test_score_df, temp_test_score_df))
+    
+    final_performance = pd.read_csv(Path(f'data/stock/model_v4/performance/medianGain/{rolling_window}.csv'))
+    
+    test_score_df = pd.merge(
+        test_score_df,
+        final_performance[['Ticker', 'Test - Gini']],
+        on='Ticker',
+        how='inner'
+    )
+
+    return test_score_df
+
+def _generate_max_daily_performance_metric(rolling_window: str, performance_metric: str) -> pd.DataFrame:
+    """
+    (Internal Helper) Generate the max daily profit data
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing the max daily profit data
+    """
+    label_paths = Path('data/stock/label').rglob('*.csv')
+    all_ticker = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
+    
+    label_df = pd.DataFrame()
+    
+    for ticker, file in zip(all_ticker, label_paths):
+        temp_label_df = pd.read_csv(file, usecols=['Date', 'Close'])
+        temp_label_df['Ticker'] = ticker
+
+        if performance_metric == 'Profit':
+            temp_label_df[f'Max Close {rolling_window}'] = temp_label_df['Close'] \
+                                                        [::-1] \
+                                                        .rolling(int(rolling_window[:-2]), closed='left') \
+                                                        .max() \
+                                                        [::-1]
+        elif performance_metric == 'Loss':
+            temp_label_df[f'Min Close {rolling_window}'] = temp_label_df['Close'] \
+                                                    [::-1] \
+                                                    .rolling(int(rolling_window[:-2]), closed='left') \
+                                                    .min() \
+                                                    [::-1]
+    
+        label_df = pd.concat((label_df, temp_label_df))
+
+    return label_df
+
+def _generate_trading_simulation_df(score_df: pd.DataFrame, max_daily_profit_df: pd.DataFrame, max_daily_loss_df: pd.DataFrame, rolling_window: str) -> pd.DataFrame:
+    """
+    (Internal Helper) Generate the trading simulation data
+
+    Args:
+        score_df (pd.DataFrame): A pandas dataframe containing the score data
+        max_daily_profit_df (pd.DataFrame): A pandas dataframe containing the max daily profit data
+        max_daily_loss_df (pd.DataFrame): A pandas dataframe containing the max daily loss data
+
+    Returns:
+        pd.DataFrame: A pandas dataframe containing the trading simulation data
+    """
+    trading_simulation_df = pd.merge(
+                                        pd.merge(
+                                                    score_df,
+                                                    max_daily_profit_df,
+                                                    on=['Ticker', 'Date'],
+                                                    how='inner' 
+                                                ),
+                                        max_daily_loss_df.drop(columns=['Close']),
+                                        on=['Ticker', 'Date'],
+                                        how='inner'
+                                    )
+    
+    trading_simulation_df['Profit'] = 100 * (trading_simulation_df[f'Max Close {rolling_window}'] - trading_simulation_df['Close']) / trading_simulation_df['Close']
+    trading_simulation_df['Loss'] = 100 * (trading_simulation_df[f'Min Close {rolling_window}'] - trading_simulation_df['Close']) / trading_simulation_df['Close']
+
+    return trading_simulation_df

@@ -9,9 +9,10 @@ import plotly.graph_objects as go
 
 from analyticsHub.helper import (
     _get_chosen_performance_df,
-    _generate_score_data_on_test_data,
-    _generate_max_daily_performance_metric,
-    _generate_trading_simulation_df
+    _generate_score_data,
+    _generate_close_data,
+    _generate_buy_sell_percentage_data,
+    _generate_recommendation_data
 )
 
 @st.cache_data
@@ -72,40 +73,15 @@ def get_daily_recommendations(rolling_window: str) -> (pd.DataFrame, str):
     Returns:
         (pd.DataFrame, str): A tuple containing the daily recommendations dataframe and the forecast date
     """
-    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
-    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
-    
-    score_df = pd.DataFrame()
-    
-    for ticker, file in zip(all_ticker, score_paths):
-        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}']).tail(1)
-        temp_score_df['Ticker'] = ticker
-    
-        score_df = pd.concat((score_df, temp_score_df))
-    
-    assert score_df['Date'].nunique() == 1
-    score_date = score_df['Date'].unique()[0]
-    
-    score_df.set_index('Ticker', inplace=True)
-    score_df.drop(columns=['Date'], inplace=True)
+    score_df, score_date = _generate_score_data(rolling_window)
+    all_close_df = _generate_close_data()
+    buy_percentage, sell_percentage = _generate_buy_sell_percentage_data(rolling_window)
+    recommendation_df = _generate_recommendation_data(score_df, all_close_df, buy_percentage, sell_percentage, rolling_window)
 
-    return score_df.sort_values(f'Score {rolling_window}', ascending=False), score_date
-
-@st.cache_data
-def generate_trading_simulation_df(rolling_window: str) -> pd.DataFrame:
-    """
-    Generate the trading simulation data
-
-    Returns:
-        pd.DataFrame: A pandas dataframe containing the trading simulation data
-    """
-    score_df = _generate_score_data_on_test_data(rolling_window)
-    max_daily_profit_df = _generate_max_daily_performance_metric(rolling_window, 'Profit')
-    max_daily_loss_df = _generate_max_daily_performance_metric(rolling_window, 'Loss')
-
-    trading_simulation_df = _generate_trading_simulation_df(score_df, max_daily_profit_df, max_daily_loss_df, rolling_window)
-
-    return trading_simulation_df
+    selected_recommendation_df = recommendation_df.loc[:, ['Ticker', f'Score {rolling_window}', 'Target Buy Price', 'Target Sell Price']] \
+                                                    .set_index('Ticker') \
+                                                    .sort_values(f'Score {rolling_window}', ascending=False)                        
+    return selected_recommendation_df, score_date
 
 @st.cache_data
 def visualize_performance_metric_distribution_for_each_forecast_threshold(trading_simulation_df: pd.DataFrame, rolling_window: str, performance_metric: str) -> go.Figure:
