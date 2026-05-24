@@ -54,7 +54,7 @@ def process_single_ticker(args_tuple):
                 f"Foreign flow and non-regular data is empty for {ticker}", 
                 0
             )
-        foreign_flow_non_regular_df = pd.merge(ohlcv_df, foreign_flow_non_regular_df, on='Date', how='left')
+        foreign_flow_non_regular_df = pd.merge(ohlcv_df, foreign_flow_non_regular_df, on='Date', how='inner')
 
         close_variance = np.var(ohlcv_df["Close"].values)
         if close_variance < 1e-10:

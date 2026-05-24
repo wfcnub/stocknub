@@ -1,4 +1,6 @@
+from pathlib import Path
 import argparse
+import shutil
 import sys
 import gc
 
@@ -20,6 +22,12 @@ def main():
         help="Comma-separated list of rolling windows (e.g., '5,10').",
     )
     
+    csv_folder_path = 'data/stock/score'
+    if Path(csv_folder_path).exists():
+        shutil.rmtree(csv_folder_path)
+
+    Path(csv_folder_path).mkdir(parents=True, exist_ok=True)
+
     args = parser.parse_args()
 
     windows = [w.strip() for w in args.windows.split(",")]

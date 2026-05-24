@@ -135,6 +135,7 @@ def run_step(step_num, args):
         cmd.extend(["--model_version", '3'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
+        cmd.extend(["--workers", "4"])
     
     elif step_num == 8:
         cmd.extend(["--model_version", '1'])
