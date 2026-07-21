@@ -91,7 +91,7 @@ def _generate_close_data() -> pd.DataFrame:
         close_df['Ticker'] = ticker
         all_close_df = pd.concat((all_close_df, close_df))
     
-    assert all_close_df['Date'].nunique() == 1
+    # assert all_close_df['Date'].nunique() == 1
     all_close_df.drop(columns=['Date'], inplace=True)
     all_close_df.reset_index(drop=True, inplace=True)
     

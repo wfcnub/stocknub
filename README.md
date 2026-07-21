@@ -23,14 +23,16 @@ To easily set up your local environment and manage dependencies, you can create 
 
 If you prefer containerization, a `compose.yaml` file is included, which builds a custom image containing both .NET 8 and Python 3.10.
 
-The `compose.yaml` defines two main services:
+The `compose.yaml` defines three main services:
 - `pipeline-service`: Designed to execute the background pipeline scripts robustly.
 - `initialize-jupyter-lab`: An interactive Jupyter Lab server exposed on port `8888`.
+- `initialize-fastapi`: A robust REST API serving endpoints powered by FastAPI, exposed on port `8000`.
 
 Before running the services, you must first build them:
 ```bash
 docker compose build pipeline-service
 docker compose build initialize-jupyter-lab
+docker compose build initialize-fastapi
 ```
 *(Alternatively, you can build both at once using `docker compose build`)*
 
@@ -89,3 +91,16 @@ docker compose run -p 8501:8501 --rm pipeline-service streamlit run analytics_hu
 ```
 
 *(Note: If you are running the Streamlit app from within Docker, ensure that you expose Streamlit's default port `8501` in your `compose.yaml` file.)*
+
+### 4. REST API (FastAPI)
+To expose the pipeline data programmatically via a RESTful JSON API, you can launch the FastAPI server. It includes fully structured layers (Router, Controller, Service, Repository) and built-in interactive Swagger documentation available at `http://127.0.0.1:8000/docs`.
+
+**Using Conda:**
+```bash
+uvicorn main:app --reload
+```
+
+**Using Docker:**
+```bash
+docker compose up initialize-fastapi
+```
