@@ -97,22 +97,11 @@ def main():
     all_failed_processes = []
     all_metrics = {}
 
-    if args.with_docker:
-        print(f"Workers: 1\n")
+    print(f"Workers: {args.workers}\n")
+    with Pool(processes=args.workers) as pool:
         results = list(
-                        tqdm(
-                            map(process_single_model, args_list),
-                            total=len(args_list),
-                            desc="Processing single model",
-                        )
-                    )
-        
-    else:
-        print(f"Workers: {args.workers}\n")
-        with Pool(processes=args.workers) as pool:
-            results = list(
-                tqdm(
-                    pool.imap(process_single_model, args_list),
+            tqdm(
+                pool.imap(process_single_model, args_list),
                     total=len(args_list),
                     desc="Processing single model",
                 )

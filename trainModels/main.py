@@ -67,8 +67,6 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
 
         test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
 
-        test_metrics_df = pd.DataFrame(test_metrics)
-
         all_model.append(model)
         all_test_metrics.append(test_metrics)
     
