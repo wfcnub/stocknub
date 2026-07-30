@@ -1,9 +1,10 @@
-import os
 import argparse
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
+
+from utils import paths
 
 from fetchForeignFlowAndNonRegularData.main import(
     fetch_foreign_flow_and_non_regular_ticker_data, 
@@ -22,15 +23,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--raw_csv_folder_path",
         type=str,
-        default="data/stock/raw_foreign_flow_non_regular",
-        help="Directory path where CSV files will be saved (default: data/stock/raw_foreign_flow_non_regular)",
+        default=str(paths.get_raw_foreign_flow_non_regular_dir()),
+        help="Directory path where CSV files will be saved",
     )
 
     parser.add_argument(
         "--csv_folder_path",
         type=str,
-        default="data/stock/foreign_flow_non_regular",
-        help="Directory path where CSV files will be saved (default: data/stock/foreign_flow_non_regular)",
+        default=str(paths.get_foreign_flow_non_regular_dir()),
+        help="Directory path where CSV files will be saved",
     )
 
     parser.add_argument(

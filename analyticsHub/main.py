@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import case_conversion
 import streamlit as st
-from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -14,6 +13,7 @@ from analyticsHub.helper import (
     _generate_buy_sell_percentage_data,
     _generate_recommendation_data
 )
+from utils import paths
 
 @st.cache_data
 def get_pre_market_outlook() -> dict | None:
@@ -23,7 +23,7 @@ def get_pre_market_outlook() -> dict | None:
     Returns:
         dict | None: The parsed outlook dictionary, or None if no file exists
     """
-    json_file_path = Path('data/pre_market_outlook.json')
+    json_file_path = paths.get_pre_market_outlook_path()
     with open(json_file_path, "r") as f:
         return json.load(f)
 
@@ -39,7 +39,7 @@ def get_all_performances() -> pd.DataFrame:
     
     all_performance_paths = []
     for model_version in model_versions:
-        model_performance_path = Path(f'data/stock/model_v{model_version}/performance')
+        model_performance_path = paths.get_model_performance_base_dir(model_version)
         _ = [[all_performance_paths.append(f) for f in file.iterdir()] for file in model_performance_path.iterdir()]  
 
     model_version_mapping = {

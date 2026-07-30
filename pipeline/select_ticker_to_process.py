@@ -1,9 +1,10 @@
-import os
 import argparse
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
+
+from utils import paths
 
 from selectTickerToProcess.main import select_ticker_to_process
 
@@ -15,8 +16,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ohlcv_folder_path",
         type=str,
-        default="data/stock/OHLCV",
-        help="Directory path where the CSV files are stored, determining the universe of tickers to evaluate (default: data/stock/OHLCV)",
+        default=str(paths.get_ohlcv_dir()),
+        help="Directory path where the CSV files are stored",
     )
 
     args = parser.parse_args()
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         selected_ticker_df = selected_ticker_df.sort_values(by="fundamental_score", ascending=False).head(150)
         
         try:
-            ticker_industry_df = pd.read_csv('data/ticker_and_industry_list.csv')
+            ticker_industry_df = pd.read_csv(paths.get_ticker_and_industry_list_path())
             selected_ticker_df = pd.merge(
                 ticker_industry_df,
                 selected_ticker_df,
@@ -75,7 +76,7 @@ if __name__ == "__main__":
             print(f' - {count} tickers from the {industry} sector')
         print()
 
-    save_path = 'data/selected_ticker_and_industry_list.csv'
+    save_path = paths.get_selected_ticker_and_industry_list_path()
     selected_ticker_df.to_csv(save_path, index=False)
     print(f'Successfully saved the top fundamental tickers to {save_path}')
 

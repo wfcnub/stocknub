@@ -2,8 +2,9 @@ import argparse
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
+
+from utils import paths
 
 from forecastStocks.main import process_single_ticker
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
@@ -44,8 +45,8 @@ def main():
     parser.add_argument(
         "--csv_folder_path",
         type=str,
-        default="data/stock/label",
-        help="Folder to save the technical and label (default: data/stock/data/stock/label)",
+        default=str(paths.get_label_dir()),
+        help="Folder to save the technical and label",
     )
 
     parser.add_argument(
@@ -104,7 +105,7 @@ def main():
         model_identifier_list = ticker_list
 
     elif args.model_version == 2:
-        ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
+        ticker_industry_df = pd.read_csv(paths.get_selected_ticker_and_industry_list_path())
         ticker_industry_df = ticker_industry_df[ticker_industry_df['Ticker'].isin(ticker_list)]
         ticker_list = ticker_industry_df['Ticker'].values.tolist()
         model_identifier_list = ticker_industry_df['Industry'].values.tolist()
@@ -162,7 +163,7 @@ def main():
         for label_type in label_types:
             for window in windows:
                 print(
-                    f"Forecasts saved to: data/stock/forecast/model_v{args.model_version}/{label_type}/{window}dd"
+                    f"Forecasts saved to: {paths.get_forecast_dir(args.model_version, label_type, window)}"
                 )
 
     print("\n" + "=" * 80)

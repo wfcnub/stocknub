@@ -2,8 +2,8 @@ import gc
 import sys
 import argparse
 import subprocess
-from pathlib import Path
-from datetime import datetime
+
+from utils import paths
 
 from warnings import simplefilter
 simplefilter("ignore")
@@ -141,21 +141,21 @@ def run_step(step_num, args):
         cmd.extend(["--model_version", '1'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-        cmd.extend(["--csv_folder_path", 'data/stock/label'])
+        cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
         cmd.extend(["--min_test_gini", '0'])
     
     elif step_num == 9:
         cmd.extend(["--model_version", '2'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-        cmd.extend(["--csv_folder_path", 'data/stock/label'])
+        cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
         cmd.extend(["--min_test_gini", '0'])
     
     elif step_num == 10:
         cmd.extend(["--model_version", '3'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
-        cmd.extend(["--csv_folder_path", 'data/stock/label'])
+        cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
         cmd.extend(["--min_test_gini", '0'])
     
     elif step_num == 11:
@@ -177,14 +177,14 @@ def run_step(step_num, args):
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '5'])
         cmd.extend(["--label_types", 'median_gain'])
-        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts_5dd'])
+        cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(5))])
         cmd.extend(["--min_test_gini", '0'])
 
     elif step_num == 15:
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
-        cmd.extend(["--csv_folder_path", 'data/stock/combined_forecasts_10dd'])
+        cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(10))])
         cmd.extend(["--min_test_gini", '0'])
 
     try:

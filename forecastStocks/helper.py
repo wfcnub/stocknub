@@ -1,7 +1,6 @@
 import shutil
-import pickle
 import pandas as pd
-from pathlib import Path
+from utils import paths
 from camel_converter import to_camel
 
 def _ensure_directories_exist(model_version: int, label_types: str, windows: int) -> None:
@@ -16,7 +15,7 @@ def _ensure_directories_exist(model_version: int, label_types: str, windows: int
     for label_type in label_types:
         camel_label = to_camel(label_type)
         for window in windows:
-            folder_path = Path(f"data/stock/forecast/model_v{model_version}/{camel_label}/{window}dd")
+            folder_path = paths.get_forecast_dir(model_version, label_type, window)
 
             if folder_path.exists():
                 shutil.rmtree(folder_path)
@@ -38,8 +37,7 @@ def _load_model_performance(model_version: int, label_type: str, window: int, mi
     Returns:
         list: List of ticker codes that meet the criteria
     """
-    camel_label = to_camel(label_type)
-    performance_path = Path(f"data/stock/model_v{model_version}/performance/{camel_label}/{window}dd.csv")
+    performance_path = paths.get_model_performance_path(model_version, label_type, window)
 
     if not performance_path.exists():
         print(f"WARNING: Performance file not found: {performance_path}")
@@ -94,8 +92,7 @@ def _save_forecast(forecast_df: pd.DataFrame, model_version: int, label_type: st
         window (int): The rolling window used to create the label
         ticker (str): The name of the ticker inside the forecast_df
     """
-    camel_label = to_camel(label_type)
-    filepath = Path(f"data/stock/forecast/model_v{model_version}/{camel_label}/{window}dd/{ticker}.csv")
+    filepath = paths.get_forecast_path(model_version, label_type, window, ticker)
     forecast_df.to_csv(filepath, index=False)
 
     return

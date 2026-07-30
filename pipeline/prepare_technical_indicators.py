@@ -1,11 +1,11 @@
-import os
 import shutil
 import argparse
-from argparse import BooleanOptionalAction
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count, set_start_method
+
+from utils import paths
 
 from prepareTechnicalIndicators.main import process_single_ticker
 
@@ -17,22 +17,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ohlcv_folder_path",
         type=str,
-        default="data/stock/OHLCV",
-        help="Folder containing historical stock data (default: data/stock/OHLCV)",
+        default=str(paths.get_ohlcv_dir()),
+        help="Folder containing historical stock data",
     )
 
     parser.add_argument(
         "--foreign_flow_non_regular_folder_path",
         type=str,
-        default="data/stock/foreign_flow_non_regular",
-        help="Folder containing historical stock data (default: data/stock/foreign_flow_non_regular)",
+        default=str(paths.get_foreign_flow_non_regular_dir()),
+        help="Folder containing foreign flow and non-regular data",
     )
 
     parser.add_argument(
         "--technical_folder_path",
         type=str,
-        default="data/stock/technical",
-        help="Folder to save technical indicators (default: data/stock/technical)",
+        default=str(paths.get_technical_dir()),
+        help="Folder to save technical indicators",
     )
 
     parser.add_argument(
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         print(f"Error: No CSV files found in {args.ohlcv_folder_path}")
 
     if args.process_selected_ticker:
-        selected_ticker_to_process_df = pd.read_csv('data/selected_ticker_and_industry_list.csv')
+        selected_ticker_to_process_df = pd.read_csv(paths.get_selected_ticker_and_industry_list_path())
         selected_tickers = selected_ticker_to_process_df['Ticker'].values
 
         all_tickers_to_process = list(set(selected_tickers).intersection(set(all_tickers)))

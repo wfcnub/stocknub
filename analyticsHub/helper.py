@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import plotly.graph_objects as go
+
+from utils import paths
 
 def _get_chosen_performance_df(all_df: pd.DataFrame, chosen_model_versions: list, chosen_model_label_types: list, chosed_model_windows: list) -> (list, list):
     """
@@ -59,8 +60,8 @@ def _generate_score_data(rolling_window: str) -> (pd.DataFrame, str):
     """
     (Internal Helper) Generate the score data for daily recommendations
     """
-    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
-    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
+    score_paths = list(paths.get_score_window_dir(rolling_window).rglob('*.csv'))
+    all_ticker = [file.stem for file in score_paths]
     
     score_df = pd.DataFrame()
     for ticker, file in zip(all_ticker, score_paths):
@@ -82,8 +83,8 @@ def _generate_close_data() -> pd.DataFrame:
     """
     (Internal Helper) Generate the close price data for daily recommendations
     """
-    label_paths = Path('data/stock/label').rglob('*.csv')
-    all_tickers = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
+    label_paths = list(paths.get_label_dir().rglob('*.csv'))
+    all_tickers = [file.stem for file in label_paths]
 
     all_close_df = pd.DataFrame()
     for ticker, file in zip(all_tickers, label_paths):
@@ -103,7 +104,7 @@ def _generate_buy_sell_percentage_data(rolling_window: str) -> pd.DataFrame:
     """
     (Internal Helper) Generate the simulation buy/sell percentages
     """
-    simulation_df = pd.read_csv(f'data/stock/score/trading_simulation_{rolling_window}.csv')
+    simulation_df = pd.read_csv(paths.get_trading_simulation_path(rolling_window))
     simulation_df[f'Score {rolling_window} Bin'] = simulation_df[f'Score {rolling_window}'].apply(lambda val: _apply_bin_scores(val))
 
     buy_percentage = simulation_df.groupby(f'Score {rolling_window} Bin')['Loss'].quantile(0.25).to_dict()

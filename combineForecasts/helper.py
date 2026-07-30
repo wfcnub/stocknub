@@ -1,11 +1,9 @@
-import os
 import yaml
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from camel_converter import to_camel
 
 from utils.pipeline import get_label_config
+from utils import paths
 
 def _get_combined_forecasts_features_target_threshold(rolling_window: int) -> (str, str, str):
     """
@@ -17,7 +15,7 @@ def _get_combined_forecasts_features_target_threshold(rolling_window: int) -> (s
         str: Threshold column used to determine the target column
 
     """
-    columns_information_path = Path(f'data/combined_forecasts_columns_information_{rolling_window}dd.yaml')
+    columns_information_path = paths.get_combined_forecasts_columns_information_path(rolling_window)
     with open(columns_information_path, 'r') as file:
         columns_information = yaml.safe_load(file)
     
@@ -42,7 +40,7 @@ def _get_ticker_available_on_all_forecasts(label_types: list, rolling_windows: l
     for model_version in [1, 2, 3]:
         for label_type in label_types:
             for window in rolling_windows:
-                all_forecast_path = Path(f'data/stock/forecast/model_v{model_version}/{to_camel(label_type)}/{window}dd/').rglob('*.csv')
+                all_forecast_path = paths.get_forecast_dir(model_version, label_type, window).rglob('*.csv')
                 all_ticker = set([file.stem for file in all_forecast_path])
                 
                 if len(all_intersected_ticker) == 0:
@@ -75,7 +73,7 @@ def _combine_multiple_forecast_for_single_ticker(ticker: str, label_types: list,
             for window in rolling_windows:
                 target_column, threshold_column, positive_label, _ = get_label_config(label_type, window)
                 forecast_column = f'Forecast {positive_label} {window}dd'
-                forecast_path = Path(f'data/stock/forecast/model_v{model_version}/{to_camel(label_type)}/{window}dd/{ticker}.csv')
+                forecast_path = paths.get_forecast_path(model_version, label_type, window, ticker)
 
                 if (window == max_window) and (label_type == 'median_gain'):
                     temp_forecast_df = pd.read_csv(forecast_path, usecols=['Date', forecast_column, target_column, threshold_column])
@@ -123,7 +121,7 @@ def _write_combined_forecasts_features_target_threshold(label_types: list, rolli
         'threhsold_column': threhsold_column
     }
 
-    columns_information_path = Path(f'data/combined_forecasts_columns_information_{np.max(rolling_windows)}dd.yaml')
+    columns_information_path = paths.get_combined_forecasts_columns_information_path(np.max(rolling_windows))
     with open(columns_information_path, 'w') as file:
         yaml.dump(columns_information, file, default_flow_style=False, sort_keys=False)
 

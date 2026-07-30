@@ -1,4 +1,4 @@
-from pathlib import Path
+from utils import paths
 
 from generateScore.helper import (
     _prepare_data,
@@ -35,6 +35,6 @@ def process_generate_trading_simulation(rolling_window: str):
     max_daily_loss_df = _generate_max_daily_performance_metric(rolling_window, 'Loss')
 
     trading_simulation_df = _generate_trading_simulation_df(score_df, max_daily_profit_df, max_daily_loss_df, rolling_window)
-    trading_simulation_df.to_csv(Path(f'data/stock/score/trading_simulation_{rolling_window}.csv'), index=False)
+    trading_simulation_df.to_csv(paths.get_trading_simulation_path(rolling_window), index=False)
 
     return

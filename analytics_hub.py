@@ -1,10 +1,5 @@
-import numpy as np
 import pandas as pd
-import case_conversion
 import streamlit as st
-from pathlib import Path
-import plotly.express as px
-import plotly.graph_objects as go
 
 from analyticsHub.main import (
     get_all_performances,
@@ -20,6 +15,7 @@ from analyticsHub.helper import (
 )
 
 from utils.pipeline import get_split_dates
+from utils import paths
 
 all_df = get_all_performances()
 pre_market_outlook = get_pre_market_outlook()
@@ -154,9 +150,9 @@ elif app_mode == "2. Model Performance":
 elif app_mode == "3. Trading Simulation":
     st.title("Trading Simulation")
 
-    trading_simulation_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in Path('data/stock/forecast/model_v4/medianGain').iterdir()])
+    trading_simulation_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in paths.get_forecast_base_dir(4, 'medianGain').iterdir()])
 
-    trading_simulation_path = Path(f'data/stock/score/trading_simulation_{trading_simulation_rolling_window}.csv')
+    trading_simulation_path = paths.get_trading_simulation_path(trading_simulation_rolling_window)
     trading_simulation_df = pd.read_csv(trading_simulation_path)
 
     splits = get_split_dates(f'Median Gain {trading_simulation_rolling_window}')
@@ -180,7 +176,7 @@ elif app_mode == "3. Trading Simulation":
 elif app_mode == "4. Daily Recommendation":
     st.title("Daily Recommendation")
         
-    daily_recommend_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in Path('data/stock/forecast/model_v4/medianGain').iterdir()])
+    daily_recommend_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in paths.get_forecast_base_dir(4, 'medianGain').iterdir()])
     
     forecast_df, forecast_date = get_daily_recommendations(daily_recommend_rolling_window)
 

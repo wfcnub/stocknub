@@ -1,9 +1,7 @@
-import os
 import time
-import calendar
 import pandas as pd
 from pathlib import Path
-from datetime import datetime, date, timedelta
+from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -13,7 +11,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 
-def _get_all_active_market_date(ohlcv_data_dir: str = 'data/stock/OHLCV') -> list:
+from utils import paths
+
+def _get_all_active_market_date(ohlcv_data_dir: str = str(paths.get_ohlcv_dir())) -> list:
     """
     (Internal Helper) Get all unique dates from data collected from yfinance, serving as the active market dates
 

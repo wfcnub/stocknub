@@ -1,8 +1,6 @@
-from datetime import datetime
-from pathlib import Path
-
 import pandas as pd
 import yfinance as yf
+from datetime import datetime
 from preMarketOutlook.helper import (
     _create_session,
     _fetch_indicator_history,
@@ -20,6 +18,7 @@ from preMarketOutlook.helper import (
     NIKKEI_TICKER,
     LOOKBACK_DAYS,
 )
+from utils import paths
 
 def _fetch_ihsg_data(period="1y"):
     ticker_symbol = "^JKSE"
@@ -42,7 +41,7 @@ def _calculate_micro_outlook(rolling_window: int) -> dict:
     ihsg_data[f'Median Gain {rolling_window}dd'] = median_gain
     ihsg_data.index = pd.to_datetime(ihsg_data.index).strftime('%Y-%m-%d')
 
-    all_score_paths = list(Path(f'data/stock/score/{rolling_window}dd').rglob('*.csv'))
+    all_score_paths = list(paths.get_score_window_dir(rolling_window).rglob('*.csv'))
     if not all_score_paths:
         return {}
 

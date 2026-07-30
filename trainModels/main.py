@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from skopt.space import Real, Integer
+
+from utils import paths
 from utils.pipeline import get_label_config
 
 from trainModels.modelling import (
@@ -46,7 +47,8 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
 
     feature_columns = get_all_technical_indicators()
 
-    prepared_data = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))
+    if csv_folder_path == str(paths.get_label_dir()):
+        prepared_data = pd.read_csv(paths.get_label_path(ticker))
 
     cleaned_data = prepared_data.dropna(subset=[target_column])
 
@@ -160,7 +162,7 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
     """
     feature_columns = get_all_technical_indicators()
 
-    prepared_data = _combine_multiple_ticker('data/stock/label')
+    prepared_data = _combine_multiple_ticker(str(paths.get_label_dir()))
 
     cleaned_data = prepared_data.dropna(subset=[target_column])
     
@@ -216,7 +218,7 @@ def develop_model_v4(rolling_window: int, positive_label: str, negative_label: s
     """
     feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold(rolling_window)
 
-    prepared_data = _combine_multiple_ticker(f'data/stock/combined_forecasts_{rolling_window}dd')
+    prepared_data = _combine_multiple_ticker(str(paths.get_combined_forecasts_window_dir(rolling_window)))
     
     cleaned_data = prepared_data.dropna(subset=[target_column])
 

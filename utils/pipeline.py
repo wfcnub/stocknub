@@ -1,6 +1,6 @@
 import json
 import pandas as pd
-from pathlib import Path
+from utils.paths import get_split_dates_path
 
 def get_label_config(label_type: str, window: int) -> tuple:
     """
@@ -44,7 +44,7 @@ def get_split_dates(target_column: str) -> dict:
         dict: The dictionary containing the train, val, and test split dates
     """
     window_dd = target_column.split(" ")[-1]
-    json_path = Path(f"data/split_dates_{window_dd}.json")
+    json_path = get_split_dates_path(window_dd)
     
     with open(json_path, 'r') as f:
         splits = json.load(f)

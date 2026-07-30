@@ -1,16 +1,13 @@
-import os
-import json
 import pickle
 import shutil
-import numpy as np
 import pandas as pd
-from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 
 from utils.pipeline import (
     get_split_dates, 
     get_split_masks
 )
+from utils import paths
 
 def _prepare_data(window: str):
     """
@@ -33,7 +30,7 @@ def _prepare_data(window: str):
     score_col = f'Score {window}'
     selected_columns = ['Date', 'Ticker', feature_col, target_col]
 
-    forecast_dir = Path(f'data/stock/forecast/model_v4/medianGain/{window}')
+    forecast_dir = paths.get_forecast_dir(4, 'medianGain', window)
     all_file_paths = list(forecast_dir.rglob('*.csv'))
 
     all_data = pd.DataFrame()
@@ -49,7 +46,7 @@ def _prepare_data(window: str):
     test_data = all_data.loc[test_mask, selected_columns].copy()
     forecast_data = all_data.loc[forecast_mask, selected_columns].copy()
 
-    perf_path = Path(f'data/stock/model_v4/performance/medianGain/{window}.csv')
+    perf_path = paths.get_model_performance_path(4, 'medianGain', window)
     model_performance = pd.read_csv(perf_path)
     
     joined_train_data = pd.merge(
@@ -95,7 +92,7 @@ def _train_model(joined_train_data: pd.DataFrame, feature_col: str, target_col: 
 
     model.fit(train_feature, train_target)
 
-    filepath = Path(f"data/stock/score/{window}.pkl")
+    filepath = paths.get_score_path(window)
     filepath.parent.mkdir(parents=True, exist_ok=True)
     with open(filepath, "wb") as f:
         pickle.dump(model, f)
@@ -127,7 +124,7 @@ def _infer_and_export(model: LogisticRegression, joined_test_data: pd.DataFrame,
 
     joined_test_forecast_data = pd.concat([joined_test_data, joined_forecast_data], ignore_index=True)
 
-    save_dir = Path(f'data/stock/score/{window}')
+    save_dir = paths.get_score_window_dir(window)
     if save_dir.exists():
         shutil.rmtree(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -145,8 +142,8 @@ def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A pandas dataframe containing the score data on the test data
     """
-    score_paths = Path(f'data/stock/score/{rolling_window}').rglob('*.csv')
-    all_ticker = [file.stem for file in Path(f'data/stock/score/{rolling_window}').rglob('*.csv')]
+    score_paths = list(paths.get_score_window_dir(rolling_window).rglob('*.csv'))
+    all_ticker = [file.stem for file in score_paths]
     
     test_score_df = pd.DataFrame()
     
@@ -160,7 +157,7 @@ def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
     
         test_score_df = pd.concat((test_score_df, temp_test_score_df))
     
-    final_performance = pd.read_csv(Path(f'data/stock/model_v4/performance/medianGain/{rolling_window}.csv'))
+    final_performance = pd.read_csv(paths.get_model_performance_path(4, 'medianGain', rolling_window))
     
     test_score_df = pd.merge(
         test_score_df,
@@ -178,8 +175,8 @@ def _generate_max_daily_performance_metric(rolling_window: str, performance_metr
     Returns:
         pd.DataFrame: A pandas dataframe containing the max daily profit data
     """
-    label_paths = Path('data/stock/label').rglob('*.csv')
-    all_ticker = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
+    label_paths = list(paths.get_label_dir().rglob('*.csv'))
+    all_ticker = [file.stem for file in label_paths]
     
     label_df = pd.DataFrame()
     

@@ -3,6 +3,7 @@ import argparse
 import shutil
 import sys
 import gc
+from utils import paths
 
 from generateScore.main import (
     process_generate_score,
@@ -22,7 +23,7 @@ def main():
         help="Comma-separated list of rolling windows (e.g., '5,10').",
     )
     
-    csv_folder_path = 'data/stock/score'
+    csv_folder_path = str(paths.get_score_dir())
     if Path(csv_folder_path).exists():
         shutil.rmtree(csv_folder_path)
 

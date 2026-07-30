@@ -6,6 +6,8 @@ from multiprocessing import Pool, cpu_count
 
 from fetchOHLCVData.main import fetch_ticker_data
 
+from utils import paths
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pipeline Description: Fetch Ticker's Open, High, Low, Close, and Volume (OHLCV) Historical Data using yfinance"
@@ -28,15 +30,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--file_name",
         type=str,
-        default="data/ticker_list.txt",
-        help="Path to the file containing a list all ticker (default: data/ticker_list.txt)",
+        default=str(paths.get_ticker_list_path()),
+        help="Path to the file containing a list all ticker",
     )
 
     parser.add_argument(
         "--csv_folder_path",
         type=str,
-        default="data/stock/OHLCV",
-        help="Directory path where the CSV files will be saved (default: data/stock/OHLCV)",
+        default=str(paths.get_ohlcv_dir()),
+        help="Directory path where the CSV files will be saved",
     )
     
     parser.add_argument(

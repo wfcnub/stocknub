@@ -2,9 +2,8 @@ import shutil
 import pickle
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from camel_converter import to_camel
 from utils.pipeline import get_label_config
+from utils import paths
 
 def _ensure_directories_exist(model_version: int, label_types: list) -> None:
     """
@@ -15,12 +14,11 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
     label_types (list): A list containing all the types of label
     """
     for label_type in label_types:
-        camel_label = to_camel(label_type)
-        model_pkl_folder_path = Path(f"data/stock/model_v{model_version}/{camel_label}")
-        model_performance_folder_path = Path(f"data/stock/model_v{model_version}/performance/{camel_label}")
+        model_pkl_folder_path = paths.get_model_dir(model_version, label_type)
+        model_performance_folder_path = paths.get_model_performance_dir(model_version, label_type)
 
         if model_pkl_folder_path.exists():
-            archive_path = Path(f"data/stock/model_archive/model_v{model_version}/{camel_label}")
+            archive_path = paths.get_model_archive_dir(model_version, label_type)
 
             if archive_path.exists():
                 shutil.rmtree(archive_path)
@@ -31,7 +29,7 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
         model_pkl_folder_path.mkdir(parents=True, exist_ok=True)
         
         if model_performance_folder_path.exists():
-            archive_perf_path = Path(f"data/stock/model_archive/model_v{model_version}/performance/{camel_label}")
+            archive_perf_path = paths.get_model_archive_performance_dir(model_version, label_type)
 
             if archive_perf_path.exists():
                 shutil.rmtree(archive_perf_path)
@@ -54,8 +52,7 @@ def _save_model(model: any, model_version: int, label_type: str, identifier: str
     identifier (str): An identifier for saving the model, could be ticker or industry
     window (int): The window used for generating the label
     """
-    camel_label = to_camel(label_type)
-    filepath = Path(f"data/stock/model_v{model_version}/{camel_label}/{identifier}-{window}dd.pkl")
+    filepath = paths.get_model_path(model_version, label_type, identifier, window)
     with open(filepath, "wb") as f:
         pickle.dump(model, f)
     
@@ -86,7 +83,7 @@ def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFram
     if model_version == 1:
         result.insert(0, "Ticker", ticker)
 
-        threshold_value = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))[threshold_col].iloc[0]
+        threshold_value = pd.read_csv(paths.get_label_path(ticker))[threshold_col].iloc[0]
         result["Threshold"] = threshold_value
 
     elif model_version in [2, 3, 4]:

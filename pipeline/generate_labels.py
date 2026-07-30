@@ -1,4 +1,3 @@
-import os
 import json
 import shutil
 import argparse
@@ -6,6 +5,8 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
+
+from utils import paths
 
 from generateLabels.main import process_single_ticker
 
@@ -17,15 +18,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--technical_folder_path",
         type=str,
-        default="data/stock/technical",
-        help="Folder containing technical indicators (default: data/stock/technical)",
+        default=str(paths.get_technical_dir()),
+        help="Folder containing technical indicators",
     )
 
     parser.add_argument(
         "--labels_folder_path",
         type=str,
-        default="data/stock/label",
-        help="Folder to save labels (default: data/stock/label)",
+        default=str(paths.get_label_dir()),
+        help="Folder to save labels",
     )
 
     parser.add_argument(
@@ -208,7 +209,7 @@ if __name__ == "__main__":
                 "test": {"start_date": test_dates[0], "end_date": test_dates[-1]},
             }
             
-            output_file = Path(f"data/split_dates_{window}dd.json")
+            output_file = paths.get_split_dates_path(window)
             with open(output_file, "w") as f:
                 json.dump(splits, f, indent=4)
                 

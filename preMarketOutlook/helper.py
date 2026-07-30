@@ -1,9 +1,10 @@
 import json
 import pandas as pd
 import yfinance as yf
-from pathlib import Path
 from curl_cffi import requests
 from datetime import datetime, timedelta
+
+from utils import paths
 
 VIX_TICKER = "^VIX"
 USDIDR_TICKER = "USDIDR=X"
@@ -395,7 +396,7 @@ def _save_outlook_to_json(outlook: dict) -> None:
         json.dumps(outlook, default=str)
     )
 
-    output_path = Path("data/pre_market_outlook").with_suffix(".json")
+    output_path = paths.get_pre_market_outlook_path()
 
     with open(output_path, "w") as f:
         json.dump(serializable, f, indent=2)

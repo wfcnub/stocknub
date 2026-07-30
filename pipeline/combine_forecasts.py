@@ -5,6 +5,8 @@ from tqdm import tqdm
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
+from utils import paths
+
 from combineForecasts.main import process_single_ticker
 from combineForecasts.helper import _get_ticker_available_on_all_forecasts, _write_combined_forecasts_features_target_threshold
 
@@ -16,8 +18,8 @@ def main():
     parser.add_argument(
         "--csv_folder_path",
         type=str,
-        default="data/stock/combined_forecasts",
-        help="Directory path where CSV files will be saved (default: data/stock/combined_forecasts)",
+        default=str(paths.get_combined_forecasts_base_dir()),
+        help="Directory path where CSV files will be saved",
     )
 
     parser.add_argument(

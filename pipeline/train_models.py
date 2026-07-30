@@ -1,9 +1,10 @@
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from camel_converter import to_camel
 from multiprocessing import Pool, cpu_count
+
+from utils import paths
 
 from warnings import simplefilter
 simplefilter(action="ignore")
@@ -71,13 +72,13 @@ def main():
     print("=" * 80)
 
     if args.model_version == 1:
-        specified_identifiers = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv')) \
+        specified_identifiers = pd.read_csv(paths.get_selected_ticker_and_industry_list_path()) \
                                     ['Ticker'] \
                                     .unique() \
                                     .tolist()
 
     elif args.model_version == 2:
-        specified_identifiers = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv')) \
+        specified_identifiers = pd.read_csv(paths.get_selected_ticker_and_industry_list_path()) \
                                     ['Industry'] \
                                     .unique() \
                                     .tolist()
@@ -125,7 +126,7 @@ def main():
         print("\nSaving performance metrics...")
         for (label_type, window), metrics_dfs in all_metrics.items():
             camel_label = to_camel(label_type)
-            filepath = Path(f"data/stock/model_v{args.model_version}/performance/{camel_label}/{window}dd.csv")
+            filepath = paths.get_model_performance_path(args.model_version, label_type, window)
 
             combined_metrics = pd.concat(metrics_dfs, ignore_index=True)
             combined_metrics.to_csv(filepath, index=False)

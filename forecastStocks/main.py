@@ -1,7 +1,6 @@
 import pickle
 import pandas as pd
 from pathlib import Path
-from camel_converter import to_camel
 from utils.pipeline import get_label_config
 
 def process_single_ticker(args_tuple):
@@ -21,8 +20,8 @@ def process_single_ticker(args_tuple):
             label_type, window
         )
 
-        camel_label = to_camel(label_type)
-        model_path = Path(f"data/stock/model_v{model_version}/{camel_label}/{model_identifier}-{window}dd.pkl")
+        from utils import paths
+        model_path = paths.get_model_path(model_version, label_type, model_identifier, window)
 
         if not Path(model_path).exists():
             return (
