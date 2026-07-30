@@ -1,6 +1,5 @@
 import time
 import pandas as pd
-from pathlib import Path
 from datetime import datetime
 
 from selenium import webdriver
@@ -13,17 +12,14 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from utils import paths
 
-def _get_all_active_market_date(ohlcv_data_dir: str = str(paths.get_ohlcv_dir())) -> list:
+def _get_all_active_market_date() -> list:
     """
     (Internal Helper) Get all unique dates from data collected from yfinance, serving as the active market dates
-
-    Args:
-        ohlcv_data_dir (str): Directory where the OHLCV data from yfinance is stored
     
     Returns:
         list: A list containing all active market dates
     """
-    all_ohlcv_data_path = list(Path(ohlcv_data_dir).rglob("*.csv"))
+    all_ohlcv_data_path = list(paths.get_ohlcv_dir().rglob("*.csv"))
     
     all_dates = set()
     for ohlcv_data_path in all_ohlcv_data_path:
@@ -35,18 +31,17 @@ def _get_all_active_market_date(ohlcv_data_dir: str = str(paths.get_ohlcv_dir())
         
     return all_dates
 
-def _get_all_active_market_date_to_backfill(raw_additional_data_dir: str, active_market_dates: str) -> list:
+def _get_all_active_market_date_to_backfill(active_market_dates: list) -> list:
     """
     (Internal Helper) Get all active market dates that have not yet get collected
 
     Args:
-        raw_additional_data_dir (str): The directory where the additional data is stored
         active_market_dates (list): A list containing all active market dates
     
     Return:
         list: A list containing all active market dates to be backfilled
     """
-    fetched_active_market_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in Path(raw_additional_data_dir).iterdir() if f.is_file() and f.suffix == '.csv'])
+    fetched_active_market_dates = set([datetime.strptime(f.stem, '%Y%m%d').strftime('%Y-%m-%d') for f in paths.get_raw_foreign_flow_non_regular_dir().iterdir() if f.is_file() and f.suffix == '.csv'])
 
     backfill_active_market_dates = list(set(active_market_dates) - fetched_active_market_dates)
 
@@ -92,12 +87,9 @@ def _wait_before_click(driver: webdriver.chrome.webdriver.WebDriver, tag: str, a
     
     return True
 
-def _initialize_driver(download_dir: str, with_docker: bool) -> webdriver.chrome.webdriver.WebDriver:
+def _initialize_driver(with_docker: bool) -> webdriver.chrome.webdriver.WebDriver:
     """
     (Internal Helper) Initalize the driver for accessing the web for scraping purposes
-    
-    Args:
-        download_dir (str): The directory where the downloaded file will be stored instead of storing it directly to the Download directory
     
     Returns:
         webdriver.chrome.webdriver.WebDriver: The driver for accessing the web for scraping purposes
@@ -119,7 +111,7 @@ def _initialize_driver(download_dir: str, with_docker: bool) -> webdriver.chrome
         chrome_options.add_experimental_option('useAutomationExtension', False)
 
         prefs = {
-            "download.default_directory": str((Path.cwd() / Path(download_dir)).resolve()),
+            "download.default_directory": str(paths.get_raw_foreign_flow_non_regular_dir().resolve()),
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "safebrowsing.enabled": True,
@@ -140,7 +132,7 @@ def _initialize_driver(download_dir: str, with_docker: bool) -> webdriver.chrome
         chrome_options = webdriver.ChromeOptions()
         
         prefs = {
-            "download.default_directory": str((Path.cwd() / Path(download_dir)).resolve()),
+            "download.default_directory": str(paths.get_raw_foreign_flow_non_regular_dir().resolve()),
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "safebrowsing.enabled": True
@@ -156,12 +148,11 @@ def _initialize_driver(download_dir: str, with_docker: bool) -> webdriver.chrome
 
     return driver
 
-def _check_if_download_completion(download_dir: str, weekday_dt: str, timeout: int = 10) -> None:
+def _check_if_download_completion(weekday_dt: str, timeout: int = 10) -> None:
     """
     (Internal Helper) A timeout procedure during the process of downloading the data
 
     Args:
-        download_dir (str): The directory where the downloaded data is being stored
         weekday_date (str): The date that will be incorporated inside the name of the file to be checked
         timeout (int): The duration of the download timeout
     """
@@ -169,7 +160,7 @@ def _check_if_download_completion(download_dir: str, weekday_dt: str, timeout: i
     end_time = time.time() + timeout
 
     while time.time() < end_time:
-        full_path = Path(download_dir) / filename
+        full_path = paths.get_raw_foreign_flow_non_regular_dir() / filename
         
         if full_path.is_file():
             return
@@ -228,13 +219,12 @@ def _select_year_month_on_web(driver: webdriver.chrome.webdriver.WebDriver, year
 
     return
 
-def _select_and_download_specific_date_on_web(driver: webdriver.chrome.webdriver.WebDriver, download_dir: str, weekday_dt: str) -> bool:
+def _select_and_download_specific_date_on_web(driver: webdriver.chrome.webdriver.WebDriver, weekday_dt: str) -> bool:
     """
     (Internal Helper) A scraping procedure for selecting the specific date of data to be downloaded
 
     Args:
         driver (webdriver.chrome.webdriver.WebDriver): The driver for accessing the web for scraping purposes
-        donwload_dir (str): The directory where the downloaded data will be stored
         weekday_dt (str): The date of the data that will be downloaded
 
     Returns:
@@ -253,7 +243,7 @@ def _select_and_download_specific_date_on_web(driver: webdriver.chrome.webdriver
     check_data_bool = _wait_before_click(driver, 'button', 'class', 'btn-filter-input mb-8 btn-download text-center')
 
     if check_data_bool:
-        _check_if_download_completion(download_dir, weekday_dt)
+        _check_if_download_completion(weekday_dt)
 
         return True
     
@@ -283,16 +273,15 @@ def _parse_indo_date(date_str: str) -> str:
             
     return datetime.strptime(date_str, '%d %b %Y').strftime('%Y-%m-%d')
 
-def _clean_downloaded_data(download_dir: str, weekday_dt: str) -> None:
+def _clean_downloaded_data(weekday_dt: str) -> None:
     """
     (Internal Helper) Clean the format and content of the downloaded data
 
     Args:
-        download_dir (str): The directory where the data is being stored
         weekday_dt (str): The date that is incorporated inside the file name, specifying which file to process
     """
     filename = f"Stock Summary-{weekday_dt.replace('-', '')}.xlsx"
-    full_path = Path(download_dir) /filename
+    full_path = paths.get_raw_foreign_flow_non_regular_dir() / filename
 
     selected_columns = [
         'Stock Code',
@@ -310,7 +299,7 @@ def _clean_downloaded_data(download_dir: str, weekday_dt: str) -> None:
     full_path.unlink()
     
     save_filename = f"{data['Last Trading Date'].unique()[0].replace('-', '')}.csv"
-    save_full_path = Path(download_dir) / save_filename
+    save_full_path = paths.get_raw_foreign_flow_non_regular_dir() / save_filename
     
     data.to_csv(save_full_path, index=False)
 

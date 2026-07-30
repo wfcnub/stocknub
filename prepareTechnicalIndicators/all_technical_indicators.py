@@ -1,6 +1,5 @@
-import os
+import pathlib
 import tempfile
-import numpy as np
 import pandas as pd
 from stock_indicators import Quote
 
@@ -12,6 +11,7 @@ from prepareTechnicalIndicators.volume_based import calculate_on_balance_volume,
 from prepareTechnicalIndicators.price_transformations import calculate_ehler_fisher_transform, calculate_zig_zag
 from prepareTechnicalIndicators.additional_technical_indicators import calculate_additional_technical_indicators
 
+from utils import paths
 
 def _prepare_data_for_generating_stock_indicators(data: pd.DataFrame) -> list:
     """
@@ -128,12 +128,14 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
     updated_columns = set(all_stock_indicators_data.columns)
     feature_columns = sorted(list(updated_columns - original_columns))
 
-    output_path = 'data/technical_indicator_features.txt'
-    dir_name = os.path.dirname(output_path) or '.'
+    output_path = paths.get_technical_indicator_features_path()
+    dir_name = output_path.parent
+
     with tempfile.NamedTemporaryFile(mode='w', dir=dir_name, suffix='.tmp', delete=False) as tmp_file:
         for fea_col in feature_columns:
             tmp_file.write(fea_col + "\n")
         tmp_path = tmp_file.name
-    os.replace(tmp_path, output_path)
+
+    tmp_path.replace(output_path)
 
     return all_stock_indicators_data

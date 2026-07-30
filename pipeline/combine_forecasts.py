@@ -2,7 +2,6 @@ import shutil
 import argparse
 import numpy as np
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from utils import paths
@@ -56,9 +55,9 @@ def main():
     rolling_windows = [int(w.strip()) for w in args.windows.split(",")]
     model_versions = [mv.strip() for mv in args.model_versions.split(",")]
     
-    csv_folder_path = Path(f'{args.csv_folder_path}_{np.max(rolling_windows)}dd')
+    csv_folder_path = paths.get_combined_forecasts_window_dir(np.max(rolling_windows))
 
-    if Path(csv_folder_path).exists():
+    if csv_folder_path.exists():
         shutil.rmtree(csv_folder_path)
 
     csv_folder_path.mkdir(parents=True, exist_ok=True)
@@ -79,8 +78,7 @@ def main():
             ticker,
             label_types,
             rolling_windows, 
-            model_versions, 
-            csv_folder_path
+            model_versions
         )
         for ticker in all_ticker
     ]

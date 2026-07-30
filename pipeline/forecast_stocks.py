@@ -117,7 +117,7 @@ def main():
     for model_identifier, ticker in zip(model_identifier_list, ticker_list):
         for label_type in label_types:
             for window in windows:
-                forecast_tasks.append((args.model_version, args.csv_folder_path, model_identifier, ticker, label_type, window, feature_columns))
+                forecast_tasks.append((args.model_version, model_identifier, ticker, label_type, window, feature_columns))
 
     total_tasks = len(forecast_tasks)
     print(

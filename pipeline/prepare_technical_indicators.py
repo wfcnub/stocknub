@@ -2,7 +2,6 @@ import shutil
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count, set_start_method
 
 from utils import paths
@@ -53,12 +52,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    if Path(args.technical_folder_path).exists():
-        shutil.rmtree(args.technical_folder_path)
+    if paths.get_technical_dir().exists():
+        shutil.rmtree(paths.get_technical_dir())
 
-    Path(args.technical_folder_path).mkdir(parents=True, exist_ok=True)
+    paths.get_technical_dir().mkdir(parents=True, exist_ok=True)
 
-    all_tickers = [file.stem for file in Path(args.ohlcv_folder_path).rglob('*.csv')]
+    all_tickers = [file.stem for file in paths.get_ohlcv_dir().rglob('*.csv')]
 
     if not all_tickers:
         print(f"Error: No CSV files found in {args.ohlcv_folder_path}")
@@ -82,7 +81,7 @@ if __name__ == "__main__":
     print()
 
     process_args = [
-        (ticker, args.ohlcv_folder_path, args.foreign_flow_non_regular_folder_path, args.technical_folder_path)
+        (ticker,)
         for ticker in all_tickers_to_process
     ]
 

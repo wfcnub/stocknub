@@ -1,7 +1,6 @@
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from utils import paths
@@ -60,15 +59,15 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    Path(args.raw_csv_folder_path).mkdir(parents=True, exist_ok=True)
-    Path(args.csv_folder_path).mkdir(parents=True, exist_ok=True)
+    paths.get_raw_foreign_flow_non_regular_dir().mkdir(parents=True, exist_ok=True)
+    paths.get_foreign_flow_non_regular_dir().mkdir(parents=True, exist_ok=True)
 
     if args.fetch_type == 'all':
         active_market_dates = _get_all_active_market_date()
 
     elif args.fetch_type == 'backfill':
         fetched_active_market_dates = _get_all_active_market_date()
-        active_market_dates = _get_all_active_market_date_to_backfill(args.raw_csv_folder_path, fetched_active_market_dates)
+        active_market_dates = _get_all_active_market_date_to_backfill(fetched_active_market_dates)
 
     print("=" * 80)
     print("PIPELINE DESCRIPTION: FETCH FOREIGN FLOW AND NON-REGULAR DATA")
@@ -78,14 +77,14 @@ if __name__ == "__main__":
     if len(active_market_dates) > 0:
         print(f"Starting fetch for {len(active_market_dates)} active market dates")
 
-        results = fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates, args.raw_csv_folder_path, args.with_docker)
+        results = fetch_foreign_flow_and_non_regular_ticker_data(active_market_dates, args.with_docker)
 
-        csv_files = Path(args.raw_csv_folder_path).rglob('*.csv')
+        csv_files = paths.get_raw_foreign_flow_non_regular_dir().rglob('*.csv')
         combined_df = pd.concat((pd.read_csv(file) for file in csv_files), ignore_index=True)
         all_tickers = combined_df['Stock Code'].unique()
 
         fetch_args = [
-            (ticker, combined_df, args.csv_folder_path)
+            (ticker, combined_df)
             for ticker in all_tickers
         ]
 

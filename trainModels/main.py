@@ -47,8 +47,7 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
 
     feature_columns = get_all_technical_indicators()
 
-    if csv_folder_path == str(paths.get_label_dir()):
-        prepared_data = pd.read_csv(paths.get_label_path(ticker))
+    prepared_data = pd.read_csv(paths.get_label_path(ticker))
 
     cleaned_data = prepared_data.dropna(subset=[target_column])
 
@@ -64,7 +63,7 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
     all_model = []
     all_test_metrics = []
     
-    for _ in range(10):
+    for _ in range(1):
         model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
         test_metrics = _measure_model_performance(model, test_feature, test_target, positive_label, negative_label)
@@ -122,7 +121,7 @@ def develop_model_v2(industry: str, target_column: str, positive_label: str, neg
     all_model = []
     all_test_metrics = []
     
-    for _ in range(10):
+    for _ in range(1):
         model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
         _, test_metrics = _measure_model_performance_for_all_ticker_in_industry(industry, model, target_column, positive_label, negative_label, threshold_col)
@@ -162,7 +161,7 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
     """
     feature_columns = get_all_technical_indicators()
 
-    prepared_data = _combine_multiple_ticker(str(paths.get_label_dir()))
+    prepared_data = _combine_multiple_ticker(paths.get_label_dir())
 
     cleaned_data = prepared_data.dropna(subset=[target_column])
     
@@ -178,7 +177,7 @@ def develop_model_v3(target_column: str, positive_label: str, negative_label: st
     all_model = []
     all_test_metrics = []
     
-    for _ in range(10):
+    for _ in range(1):
         model = _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature, train_target, cv_split, search_spaces)
 
         _, test_metrics = _measure_model_performance_for_all_ticker(model, target_column, positive_label, negative_label, threshold_col)

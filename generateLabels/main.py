@@ -1,8 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from pathlib import Path
-
+from utils import paths
 from generateLabels.helper import _generate_labels_based_on_label_type
 
 def process_single_ticker(args_tuple):
@@ -10,15 +9,13 @@ def process_single_ticker(args_tuple):
     Read technical data, generate labels, and save to label folder
 
     Args:
-        args_tuple: Tuple containing (ticker, technical_folder_path, labels_folder_path, target_column, rolling_windows, label_types)
+        args_tuple: Tuple containing (ticker, target_column, rolling_windows, label_types)
 
     Returns:
         Tuple of (ticker, success, message, num_new_rows)
     """
     (
         ticker,
-        technical_folder_path,
-        labels_folder_path,
         target_column,
         rolling_windows,
         label_types,
@@ -27,8 +24,8 @@ def process_single_ticker(args_tuple):
     ) = args_tuple
 
     try:
-        technical_path = (Path(technical_folder_path) / ticker).with_suffix('.csv')
-        labels_path = (Path(labels_folder_path) / ticker).with_suffix('.csv')
+        technical_path = paths.get_technical_path(ticker)
+        labels_path = paths.get_label_path(ticker)
         
         if not technical_path.is_file():
             return (ticker, False, f"{ticker} - Technical file not found", 0)

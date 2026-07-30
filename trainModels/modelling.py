@@ -1,19 +1,18 @@
-import json
 import numpy as np
 import pandas as pd
-from pathlib import Path
+from skopt.space import Real
 from skopt import BayesSearchCV
-from skopt.space import Real, Integer
 from catboost import CatBoostClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import PredefinedSplit
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
 from utils.pipeline import get_split_dates, get_split_masks
+from utils import paths
 
 
 def _combine_multiple_ticker_in_industry(industry: str) -> pd.DataFrame:
@@ -26,29 +25,28 @@ def _combine_multiple_ticker_in_industry(industry: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A pandas dataframe containing all the ticker in an industry
     """
-    ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
+    ticker_industry_df = pd.read_csv(paths.get_selected_ticker_and_industry_list_path())
     
     selected_ticker_industry_df = ticker_industry_df[ticker_industry_df['Industry'] == industry]
     
     selected_ticker = selected_ticker_industry_df['Ticker'].values
     
-    selected_ticker_df = pd.concat((pd.read_csv(f'data/stock/label/{ticker}.csv')) for ticker in selected_ticker) \
+    selected_ticker_df = pd.concat((pd.read_csv(paths.get_label_path(ticker)) for ticker in selected_ticker)) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
     return selected_ticker_df
 
-def _combine_multiple_ticker(csv_folder_path: str) -> pd.DataFrame:
+def _combine_multiple_ticker(csv_folder_path) -> pd.DataFrame:
     """
     (Internal Helper) Combine data from multiple ticker into a single pandas dataframe
 
-    Args:
-        csv_folder_path (str): The path to the folder containing the data
+        csv_folder_path (Path): The path to the folder containing the data
 
     Returns:
         pd.DataFrame: A pandas dataframe containing all the selected ticker
     """
-    all_ticker_path = Path(csv_folder_path).rglob("*.csv")
+    all_ticker_path = csv_folder_path.rglob("*.csv")
     
     selected_ticker_df = pd.concat((pd.read_csv(ticker_path) for ticker_path in all_ticker_path)) \
                             .sort_values('Date', ascending=True) \
@@ -462,7 +460,7 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
+    ticker_industry_df = pd.read_csv(paths.get_selected_ticker_and_industry_list_path())
     all_tickers = ticker_industry_df.loc[ticker_industry_df['Industry'] == industry, 'Ticker'].values
 
     all_ticker_train_metrics_df = pd.DataFrame()
@@ -472,7 +470,7 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
 
     for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(Path(f'data/stock/label/{ticker}.csv'))
+            prepared_data = pd.read_csv(paths.get_label_path(ticker))
             ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
 
             ticker_train_metrics_df['Ticker'] = ticker
@@ -507,7 +505,7 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    all_tickers = [file.stem for file in Path('data/stock/label').rglob('*.csv')]
+    all_tickers = [file.stem for file in paths.get_label_dir().rglob('*.csv')]
     
     all_ticker_train_metrics_df = pd.DataFrame()
     all_ticker_test_metrics_df = pd.DataFrame()
@@ -516,7 +514,7 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
 
     for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv((Path(f'data/stock/label/{ticker}.csv')))
+            prepared_data = pd.read_csv(paths.get_label_path(ticker))
             ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
     
             ticker_train_metrics_df['Ticker'] = ticker
@@ -548,14 +546,14 @@ def _measure_model_performance_on_forecast_features_for_all_ticker(model: any, r
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
-    all_tickers = [file.stem for file in Path(f'data/stock/combined_forecasts_{rolling_window}dd').rglob('*.csv')]
+    all_tickers = [file.stem for file in paths.get_combined_forecasts_window_dir(rolling_window).rglob('*.csv')]
     
     all_ticker_train_metrics_df = pd.DataFrame()
     all_ticker_test_metrics_df = pd.DataFrame()
 
     for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(Path(f'data/stock/combined_forecasts_{rolling_window}dd/{ticker}.csv'))
+            prepared_data = pd.read_csv(paths.get_combined_forecasts_path(rolling_window, ticker))
             
             feature_columns, target_column, threshold_column = _get_combined_forecasts_features_target_threshold(rolling_window)
             

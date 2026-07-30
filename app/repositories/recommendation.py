@@ -1,9 +1,13 @@
+import os
+import sys
 import pandas as pd
 from typing import Tuple
-import sys
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))
+
+if project_root not in sys.path:
+    sys.path.append(project_root)
 from analyticsHub.main import get_daily_recommendations
 
 class RecommendationRepository:

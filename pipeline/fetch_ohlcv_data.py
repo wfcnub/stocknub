@@ -1,7 +1,6 @@
 import shutil
 import argparse
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from fetchOHLCVData.main import fetch_ticker_data
@@ -50,18 +49,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    if Path(args.csv_folder_path).exists():
-        shutil.rmtree(args.csv_folder_path)
+    if paths.get_ohlcv_dir().exists():
+        shutil.rmtree(paths.get_ohlcv_dir())
 
-    Path(args.csv_folder_path).mkdir(parents=True, exist_ok=True)
+    paths.get_ohlcv_dir().mkdir(parents=True, exist_ok=True)
         
     with open(args.file_name, "r") as f:
         ticker_list = f.read().splitlines()
 
-    fetch_args = [
-        (ticker, args.start_date, args.end_date, args.csv_folder_path)
-        for ticker in ticker_list
-    ]
+    fetch_args = [(ticker, args.start_date, args.end_date) for ticker in ticker_list]
 
     print("=" * 80)
     print("PIPELINE DESCRIPTION: FETCH OHLCV DATA")

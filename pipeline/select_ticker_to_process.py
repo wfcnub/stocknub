@@ -1,7 +1,6 @@
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from utils import paths
@@ -29,7 +28,7 @@ if __name__ == "__main__":
     print('Evaluating and ranking tickers across the market based on fundamental upside potential.')
     print()
 
-    all_tickers = [file.stem for file in Path(args.ohlcv_folder_path).rglob("*.csv")]
+    all_tickers = [file.stem for file in paths.get_ohlcv_dir().rglob("*.csv")]
     
     print(f"Starting multiprocessing fetching for {len(all_tickers)} tickers...")
     

@@ -3,7 +3,6 @@ import shutil
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from utils import paths
@@ -85,12 +84,12 @@ if __name__ == "__main__":
     label_types = [lt.strip() for lt in args.label_types.split(",")]
     rolling_windows = [int(w.strip()) for w in args.windows.split(",")]
 
-    if Path(args.labels_folder_path).exists():
-        shutil.rmtree(args.labels_folder_path)
-
-    Path(args.labels_folder_path).mkdir(parents=True, exist_ok=True)
-
-    all_tickers = [file.stem for file in Path(args.technical_folder_path).rglob('*.csv')]
+    if paths.get_label_dir().exists():
+        shutil.rmtree(paths.get_label_dir())
+        
+    paths.get_label_dir().mkdir(parents=True, exist_ok=True)
+    
+    all_tickers = [file.stem for file in paths.get_technical_dir().rglob('*.csv')]
 
     print("=" * 80)
     print("PIPELINE DESCRIPTION: GENERATE TARGET LABELS")
@@ -107,8 +106,6 @@ if __name__ == "__main__":
     process_args = [
         (
             ticker,
-            args.technical_folder_path,
-            args.labels_folder_path,
             args.target_column,
             rolling_windows,
             label_types,
@@ -186,7 +183,7 @@ if __name__ == "__main__":
             
         all_valid_dates = set()
         for ticker in successful_tickers_list:
-            labels_path = Path(args.labels_folder_path) / f"{ticker}.csv"
+            labels_path = paths.get_label_path(ticker)
             if labels_path.exists():
                 try:
                     df = pd.read_csv(labels_path, usecols=["Date", label_col])

@@ -1,8 +1,13 @@
+import os
 from pathlib import Path
 from camel_converter import to_camel
 from typing import Union
 
-BASE_DIR = Path("data")
+env = os.getenv("APP_ENV", "dev")
+if env not in ["dev", "prod"]:
+    env = "dev"
+
+BASE_DIR = Path("data") / env
 STOCK_DIR = BASE_DIR / "stock"
 
 def _format_window(window: Union[int, str]) -> str:
@@ -21,14 +26,23 @@ def get_label_path(ticker: str) -> Path:
 def get_ohlcv_dir() -> Path:
     return STOCK_DIR / "OHLCV"
 
+def get_ohlcv_path(ticker: str) -> Path:
+    return get_ohlcv_dir() / f"{ticker}.csv"
+
 def get_raw_foreign_flow_non_regular_dir() -> Path:
     return STOCK_DIR / "raw_foreign_flow_non_regular"
 
 def get_foreign_flow_non_regular_dir() -> Path:
     return STOCK_DIR / "foreign_flow_non_regular"
 
+def get_foreign_flow_non_regular_path(ticker: str) -> Path:
+    return get_foreign_flow_non_regular_dir() / f"{ticker}.csv"
+
 def get_technical_dir() -> Path:
     return STOCK_DIR / "technical"
+
+def get_technical_path(ticker: str) -> Path:
+    return get_technical_dir() / f"{ticker}.csv"
 
 def get_technical_indicator_features_path() -> Path:
     return BASE_DIR / "technical_indicator_features.txt"
@@ -70,15 +84,6 @@ def get_model_performance_dir(version: int, label_type: str) -> Path:
 def get_model_performance_path(version: int, label_type: str, window: Union[int, str]) -> Path:
     return get_model_performance_dir(version, label_type) / f"{_format_window(window)}.csv"
 
-# Model Archives
-def get_model_archive_dir(version: int, label_type: str) -> Path:
-    camel_label = to_camel(label_type)
-    return STOCK_DIR / "model_archive" / f"model_v{version}" / camel_label
-
-def get_model_archive_performance_dir(version: int, label_type: str) -> Path:
-    camel_label = to_camel(label_type)
-    return STOCK_DIR / "model_archive" / f"model_v{version}" / "performance" / camel_label
-
 # Score
 def get_score_dir() -> Path:
     return STOCK_DIR / "score"
@@ -111,4 +116,7 @@ def get_combined_forecasts_base_dir() -> Path:
 
 def get_combined_forecasts_window_dir(window: Union[int, str]) -> Path:
     return STOCK_DIR / f"combined_forecasts_{_format_window(window)}"
+
+def get_combined_forecasts_path(window: Union[int, str], ticker: str) -> Path:
+    return get_combined_forecasts_window_dir(window) / f"{ticker}.csv"
 

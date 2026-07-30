@@ -2,7 +2,7 @@ import shutil
 import pickle
 import numpy as np
 import pandas as pd
-from utils.pipeline import get_label_config
+
 from utils import paths
 
 def _ensure_directories_exist(model_version: int, label_types: list) -> None:
@@ -18,23 +18,11 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
         model_performance_folder_path = paths.get_model_performance_dir(model_version, label_type)
 
         if model_pkl_folder_path.exists():
-            archive_path = paths.get_model_archive_dir(model_version, label_type)
-
-            if archive_path.exists():
-                shutil.rmtree(archive_path)
-
-            shutil.copytree(model_pkl_folder_path, archive_path, dirs_exist_ok=True)
             shutil.rmtree(model_pkl_folder_path)
 
         model_pkl_folder_path.mkdir(parents=True, exist_ok=True)
         
         if model_performance_folder_path.exists():
-            archive_perf_path = paths.get_model_archive_performance_dir(model_version, label_type)
-
-            if archive_perf_path.exists():
-                shutil.rmtree(archive_perf_path)
-
-            shutil.copytree(model_performance_folder_path, archive_perf_path, dirs_exist_ok=True)
             shutil.rmtree(model_performance_folder_path)
 
         model_performance_folder_path.mkdir(parents=True, exist_ok=True)

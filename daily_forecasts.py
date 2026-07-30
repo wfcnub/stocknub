@@ -1,3 +1,6 @@
+import os
+os.environ["APP_ENV"] = "prod"
+
 import sys
 import argparse
 import subprocess

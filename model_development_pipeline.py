@@ -1,7 +1,12 @@
+import os
+os.environ["APP_ENV"] = "dev"
+
 import gc
 import sys
+import shutil
 import argparse
 import subprocess
+from pathlib import Path
 
 from utils import paths
 
@@ -101,7 +106,7 @@ def run_step(step_num, args):
 
     cmd = [sys.executable, "-m", step["module"]]
 
-    if step['module'] in ["pipeline.train_models", "pipeline.fetch_foreign_flow_non_regular_data"] and args.with_docker:
+    if step['module'] in ["pipeline.fetch_foreign_flow_non_regular_data"] and args.with_docker:
         cmd.extend(["--with_docker"])
 
     if step_num == 0:
@@ -191,6 +196,7 @@ def run_step(step_num, args):
         subprocess.run(cmd, check=True)
         print(f"\nStep {step_num} completed")
         return True
+        
     except subprocess.CalledProcessError as e:
         print(f"\nStep {step_num} failed with exit code {e.returncode}")
         return False
@@ -212,6 +218,24 @@ def main():
 
     args = parser.parse_args()
 
+    prod_dir = Path('data/prod')
+    dev_dir = Path('data/dev')
+    base_dir = Path('data/base')
+    
+    print("\n" + "=" * 80)
+    print("SYNCING DEV DIRECTORY FROM PROD")
+    print("=" * 80)
+    
+    if dev_dir.exists():
+        shutil.rmtree(dev_dir)
+        
+    if prod_dir.exists():
+        shutil.copytree(prod_dir, dev_dir)
+        print("Successfully copied data/prod to data/dev")
+    else:
+        shutil.copytree(prod_dir, base_dir)
+        print("Warning: data/prod does not exist. copied data/base to data/dev")
+
     steps_to_run = sorted(PIPELINE_STEPS.keys())
 
     print("\n" + "=" * 80)
@@ -220,7 +244,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run[3:]:
+    for step_num in steps_to_run:
         success = run_step(step_num, args)
 
         if not success:
@@ -236,6 +260,17 @@ def main():
 
     if not failed_steps:
         print("All steps completed!")
+        
+        print("\n" + "=" * 80)
+        print("PROMOTING DEV DIRECTORY TO PROD")
+        print("=" * 80)
+        
+        if prod_dir.exists():
+            shutil.rmtree(prod_dir)
+            
+        shutil.copytree(dev_dir, prod_dir)
+        print("Successfully promoted data/dev to data/prod")
+        
         return 0
     else:
         print(f"Pipeline failed at step {failed_steps[0]}")

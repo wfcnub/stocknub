@@ -9,9 +9,9 @@ catboost_info/
 .DS_Store
 
 # secret recipe datas
-data/stock/*
+data/dev/*
+data/prod/*
 experiments/
 
-data/split_dates_5dd.json
-data/split_dates_10dd.json
+data/split_dates_*.json
 data/selected_ticker_and_industry_list.csv

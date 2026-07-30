@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import yfinance as yf
-from pathlib import Path
 from curl_cffi import requests
 from datetime import datetime, timedelta
 

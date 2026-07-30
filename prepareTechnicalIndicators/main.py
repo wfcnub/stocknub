@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
+from utils import paths
 
 from prepareTechnicalIndicators.all_technical_indicators import generate_all_technical_indicators
 
@@ -9,17 +9,17 @@ def process_single_ticker(args_tuple):
     Read historical data, generate technical indicators, and save to technical indicators folder.
 
     Args:
-        args_tuple: Tuple containing (ticker, ohlcv_folder_path, foreign_flow_non_regular_folder_path, technical_folder_path)
+        args_tuple: Tuple containing (ticker)
 
     Returns:
         Tuple of (ticker, success, message, num_new_rows)
     """
-    ticker, ohlcv_folder_path, foreign_flow_non_regular_folder_path, technical_folder_path = args_tuple
+    (ticker,) = args_tuple
 
     try:
-        ohlcv_path = (Path(ohlcv_folder_path) / ticker).with_suffix('.csv')
-        foreign_flow_non_regular_path = (Path(foreign_flow_non_regular_folder_path) / ticker).with_suffix('.csv')
-        technical_path = (Path(technical_folder_path) / ticker).with_suffix('.csv')
+        ohlcv_path = paths.get_ohlcv_path(ticker)
+        foreign_flow_non_regular_path = paths.get_foreign_flow_non_regular_path(ticker)
+        technical_path = paths.get_technical_path(ticker)
 
         if not ohlcv_path.is_file():
             return (

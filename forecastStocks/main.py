@@ -1,6 +1,5 @@
 import pickle
 import pandas as pd
-from pathlib import Path
 from utils.pipeline import get_label_config
 
 def process_single_ticker(args_tuple):
@@ -13,7 +12,7 @@ def process_single_ticker(args_tuple):
     Returns:
         Tuple of (ticker, label_type, window, success, message, forecast_data_dict)
     """
-    model_version, csv_folder_path, model_identifier, ticker, label_type, window, feature_columns = args_tuple
+    model_version, model_identifier, ticker, label_type, window, feature_columns = args_tuple
 
     try:
         target_col, threshold_col, positive_label, negative_label = get_label_config(
@@ -23,7 +22,7 @@ def process_single_ticker(args_tuple):
         from utils import paths
         model_path = paths.get_model_path(model_version, label_type, model_identifier, window)
 
-        if not Path(model_path).exists():
+        if not model_path.exists():
             return (
                 identifier,
                 label_type,
@@ -37,8 +36,12 @@ def process_single_ticker(args_tuple):
             model = pickle.load(f)
 
         try:
-            csv_file_path = Path(f"{csv_folder_path}/{ticker}.csv")
-            if not Path(csv_file_path).exists():
+            if model_version in [1, 2, 3]:
+                csv_file_path = paths.get_label_path(ticker)
+            elif model_version == 4:
+                csv_file_path = paths.get_combined_forecasts_path(window, ticker)
+            
+            if not csv_file_path.exists():
                 return (
                     ticker,
                     label_type,
