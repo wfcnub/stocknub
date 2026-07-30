@@ -92,6 +92,9 @@ def main():
                 unit="ticker",
             )
         )
+
+        pool.close()
+        pool.join()
     
     print("\n" + "=" * 80)
     print("FETCH SUMMARY")

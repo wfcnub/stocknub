@@ -98,6 +98,9 @@ if __name__ == "__main__":
             )
         )
 
+        pool.close()
+        pool.join()
+
     print("\n" + "=" * 80)
     print("TECHNICAL INDICATORS GENERATION SUMMARY")
     print("=" * 80)

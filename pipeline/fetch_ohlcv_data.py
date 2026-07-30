@@ -77,6 +77,9 @@ if __name__ == "__main__":
             )
         )
 
+        pool.close()
+        pool.join()
+
     print("\n" + "=" * 80)
     print("FETCH SUMMARY")
     print("=" * 80)

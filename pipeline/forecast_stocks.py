@@ -102,11 +102,13 @@ def main():
 
     if args.model_version == 1:
         model_identifier_list = ticker_list
+
     elif args.model_version == 2:
         ticker_industry_df = pd.read_csv(Path('data/selected_ticker_and_industry_list.csv'))
         ticker_industry_df = ticker_industry_df[ticker_industry_df['Ticker'].isin(ticker_list)]
         ticker_list = ticker_industry_df['Ticker'].values.tolist()
         model_identifier_list = ticker_industry_df['Industry'].values.tolist()
+
     elif args.model_version in [3, 4]:
         model_identifier_list = ['IHSG' for _ in range(len(ticker_list))]
 
@@ -133,6 +135,9 @@ def main():
                 desc="Generating forecasts",
             )
         )
+
+        pool.close()
+        pool.join()
 
     print("\n" + "=" * 80)
     print("FORECAST SUMMARY")

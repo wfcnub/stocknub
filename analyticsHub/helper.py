@@ -68,9 +68,9 @@ def _generate_score_data(rolling_window: str) -> (pd.DataFrame, str):
         temp_score_df['Ticker'] = ticker
         score_df = pd.concat((score_df, temp_score_df))
     
-    assert score_df['Date'].nunique() == 1
-    score_date = score_df['Date'].unique()[0]
+    score_date = score_df['Date'].max()
     
+    score_df = score_df[score_df['Date'] == score_date]
     score_df.set_index('Ticker', inplace=True)
     score_df.drop(columns=['Date'], inplace=True)
     
@@ -91,7 +91,9 @@ def _generate_close_data() -> pd.DataFrame:
         close_df['Ticker'] = ticker
         all_close_df = pd.concat((all_close_df, close_df))
     
-    # assert all_close_df['Date'].nunique() == 1
+    score_date = all_close_df['Date'].max()
+    
+    all_close_df = all_close_df[all_close_df['Date'] == score_date]
     all_close_df.drop(columns=['Date'], inplace=True)
     all_close_df.reset_index(drop=True, inplace=True)
     

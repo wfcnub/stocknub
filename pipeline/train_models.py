@@ -81,6 +81,7 @@ def main():
                                     ['Industry'] \
                                     .unique() \
                                     .tolist()
+
     elif args.model_version in [3, 4]:
         specified_identifiers = ['IHSG']
     
@@ -106,6 +107,9 @@ def main():
                     desc="Processing single model",
                 )
             )
+    
+        pool.close()
+        pool.join()
 
     for failed_process, metrics_list in results:
         all_failed_processes.extend(failed_process)

@@ -11,3 +11,7 @@ catboost_info/
 # secret recipe datas
 data/stock/*
 experiments/
+
+data/split_dates_5dd.json
+data/split_dates_10dd.json
+data/selected_ticker_and_industry_list.csv
