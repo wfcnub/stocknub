@@ -136,6 +136,6 @@ def generate_all_technical_indicators(data: pd.DataFrame, additional_data: pd.Da
             tmp_file.write(fea_col + "\n")
         tmp_path = tmp_file.name
 
-    tmp_path.replace(output_path)
+    pathlib.Path(tmp_path).replace(output_path)
 
     return all_stock_indicators_data
