@@ -1,9 +1,9 @@
 import pandas as pd
 from typing import Tuple
 import sys
-import os
+from pathlib import Path
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from analyticsHub.main import get_daily_recommendations
 
 class RecommendationRepository:

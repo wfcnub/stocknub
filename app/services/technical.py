@@ -1,0 +1,39 @@
+import pandas as pd
+from datetime import date, timedelta
+from app.repositories.technical import TechnicalRepository
+
+class TechnicalService:
+    """
+    Service layer for technical indicator logic.
+    """
+    def __init__(self, repository: TechnicalRepository):
+        self.repository = repository
+        
+    def get_lagged_technical_indicators(self, ticker: str) -> dict:
+        df = self.repository.get_technical_indicators(ticker)
+                    
+        selected_date = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        if selected_date not in df['Date'].values:
+            raise ValueError("Latest date not found in data")
+            
+        target_row = df.loc[df['Date'] == selected_date, :].squeeze()
+        
+        data_dict = target_row.drop('Date').to_dict()
+        
+        import math
+        cleaned_dict = {}
+        for k, v in data_dict.items():
+            if isinstance(v, float) and math.isnan(v):
+                cleaned_dict[k] = None
+            else:
+                cleaned_dict[k] = v
+                
+        return {
+            selected_date: cleaned_dict
+        }
+
+    def check_lagged_availability(self, ticker: str) -> bool:
+        df = self.repository.get_technical_indicators(ticker)
+        selected_date = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+        return selected_date in df['Date'].values
