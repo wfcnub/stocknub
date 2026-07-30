@@ -3,9 +3,10 @@ from pathlib import Path
 from camel_converter import to_camel
 from typing import Union
 
-env = os.getenv("APP_ENV", "dev")
+env = os.getenv("APP_ENV", "prod")
+
 if env not in ["dev", "prod"]:
-    env = "dev"
+    env = "prod"
 
 BASE_DIR = Path("data") / env
 STOCK_DIR = BASE_DIR / "stock"

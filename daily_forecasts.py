@@ -156,7 +156,6 @@ def run_step(step_num, args):
         pass
 
     elif step_num == 12:
-        cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '5,10'])
 
     try:
