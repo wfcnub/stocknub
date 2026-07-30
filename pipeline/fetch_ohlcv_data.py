@@ -1,5 +1,6 @@
 import shutil
 import argparse
+import pandas as pd
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
@@ -47,16 +48,32 @@ if __name__ == "__main__":
         help="Number of parallel workers to use (default: CPU count)",
     )
 
+    parser.add_argument(
+        "--process_selected_ticker",
+        dest='process_selected_ticker', 
+        action='store_true',
+        help="A boolean enusring that the tickers being processed are just the selected ones",
+    )
+
+    parser.set_defaults(process_selected_ticker=False)
+
     args = parser.parse_args()
     
     if paths.get_ohlcv_dir().exists():
         shutil.rmtree(paths.get_ohlcv_dir())
 
     paths.get_ohlcv_dir().mkdir(parents=True, exist_ok=True)
-        
+
     with open(args.file_name, "r") as f:
         ticker_list = f.read().splitlines()
+    
+    if args.process_selected_ticker:
+        selected_ticker_to_process_df = pd.read_csv(paths.get_selected_ticker_and_industry_list_path())
+        selected_tickers = selected_ticker_to_process_df['Ticker'].values
+        
+        ticker_list = list(set(selected_tickers).intersection(set(ticker_list)))
 
+        
     fetch_args = [(ticker, args.start_date, args.end_date) for ticker in ticker_list]
 
     print("=" * 80)

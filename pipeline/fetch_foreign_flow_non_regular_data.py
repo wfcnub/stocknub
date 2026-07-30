@@ -54,8 +54,16 @@ if __name__ == "__main__":
         action='store_true',
         help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
     )
+    
+    parser.add_argument(
+        "--process_selected_ticker",
+        dest='process_selected_ticker', 
+        action='store_true',
+        help="A boolean enusring that the tickers being processed are just the selected ones",
+    )
 
     parser.set_defaults(with_docker=False)
+    parser.set_defaults(process_selected_ticker=False)
     
     args = parser.parse_args()
 
@@ -81,8 +89,15 @@ if __name__ == "__main__":
 
         csv_files = paths.get_raw_foreign_flow_non_regular_dir().rglob('*.csv')
         combined_df = pd.concat((pd.read_csv(file) for file in csv_files), ignore_index=True)
+    
         all_tickers = combined_df['Stock Code'].unique()
 
+        if args.process_selected_ticker:
+            selected_ticker_to_process_df = pd.read_csv(paths.get_selected_ticker_and_industry_list_path())
+            selected_tickers = selected_ticker_to_process_df['Ticker'].values
+
+            all_tickers = list(set(selected_tickers).intersection(set(all_tickers)))
+            
         fetch_args = [
             (ticker, combined_df)
             for ticker in all_tickers

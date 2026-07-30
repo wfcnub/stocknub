@@ -88,14 +88,15 @@ def run_step(step_num, args):
 
     cmd = [sys.executable, "-m", step["module"]]
 
-    if step['module'] in ["pipeline.train_models", "pipeline.fetch_foreign_flow_non_regular_data"] and args.with_docker:
+    if step['module'] in ["pipeline.fetch_foreign_flow_non_regular_data"] and args.with_docker:
         cmd.extend(["--with_docker"])
         
     if step_num == 0:
         cmd.extend(["--start_date", '2020-01-01'])
+        cmd.extend(["--process_selected_ticker"])
 
     elif step_num == 1:
-        pass
+        cmd.extend(["--process_selected_ticker"])
     
     elif step_num == 2:
         cmd.extend(["--process_selected_ticker"])
