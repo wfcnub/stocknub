@@ -1,7 +1,13 @@
 import os
 from pathlib import Path
-from camel_converter import to_camel
 from typing import Union
+
+try:
+    from camel_converter import to_camel
+except ImportError:
+    def to_camel(value: str) -> str:
+        parts = value.replace("-", "_").replace(" ", "_").split("_")
+        return parts[0].lower() + "".join(part.capitalize() for part in parts[1:])
 
 env = os.getenv("APP_ENV", "prod")
 
@@ -56,6 +62,24 @@ def get_ticker_and_industry_list_path() -> Path:
 
 def get_selected_ticker_and_industry_list_path() -> Path:
     return BASE_DIR / "selected_ticker_and_industry_list.csv"
+
+def get_tactical_ticker_list_path() -> Path:
+    return BASE_DIR / "tactical_ticker_list.csv"
+
+def get_ticker_selection_audit_path() -> Path:
+    return BASE_DIR / "ticker_selection_audit.csv"
+
+def get_ticker_selection_history_path() -> Path:
+    return BASE_DIR / "ticker_selection_history.csv"
+
+def get_ticker_selection_forward_returns_path() -> Path:
+    return BASE_DIR / "ticker_selection_forward_returns.csv"
+
+def get_ticker_selection_validation_summary_path() -> Path:
+    return BASE_DIR / "ticker_selection_validation_summary.csv"
+
+def get_fundamental_history_path() -> Path:
+    return BASE_DIR / "fundamental_history.csv"
 
 def get_split_dates_path(window: Union[int, str]) -> Path:
     window_str = str(window).replace("dd", "")
@@ -120,4 +144,3 @@ def get_combined_forecasts_window_dir(window: Union[int, str]) -> Path:
 
 def get_combined_forecasts_path(window: Union[int, str], ticker: str) -> Path:
     return get_combined_forecasts_window_dir(window) / f"{ticker}.csv"
-

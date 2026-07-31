@@ -1,10 +1,116 @@
+import random
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import yfinance as yf
 from curl_cffi import requests
 
-def _fetch_fundamentals(tickers: list) -> pd.DataFrame:
+FUNDAMENTAL_FIELDS = [
+    "trailingPE",
+    "forwardPE",
+    "pegRatio",
+    "priceToBook",
+    "returnOnEquity",
+    "returnOnAssets",
+    "profitMargins",
+    "operatingMargins",
+    "debtToEquity",
+    "currentRatio",
+    "quickRatio",
+    "freeCashflow",
+    "operatingCashflow",
+    "revenueGrowth",
+    "earningsGrowth",
+    "averageVolume",
+    "volume",
+    "marketCap",
+    "regularMarketPrice",
+]
+
+_thread_state = threading.local()
+
+
+def _get_session():
+    if not hasattr(_thread_state, "session"):
+        _thread_state.session = requests.Session(impersonate="chrome123")
+    return _thread_state.session
+
+
+def _fetch_one_fundamental(ticker: str) -> dict:
+    ticker_symbol = f"{ticker}.JK" if not ticker.endswith(".JK") else ticker
+    error = ""
+    for attempt in range(3):
+        try:
+            ticker_yf = yf.Ticker(ticker_symbol, session=_get_session())
+            info = ticker_yf.info
+            record = {"Ticker": ticker}
+            record.update({field: info.get(field) for field in FUNDAMENTAL_FIELDS})
+            available = sum(pd.notna(record[field]) for field in FUNDAMENTAL_FIELDS)
+            if available == 0:
+                raise ValueError("provider returned no fundamental fields")
+            record.update(
+                {
+                    "fetched_at": pd.Timestamp.now(tz="UTC").isoformat(),
+                    "fetch_status": "success",
+                    "fetch_error": "",
+                }
+            )
+            return record
+        except Exception as exc:
+            error = str(exc)
+            if attempt < 2:
+                time.sleep((2**attempt) + random.uniform(0, 1))
+
+    return {
+        "Ticker": ticker,
+        "fetched_at": pd.Timestamp.now(tz="UTC").isoformat(),
+        "fetch_status": "failed",
+        "fetch_error": error,
+        **{field: np.nan for field in FUNDAMENTAL_FIELDS},
+    }
+
+
+def _load_fundamental_history(cache_path: Path | None) -> pd.DataFrame:
+    if cache_path is None or not cache_path.is_file():
+        return pd.DataFrame()
+    try:
+        history = pd.read_csv(cache_path)
+        if "Ticker" not in history or "fetched_at" not in history:
+            return pd.DataFrame()
+        return history
+    except (OSError, pd.errors.ParserError):
+        return pd.DataFrame()
+
+
+def _latest_successful_fundamentals(history: pd.DataFrame) -> pd.DataFrame:
+    if history.empty:
+        return history
+    successful = history[
+        history.get("fetch_status", pd.Series("success", index=history.index)).eq("success")
+    ].copy()
+    if successful.empty:
+        return successful
+    successful["_fetched_at"] = pd.to_datetime(
+        successful["fetched_at"], errors="coerce", utc=True
+    )
+    return (
+        successful.sort_values("_fetched_at")
+        .drop_duplicates("Ticker", keep="last")
+        .drop(columns="_fetched_at")
+    )
+
+
+def _fetch_fundamentals(
+    tickers: list,
+    cache_path: str | Path | None = None,
+    ttl_days: int = 30,
+    max_workers: int = 4,
+    force_refresh: bool = False,
+) -> pd.DataFrame:
     """
     (Internal Helper) Queries yfinance to acquire robust fundamentals for a list of tickers.
     
@@ -14,54 +120,50 @@ def _fetch_fundamentals(tickers: list) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A dataframe containing fundamental metrics for each ticker
     """
-    session = requests.Session(impersonate="chrome123")
-    data = []
-    
-    for ticker in tickers:
-        retries = 3
-        while retries > 0:
-            try:
-                ticker_symbol = f"{ticker}.JK" if not ticker.endswith(".JK") else ticker
-                ticker_yf = yf.Ticker(ticker_symbol, session=session)
-                
-                info = ticker_yf.info
-                
-                data.append({
-                    "Ticker": ticker,
-                    "trailingPE": info.get("trailingPE"),
-                    "forwardPE": info.get("forwardPE"),
-                    "pegRatio": info.get("pegRatio"),
-                    "priceToBook": info.get("priceToBook"),
-                    "returnOnEquity": info.get("returnOnEquity"),
-                    "returnOnAssets": info.get("returnOnAssets"),
-                    "profitMargins": info.get("profitMargins"),
-                    "operatingMargins": info.get("operatingMargins"),
-                    "debtToEquity": info.get("debtToEquity"),
-                    "currentRatio": info.get("currentRatio"),
-                    "quickRatio": info.get("quickRatio"),
-                    "freeCashflow": info.get("freeCashflow"),
-                    "operatingCashflow": info.get("operatingCashflow"),
-                    "revenueGrowth": info.get("revenueGrowth"),
-                    "earningsGrowth": info.get("earningsGrowth"),
-                    "averageVolume": info.get("averageVolume"),
-                    "volume": info.get("volume"),
-                    "marketCap": info.get("marketCap"),
-                    "regularMarketPrice": info.get("regularMarketPrice"),
-                })
-                break
+    requested = list(dict.fromkeys(tickers))
+    cache = Path(cache_path) if cache_path is not None else None
+    history = _load_fundamental_history(cache)
+    latest = _latest_successful_fundamentals(history)
+    latest_by_ticker = latest.set_index("Ticker") if not latest.empty else pd.DataFrame()
 
-            except Exception as e:
-                error_msg = str(e).lower()
-                if '429' in error_msg or 'rate limit' in error_msg or 'too many requests' in error_msg:
-                    print(f"Rate limit hit for {ticker}. Waiting 3 minutes before continuing...")
-                    time.sleep(180)
-                    retries -= 1
-                else:
-                    print(f"Failed to fetch {ticker}: {e}")
-                    break
-            
-    df = pd.DataFrame(data)
-    return df
+    cutoff = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=ttl_days)
+    to_fetch = []
+    for ticker in requested:
+        if force_refresh or latest_by_ticker.empty or ticker not in latest_by_ticker.index:
+            to_fetch.append(ticker)
+            continue
+        fetched_at = pd.to_datetime(
+            latest_by_ticker.loc[ticker, "fetched_at"], errors="coerce", utc=True
+        )
+        if pd.isna(fetched_at) or fetched_at < cutoff:
+            to_fetch.append(ticker)
+
+    fetched_records = []
+    if to_fetch:
+        with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(to_fetch)))) as pool:
+            futures = {
+                pool.submit(_fetch_one_fundamental, ticker): ticker for ticker in to_fetch
+            }
+            for future in as_completed(futures):
+                fetched_records.append(future.result())
+
+    if fetched_records:
+        fetched = pd.DataFrame(fetched_records)
+        history = pd.concat([history, fetched], ignore_index=True, sort=False)
+        if cache is not None:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            temporary_path = cache.with_suffix(cache.suffix + ".tmp")
+            history.to_csv(temporary_path, index=False)
+            temporary_path.replace(cache)
+
+    latest = _latest_successful_fundamentals(history)
+    if latest.empty:
+        return pd.DataFrame(columns=["Ticker", *FUNDAMENTAL_FIELDS])
+    result = latest[latest["Ticker"].isin(requested)].copy()
+    result["fundamental_cache_stale"] = (
+        pd.to_datetime(result["fetched_at"], errors="coerce", utc=True) < cutoff
+    )
+    return result.reset_index(drop=True)
 
 def _num(df: pd.DataFrame, col: str, fallback: float = 0) -> pd.Series:
     """Helper to safely convert a column to numeric, filling NaNs."""
@@ -118,15 +220,15 @@ def _calc_valuation_score(df: pd.DataFrame) -> pd.Series:
     Returns:
         pd.Series: A series containing the computed valuation score.
     """
-    peg        = _num(df, 'pegRatio', 999).clip(lower=0.1)
-    fwd_pe     = _num(df, 'forwardPE', 999).clip(lower=1)
-    trailing_pe = _num(df, 'trailingPE', 999).clip(lower=1)
-    pb         = _num(df, 'priceToBook', 999).clip(lower=0.1)
+    peg = _num(df, 'pegRatio', np.nan).where(lambda value: value > 0)
+    fwd_pe = _num(df, 'forwardPE', np.nan).where(lambda value: value > 0)
+    trailing_pe = _num(df, 'trailingPE', np.nan).where(lambda value: value > 0)
+    pb = _num(df, 'priceToBook', np.nan).where(lambda value: value > 0)
     
-    val_score = (50  / peg).clip(upper=100) + \
-                (200 / fwd_pe).clip(upper=75) + \
-                (200 / trailing_pe).clip(upper=75) + \
-                (25  / pb).clip(upper=50)
+    val_score = (50 / peg).clip(upper=100).fillna(0) + \
+                (200 / fwd_pe).clip(upper=75).fillna(0) + \
+                (200 / trailing_pe).clip(upper=75).fillna(0) + \
+                (25 / pb).clip(upper=50).fillna(0)
     return val_score
 
 def _calc_health_score(df: pd.DataFrame) -> pd.Series:
@@ -212,7 +314,7 @@ def _calculate_fundamental_score(df: pd.DataFrame) -> pd.DataFrame:
         4. Financial Health: +200  (Current Ratio, Quick Ratio, Debt-to-Equity)
         5. Cash Flow      : +200  (FCF Yield, OCF Yield)
         6. Liquidity      : +200  (graduated, based on avg daily value traded)
-        Hard gate         : -10000 if avg daily value traded < 1B IDR
+        Hard gate         : -10000 if avg daily value traded < 5B IDR
     
     Args:
         df (pd.DataFrame): DataFrame with fundamental metrics.

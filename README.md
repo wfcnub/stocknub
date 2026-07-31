@@ -77,6 +77,42 @@ python daily_forecasts.py
 docker compose run --rm pipeline-service python daily_forecasts.py --with_docker
 ```
 
+### Ticker selection
+
+The model-development pipeline selects a configurable universe using four stages:
+historical OHLCV/data-quality gates, local traded-value gates, industry-relative
+fundamental scoring, and cross-sectional technical scoring. The default is 75
+model-development tickers plus a 25-name tactical shortlist.
+
+The selector writes:
+
+- `selected_ticker_and_industry_list.csv`: stable model-development universe;
+- `tactical_ticker_list.csv`: technically strongest current subset;
+- `ticker_selection_audit.csv`: every ticker, score component, and rejection reason;
+- `ticker_selection_history.csv`: dated snapshots for prospective validation;
+- `fundamental_history.csv`: cached, dated provider snapshots;
+- `ticker_selection_forward_returns.csv`: per-ticker forward validation detail;
+- `ticker_selection_validation_summary.csv`: aggregate return, drawdown, and stability metrics.
+
+Important thresholds are CLI options:
+
+```bash
+python -m pipeline.select_ticker_to_process \
+  --top_n 75 \
+  --tactical_top_n 25 \
+  --min_adv_60 5000000000 \
+  --min_history_rows 504
+```
+
+Run the model-universe selection on a quarterly schedule to avoid unnecessary
+per-ticker retraining. The tactical shortlist can be regenerated more frequently.
+Once selection history has accumulated future observations, evaluate it with:
+
+```bash
+python -m pipeline.evaluate_ticker_selection \
+  --benchmark_path path/to/ihsg.csv
+```
+
 ### 3. Analytics Hub
 For interactive analysis and visual exploration of your data and forecasts, launch the Streamlit-based Analytics Hub. It will start a local web server you can access via your browser:
 

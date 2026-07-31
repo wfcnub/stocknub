@@ -27,7 +27,7 @@ PIPELINE_STEPS = {
     2: {
         "name": "Select Ticker to Process",
         "module": "pipeline.select_ticker_to_process",
-        "description": "Select Ticker to Process Based on The Recent Average Valuation",
+        "description": "Select a model-development universe using fundamental and OHLCV strength",
     },    
     3: {
         "name": "Prepare Technical Indicators",
