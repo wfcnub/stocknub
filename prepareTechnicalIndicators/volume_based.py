@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from stock_indicators import indicators
 
-from prepareTechnicalIndicators.helper import identify_historical_trends
+from prepareTechnicalIndicators.helper import identify_historical_trends, safe_divide
 
 def calculate_on_balance_volume(prepared_data):
     result = indicators.get_obv(prepared_data, 10)
@@ -11,14 +11,19 @@ def calculate_on_balance_volume(prepared_data):
         'On Balance Volume': [val.obv for val in result],
     })
 
-    result_df.dropna(subset=['On Balance Volume'], inplace=True)
-
     result_df['On Balance Volume Increasing'] = identify_historical_trends(result_df, 'On Balance Volume', 5, make_bool_up=True)
     result_df['On Balance Volume Decreasing'] = identify_historical_trends(result_df, 'On Balance Volume', 5, make_bool_down=True)
 
     obv_ma20 = result_df['On Balance Volume'].rolling(window=20).mean()
-    result_df['OBV to MA20 Ratio'] = result_df['On Balance Volume'] / obv_ma20.replace(0, np.nan)
-    result_df['OBV to MA20 Ratio'] = result_df['OBV to MA20 Ratio'].replace([np.inf, -np.inf], np.nan)
+    obv_scale20 = result_df['On Balance Volume'].abs().rolling(window=20).mean()
+    result_df['OBV to MA20 Ratio'] = safe_divide(
+        result_df['On Balance Volume'],
+        obv_ma20,
+    )
+    result_df['OBV Change 5D Normalized'] = safe_divide(
+        result_df['On Balance Volume'].diff(5),
+        obv_scale20,
+    )
 
     result_df.drop(columns=['On Balance Volume'], inplace=True)
 
@@ -31,10 +36,13 @@ def calculate_accumulation_distribution_line(prepared_data):
         'Accumulation Distribution Line': np.array([val.adl for val in result]).astype(float),
     })
 
-    result_df.dropna(subset=['Accumulation Distribution Line'], inplace=True)
-
     result_df['Accumulation Distribution Line Increasing'] = identify_historical_trends(result_df, 'Accumulation Distribution Line', 5, make_bool_up=True)
     result_df['Accumulation Distribution Line Decreasing'] = identify_historical_trends(result_df, 'Accumulation Distribution Line', 5, make_bool_down=True)
+    adl_scale20 = result_df['Accumulation Distribution Line'].abs().rolling(20).mean()
+    result_df['ADL Change 5D Normalized'] = safe_divide(
+        result_df['Accumulation Distribution Line'].diff(5),
+        adl_scale20,
+    )
 
     result_df.drop(columns=['Accumulation Distribution Line'], inplace=True)
 
@@ -47,8 +55,8 @@ def calculate_chaikin_money_flow(prepared_data):
         'Chaikin Money Flow': [val.cmf for val in result]
     })
 
-    result_df.dropna(subset=['Chaikin Money Flow'], inplace=True)
-
+    result_df['CMF Value'] = result_df['Chaikin Money Flow']
+    result_df['CMF Change 5D'] = result_df['Chaikin Money Flow'].diff(5)
     result_df['Positive CMF'] = (result_df['Chaikin Money Flow'] > 0).astype(int)
     result_df['Strong Positive CMF'] = (result_df['Chaikin Money Flow'] >= 0.25).astype(int)
     result_df['Negative CMF'] = (result_df['Chaikin Money Flow'] <= 0).astype(int)
@@ -66,8 +74,6 @@ def calculate_money_flow_index(prepared_data):
         'Money Flow Index': [val.mfi for val in result]
     })
 
-    result_df.dropna(subset=['Money Flow Index'], inplace=True)
-    
     result_df['MFI Value'] = result_df['Money Flow Index']
 
     result_df['MFI Overbought'] = (result_df['Money Flow Index'] >= 80).astype(int)
@@ -77,4 +83,18 @@ def calculate_money_flow_index(prepared_data):
 
     result_df.drop(columns=['Money Flow Index'], inplace=True)
 
+    return result_df.set_index('Date')
+
+
+def calculate_percentage_volume_oscillator(prepared_data):
+    """Calculate continuous percentage-volume momentum features."""
+    result = indicators.get_pvo(prepared_data)
+    result_df = pd.DataFrame({
+        'Date': [val.date for val in result],
+        'PVO Value': [val.pvo for val in result],
+        'PVO Signal': [val.signal for val in result],
+        'PVO Histogram': [val.histogram for val in result],
+    })
+    result_df['PVO Histogram Change 5D'] = result_df['PVO Histogram'].diff(5)
+    result_df['PVO Positive'] = (result_df['PVO Value'] > 0).astype(int)
     return result_df.set_index('Date')

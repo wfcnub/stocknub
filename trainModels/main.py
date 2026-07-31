@@ -56,7 +56,7 @@ def develop_model_v1(ticker: str, target_column: str, positive_label: str, negat
     search_spaces = {
         'depth': Integer(1, 5),
         'learning_rate': Real(0.01, 0.1, prior='log-uniform'),
-        'iterations': Integer(150, 300),
+        'iterations': Integer(250, 400),
         'l2_leaf_reg': Real(0.5, 3.0)
     }
 

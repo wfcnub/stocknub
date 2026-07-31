@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from generateLabels.thresholds import get_purged_training_labels
+
 def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window: int, test_length: int = 80, val_length: int = 40) -> (np.array, float):
     """
     (Internal Helper) Calculates the median gain of a target column based on a rolling window
@@ -24,9 +26,17 @@ def _generate_median_gain(data: pd.DataFrame, target_column: str, rolling_window
     if np.isnan(median_gain).all():
         threshold = np.nan
     else:
-        test_median_gain_length = test_length
-        test_median_gain = median_gain[-1 * (test_median_gain_length + rolling_window): -rolling_window]
-        threshold = np.nanquantile(test_median_gain, 0.9)
+        training_median_gain = get_purged_training_labels(
+            median_gain,
+            rolling_window,
+            test_length,
+            val_length,
+        )
+        threshold = (
+            np.nan
+            if len(training_median_gain) == 0
+            else np.nanquantile(training_median_gain, 0.9)
+        )
 
     return (median_gain, threshold)
 

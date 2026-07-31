@@ -1,6 +1,8 @@
-import numpy as np
+import pathlib
+import tempfile
 
-from utils import paths
+import numpy as np
+import pandas as pd
 
 def identify_historical_trends(data, column, rolling_window, make_bool_up=None, make_bool_down=None):
     """
@@ -77,6 +79,47 @@ def _retrieve_linreg_gradients(target_data):
     return slope
 
 
+def safe_divide(numerator, denominator):
+    """
+    Divide two aligned numeric objects without producing infinite values.
+
+    Zero denominators are treated as unavailable observations.  The helper
+    intentionally preserves pandas indexes so derived features remain aligned
+    by trading date.
+    """
+    denominator = denominator.replace(0, np.nan)
+    result = numerator / denominator
+    return result.replace([np.inf, -np.inf], np.nan)
+
+
+def rolling_zscore(series: pd.Series, window: int, min_periods: int | None = None):
+    """Return a causal rolling z-score using only the current and prior rows."""
+    min_periods = min_periods or window
+    rolling_mean = series.rolling(window=window, min_periods=min_periods).mean()
+    rolling_std = series.rolling(window=window, min_periods=min_periods).std(ddof=0)
+    return safe_divide(series - rolling_mean, rolling_std)
+
+
+def write_technical_indicator_features(feature_columns):
+    """Atomically write the generated feature manifest once per pipeline run."""
+    from utils import paths
+
+    output_path = paths.get_technical_indicator_features_path()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        dir=output_path.parent,
+        suffix=".tmp",
+        delete=False,
+    ) as tmp_file:
+        for feature_column in sorted(feature_columns):
+            tmp_file.write(f"{feature_column}\n")
+        tmp_path = tmp_file.name
+
+    pathlib.Path(tmp_path).replace(output_path)
+
+
 def get_all_technical_indicators():
     """
     Load the saved and generated stock's technical indicators.
@@ -84,6 +127,8 @@ def get_all_technical_indicators():
     Returns:
         list: A list containing all feature names for the technical indicators.
     """
+    from utils import paths
+
     feature_file = paths.get_technical_indicator_features_path()
     with open(feature_file, "r") as file:
         feature_columns = [line.strip() for line in file]

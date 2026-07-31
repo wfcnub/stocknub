@@ -7,6 +7,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 from utils import paths
 
 from prepareTechnicalIndicators.main import process_single_ticker
+from prepareTechnicalIndicators.helper import write_technical_indicator_features
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -116,6 +117,20 @@ if __name__ == "__main__":
             successful_tickers.append((ticker, message, num_new_rows))
         else:
             failed_tickers.append((ticker, message))
+
+    if successful_tickers:
+        manifest_ticker = successful_tickers[0][0]
+        manifest_df = pd.read_csv(
+            paths.get_technical_path(manifest_ticker),
+            nrows=1,
+        )
+        non_feature_columns = {'Date', 'Open', 'High', 'Low', 'Close', 'Volume'}
+        feature_columns = [
+            column
+            for column in manifest_df.columns
+            if column not in non_feature_columns
+        ]
+        write_technical_indicator_features(feature_columns)
 
     print(f"Successfully processed: {success_count}/{len(all_tickers_to_process)} tickers")
     print(f"Total new rows generated: {total_new_rows}")

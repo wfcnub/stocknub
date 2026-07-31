@@ -10,8 +10,6 @@ def calculate_relative_strength_index(prepared_data):
         'Relative Strength Index': [val.rsi for val in result]
     })
     
-    result_df.dropna(subset=['Relative Strength Index'], inplace=True)
-
     result_df['RSI Value'] = result_df['Relative Strength Index']
 
     result_df['RSI Up Trend'] = (result_df['Relative Strength Index'] >= 65).astype(int)
@@ -39,11 +37,11 @@ def calculate_multi_timeframe_rsi(prepared_data):
             'Date': [val.date for val in result],
             f'RSI {period}': [val.rsi for val in result]
         })
-        rsi_df.dropna(subset=[f'RSI {period}'], inplace=True)
         rsi_df = rsi_df.set_index('Date')
         result_dfs.append(rsi_df)
 
     combined = result_dfs[0].join(result_dfs[1], how='outer')
+    combined['RSI 7 Minus 21'] = combined['RSI 7'] - combined['RSI 21']
 
     return combined
 
@@ -53,16 +51,20 @@ def calculate_stochastic_oscillator(prepared_data):
     result = indicators.get_stoch(prepared_data)
     result_df = pd.DataFrame({
         'Date': [val.date for val in result],
-        'Stochastic Oscillator': [val.oscillator for val in result]
+        'Stochastic Oscillator': [val.oscillator for val in result],
+        'Stochastic Signal': [val.signal for val in result],
+        'Stochastic J': [val.percent_j for val in result],
     })
 
-    result_df.dropna(subset=['Stochastic Oscillator'], inplace=True)
-
     result_df['Stochastic K Value'] = result_df['Stochastic Oscillator']
+    result_df['Stochastic D Value'] = result_df['Stochastic Signal']
+    result_df['Stochastic K Minus D'] = (
+        result_df['Stochastic Oscillator'] - result_df['Stochastic Signal']
+    )
 
     result_df['Stochastic Oscillator Overbought'] = (result_df['Stochastic Oscillator'] >= 80).astype(float)
     result_df['Stochastic Oscillator Oversold'] = (result_df['Stochastic Oscillator'] <= 20).astype(float)
 
-    result_df.drop(columns=['Stochastic Oscillator'], inplace=True)
+    result_df.drop(columns=['Stochastic Oscillator', 'Stochastic Signal'], inplace=True)
 
     return result_df.set_index('Date')

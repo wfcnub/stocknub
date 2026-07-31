@@ -11,6 +11,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
+from trainModels.splits import purge_overlapping_label_periods
 from utils.pipeline import get_split_dates, get_split_masks
 from utils import paths
 
@@ -80,6 +81,13 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
     """
     splits = get_split_dates(target_column)
     train_val_mask, train_mask, val_mask, test_mask, _ = get_split_masks(data, splits)
+    train_val_mask, val_mask = purge_overlapping_label_periods(
+        data,
+        train_val_mask,
+        train_mask,
+        val_mask,
+        target_column,
+    )
 
     train_data = data[train_val_mask].copy()
     test_data = data[test_mask].copy()
@@ -123,6 +131,13 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
 
     splits = get_split_dates(target_column)
     train_val_mask, train_mask, val_mask, test_mask, _ = get_split_masks(data, splits)
+    train_val_mask, val_mask = purge_overlapping_label_periods(
+        data,
+        train_val_mask,
+        train_mask,
+        val_mask,
+        target_column,
+    )
 
     train_data = data[train_val_mask].copy()
     test_data = data[test_mask].copy()

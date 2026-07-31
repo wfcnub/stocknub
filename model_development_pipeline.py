@@ -233,7 +233,7 @@ def main():
         shutil.copytree(prod_dir, dev_dir)
         print("Successfully copied data/prod to data/dev")
     else:
-        shutil.copytree(prod_dir, base_dir)
+        shutil.copytree(base_dir, dev_dir)
         print("Warning: data/prod does not exist. copied data/base to data/dev")
 
     steps_to_run = sorted(PIPELINE_STEPS.keys())
