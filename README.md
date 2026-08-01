@@ -64,6 +64,41 @@ python model_development_pipeline.py
 docker compose run --rm pipeline-service python model_development_pipeline.py --with_docker
 ```
 
+CatBoost V1-V3 development uses a locked final test period. Hyperparameters are
+selected by one seeded Optuna study over purged expanding-window folds; the test
+period is scored only after selection. Each fitted model also stores out-of-fold
+calibration, a validation-tuned decision threshold, its selected features, and
+the exact fold/trial history under the model's `artifacts` directory.
+Optuna checkpoints studies under `stock/tuning_studies`; an interrupted run or
+an identical rerun resumes instead of discarding completed trials.
+
+For a focused training run, the principal compute controls are:
+
+```bash
+python -m pipeline.train_models \
+  --model_version 1 \
+  --n_trials 80 \
+  --cv_folds 4 \
+  --validation_dates 120 \
+  --max_iterations 3000 \
+  --early_stopping_rounds 100 \
+  --ensemble_size 3 \
+  --workers 4
+```
+
+The pipeline automatically limits CatBoost threads per worker so that outer
+multiprocessing does not oversubscribe the machine. Forecast filtering uses
+`Validation - Gini`; `--min_test_gini` remains only as a deprecated CLI alias
+for `--min_validation_gini`.
+
+Technical features include the current session's OHLCV bar, so V1-V3 forecasts
+are explicitly **after-close** signals. A pre-market deployment must use the
+previous completed bar (shift those features by one session) before training and
+inference. Every run records the ticker-universe snapshot date; until historical
+selection snapshots accumulate, the artifact marks point-in-time universe
+validation as unavailable rather than presenting the current universe as a
+historically unbiased one.
+
 ### 2. Daily Forecasts
 To generate new forecasts using the latest available data, run the daily forecast script. This is intended to be executed on a regular, daily basis:
 

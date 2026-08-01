@@ -147,21 +147,21 @@ def run_step(step_num, args):
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 9:
         cmd.extend(["--model_version", '2'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 10:
         cmd.extend(["--model_version", '3'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 11:
         cmd.extend(["--model_versions", '1,2,3'])
@@ -183,14 +183,14 @@ def run_step(step_num, args):
         cmd.extend(["--windows", '5'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(5))])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
 
     elif step_num == 15:
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(10))])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
 
     try:
         subprocess.run(cmd, check=True)
@@ -244,7 +244,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run:
+    for step_num in steps_to_run[5:6]:
         success = run_step(step_num, args)
 
         if not success:

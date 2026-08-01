@@ -99,6 +99,37 @@ def get_model_dir(version: int, label_type: str) -> Path:
 def get_model_path(version: int, label_type: str, identifier: str, window: Union[int, str]) -> Path:
     return get_model_dir(version, label_type) / f"{identifier}-{_format_window(window)}.pkl"
 
+def get_model_artifact_dir(version: int, label_type: str) -> Path:
+    return get_model_dir(version, label_type) / "artifacts"
+
+def get_model_artifact_path(
+    version: int,
+    label_type: str,
+    identifier: str,
+    window: Union[int, str],
+    artifact: str,
+    extension: str,
+) -> Path:
+    filename = f"{identifier}-{_format_window(window)}-{artifact}.{extension}"
+    return get_model_artifact_dir(version, label_type) / filename
+
+def get_tuning_study_dir(version: int) -> Path:
+    return STOCK_DIR / "tuning_studies" / f"model_v{version}"
+
+def get_tuning_study_path(
+    version: int,
+    identifier: str,
+    target_column: str,
+) -> Path:
+    def safe_name(value: str) -> str:
+        return "".join(
+            character if character.isalnum() else "_" for character in value
+        ).strip("_")
+
+    return get_tuning_study_dir(version) / (
+        f"{safe_name(identifier)}-{safe_name(target_column)}.sqlite3"
+    )
+
 def get_model_performance_base_dir(version: int) -> Path:
     return STOCK_DIR / f"model_v{version}" / "performance"
 
