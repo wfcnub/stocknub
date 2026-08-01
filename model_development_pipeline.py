@@ -244,7 +244,7 @@ def main():
     print(f"Steps to run: {steps_to_run}")
     
     failed_steps = []
-    for step_num in steps_to_run[5:6]:
+    for step_num in steps_to_run:
         success = run_step(step_num, args)
 
         if not success:
