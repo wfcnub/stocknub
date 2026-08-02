@@ -11,8 +11,13 @@ class TechnicalService:
         
     def get_lagged_technical_indicators(self, ticker: str) -> dict:
         df = self.repository.get_technical_indicators(ticker)
-                    
-        selected_date = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        if date.today().weekday() == 0:
+            selected_date = (date.today() - timedelta(days=3)).strftime('%Y-%m-%d')
+        elif 1 <= date.today().weekday() <= 5:
+            selected_date = (date.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+        elif date.today().weekday() == 6:
+            selected_date = (date.today() - timedelta(days=2)).strftime('%Y-%m-%d')
 
         if selected_date not in df['Date'].values:
             raise ValueError("Latest date not found in data")
