@@ -3,7 +3,6 @@ from pathlib import Path
 
 from selectTickerToProcess.config import SelectionConfig
 from selectTickerToProcess.main import build_selection_universe
-from selectTickerToProcess.validation import append_selection_history
 from utils import paths
 
 
@@ -119,7 +118,6 @@ def main() -> None:
             f"Audit saved to {args.audit_output_path}."
         )
 
-    append_selection_history(audit, args.audit_history_path)
     args.selected_output_path.parent.mkdir(parents=True, exist_ok=True)
     selected.to_csv(args.selected_output_path, index=False)
     tactical = selected.sort_values(

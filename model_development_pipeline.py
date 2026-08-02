@@ -213,6 +213,14 @@ def main():
         action='store_true',
         help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
     )
+    parser.add_argument(
+        "--start_step",
+        dest="start_step",
+        type=int,
+        choices=sorted(PIPELINE_STEPS),
+        default=min(PIPELINE_STEPS),
+        help="Pipeline step to start from (default: %(default)s)",
+    )
 
     parser.set_defaults(with_docker=False)
 
@@ -236,7 +244,11 @@ def main():
         shutil.copytree(base_dir, dev_dir)
         print("Warning: data/prod does not exist. copied data/base to data/dev")
 
-    steps_to_run = sorted(PIPELINE_STEPS.keys())
+    steps_to_run = [
+        step_num
+        for step_num in sorted(PIPELINE_STEPS)
+        if step_num >= args.start_step
+    ]
 
     print("\n" + "=" * 80)
     print("STOCKNUB DATA PIPELINE")
