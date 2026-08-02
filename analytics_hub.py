@@ -10,6 +10,7 @@ from analyticsHub.main import (
 )
 
 from analyticsHub.helper import (
+    _get_available_score_windows,
     _get_chosen_performance_df,
     _visualize_micro_outlook_boxplot
 )
@@ -36,6 +37,12 @@ st.sidebar.info("The Model Used for __Daily Recommendations__ and __Trading Simu
 
 if app_mode == "1. Pre-Market Outlook":
     st.title("Pre-Market Outlook")
+    if not pre_market_outlook:
+        st.warning(
+            "Pre-market outlook data is not available. Run the pre-market "
+            "outlook pipeline stage and refresh this page."
+        )
+        st.stop()
     st.markdown(f"**Generated at:** {pre_market_outlook['timestamp']}")
 
     overall = pre_market_outlook["overall_outlook"]
@@ -137,6 +144,13 @@ if app_mode == "1. Pre-Market Outlook":
 elif app_mode == "2. Model Performance":
     st.title("Model Performance")
     st.markdown("Inspect The Performance for Each Variations of the Model")
+
+    if all_df.empty:
+        st.warning(
+            "No model performance metrics are available. Train the models and "
+            "refresh this page."
+        )
+        st.stop()
     
     chosen_model_versions = st.multiselect("Pick the Model's Version", all_df['model_version'].unique())
     chosen_model_label_types = st.multiselect("Pick the Model's Label Type", all_df['label_type'].unique())
@@ -150,7 +164,20 @@ elif app_mode == "2. Model Performance":
 elif app_mode == "3. Trading Simulation":
     st.title("Trading Simulation")
 
-    trading_simulation_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in paths.get_forecast_base_dir(4, 'medianGain').iterdir()])
+    trading_windows = _get_available_score_windows(
+        require_simulation=True,
+        require_split=True,
+    )
+    if not trading_windows:
+        st.warning(
+            "No complete score, simulation, and split artifacts are available. "
+            "Run the score-generation pipeline stage and refresh this page."
+        )
+        st.stop()
+    trading_simulation_rolling_window = st.selectbox(
+        "Pick the Forecast Rolling Window",
+        trading_windows,
+    )
 
     trading_simulation_path = paths.get_trading_simulation_path(trading_simulation_rolling_window)
     trading_simulation_df = pd.read_csv(trading_simulation_path)
@@ -175,8 +202,20 @@ elif app_mode == "3. Trading Simulation":
 
 elif app_mode == "4. Daily Recommendation":
     st.title("Daily Recommendation")
-        
-    daily_recommend_rolling_window = st.selectbox("Pick the Forecast Rolling Window", [val.stem for val in paths.get_forecast_base_dir(4, 'medianGain').iterdir()])
+
+    recommendation_windows = _get_available_score_windows(
+        require_simulation=True,
+    )
+    if not recommendation_windows:
+        st.warning(
+            "No complete score and simulation artifacts are available. Run "
+            "the score-generation pipeline stage and refresh this page."
+        )
+        st.stop()
+    daily_recommend_rolling_window = st.selectbox(
+        "Pick the Forecast Rolling Window",
+        recommendation_windows,
+    )
     
     forecast_df, forecast_date = get_daily_recommendations(daily_recommend_rolling_window)
 

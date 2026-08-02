@@ -14,6 +14,12 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
     model_version (int): The version of model currently being developed
     label_types (list): A list containing all the types of label
     """
+    failure_path = (
+        paths.get_model_performance_base_dir(model_version) / "failures.csv"
+    )
+    if failure_path.exists():
+        failure_path.unlink()
+
     for label_type in label_types:
         model_pkl_folder_path = paths.get_model_dir(model_version, label_type)
         model_performance_folder_path = paths.get_model_performance_dir(model_version, label_type)

@@ -224,11 +224,16 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(
     """
     val_indices = np.where(predefined_split_index.test_fold == 0)[0]
     train_indices = np.where(predefined_split_index.test_fold != 0)[0]
+    # PredefinedSplit exposes row positions.  V4 training data is assembled by
+    # concatenating ticker frames, so its pandas index is not guaranteed to be
+    # a zero-based RangeIndex.  Convert the target to an ndarray before using
+    # split positions to avoid pandas interpreting them as index labels.
+    target_values = np.asarray(train_target)
 
-    if len(np.unique(train_target[train_indices])) == 1:
+    if len(np.unique(target_values[train_indices])) == 1:
         raise ValueError("The train target contains only one unique value.")
 
-    if len(np.unique(train_target[val_indices])) == 1:
+    if len(np.unique(target_values[val_indices])) == 1:
         raise ValueError("The validation target contains only one unique value")
     scoring_method = 'roc_auc'
 

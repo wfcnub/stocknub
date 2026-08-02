@@ -230,19 +230,19 @@ def main():
     dev_dir = Path('data/dev')
     base_dir = Path('data/base')
     
-    print("\n" + "=" * 80)
-    print("SYNCING DEV DIRECTORY FROM PROD")
-    print("=" * 80)
+    # print("\n" + "=" * 80)
+    # print("SYNCING DEV DIRECTORY FROM PROD")
+    # print("=" * 80)
     
-    if dev_dir.exists():
-        shutil.rmtree(dev_dir)
+    # if dev_dir.exists():
+    #     shutil.rmtree(dev_dir)
         
-    if prod_dir.exists():
-        shutil.copytree(prod_dir, dev_dir)
-        print("Successfully copied data/prod to data/dev")
-    else:
-        shutil.copytree(base_dir, dev_dir)
-        print("Warning: data/prod does not exist. copied data/base to data/dev")
+    # if prod_dir.exists():
+    #     shutil.copytree(prod_dir, dev_dir)
+    #     print("Successfully copied data/prod to data/dev")
+    # else:
+    #     shutil.copytree(base_dir, dev_dir)
+    #     print("Warning: data/prod does not exist. copied data/base to data/dev")
 
     steps_to_run = [
         step_num

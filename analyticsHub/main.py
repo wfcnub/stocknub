@@ -7,7 +7,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from analyticsHub.helper import (
-    _get_chosen_performance_df,
     _generate_score_data,
     _generate_close_data,
     _generate_buy_sell_percentage_data,
@@ -24,8 +23,14 @@ def get_pre_market_outlook() -> dict | None:
         dict | None: The parsed outlook dictionary, or None if no file exists
     """
     json_file_path = paths.get_pre_market_outlook_path()
-    with open(json_file_path, "r") as f:
-        return json.load(f)
+    if not json_file_path.is_file():
+        return None
+
+    try:
+        with open(json_file_path, "r") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
 
 @st.cache_data
 def get_all_performances() -> pd.DataFrame:
@@ -35,35 +40,57 @@ def get_all_performances() -> pd.DataFrame:
     Returns:
         pd.DataFrame: A pandas dataframe containing the overview of the model performance
     """
-    model_versions = [1, 2, 3, 4]
-    
-    all_performance_paths = []
-    for model_version in model_versions:
-        model_performance_path = paths.get_model_performance_base_dir(model_version)
-        _ = [[all_performance_paths.append(f) for f in file.iterdir()] for file in model_performance_path.iterdir()]  
-
     model_version_mapping = {
-        'model_v1': 'Specific Ticker Model',
-        'model_v2': 'Specific Industry Model',
-        'model_v3': 'IHSG Model',
-        'model_v4': 'Ensemble of Specific Ticker, Specific Industry, and IHSG Model'
-        
+        1: 'Specific Ticker Model',
+        2: 'Specific Industry Model',
+        3: 'IHSG Model',
+        4: 'Ensemble of Specific Ticker, Specific Industry, and IHSG Model',
     }
-    all_model_versions = [model_version_mapping[performance_path.parts[2]] for performance_path in all_performance_paths]
-    all_label_types = [case_conversion.separate_words(performance_path.parts[-2]).title() for performance_path in all_performance_paths]
-    all_windows = [performance_path.stem for performance_path in all_performance_paths]
-    all_performance_df = [pd.read_csv(performance_path).describe() for performance_path in all_performance_paths]
+    records = []
+    for model_version, display_name in model_version_mapping.items():
+        performance_dir = paths.get_model_performance_base_dir(model_version)
+        if not performance_dir.is_dir():
+            continue
 
-    all_df = pd.DataFrame({
-        'model_version': all_model_versions,
-        'label_type': all_label_types,
-        'window': all_windows,
-        'performance_df': all_performance_df
-    })
+        # Performance metrics live one directory below their label type.
+        # Restricting discovery to this shape excludes failures.csv and other
+        # non-metric artifacts in the performance root.
+        for performance_path in sorted(performance_dir.glob("*/*.csv")):
+            performance = pd.read_csv(performance_path)
+            if performance.empty:
+                continue
+            numeric_performance = performance.select_dtypes(include=[np.number])
+            summary = (
+                numeric_performance.describe()
+                if not numeric_performance.empty
+                else performance.describe(include="all")
+            )
+            label_type = case_conversion.separate_words(
+                performance_path.parent.name
+            ).title()
+            window = performance_path.stem
+            records.append(
+                {
+                    'model_version': display_name,
+                    'label_type': label_type,
+                    'window': window,
+                    'performance_df': summary,
+                    'model_identifier': ' - '.join(
+                        (display_name, label_type, window)
+                    ),
+                }
+            )
 
-    all_df['model_identifier'] = [' - '.join(val) for val in all_df[['model_version', 'label_type', 'window']].values]
-
-    return all_df
+    return pd.DataFrame.from_records(
+        records,
+        columns=[
+            'model_version',
+            'label_type',
+            'window',
+            'performance_df',
+            'model_identifier',
+        ],
+    )
 
 @st.cache_data
 def get_daily_recommendations(rolling_window: str) -> (pd.DataFrame, str):
@@ -74,7 +101,7 @@ def get_daily_recommendations(rolling_window: str) -> (pd.DataFrame, str):
         (pd.DataFrame, str): A tuple containing the daily recommendations dataframe and the forecast date
     """
     score_df, score_date = _generate_score_data(rolling_window)
-    all_close_df = _generate_close_data()
+    all_close_df = _generate_close_data(as_of_date=score_date)
     buy_percentage, sell_percentage = _generate_buy_sell_percentage_data(rolling_window)
     recommendation_df = _generate_recommendation_data(score_df, all_close_df, buy_percentage, sell_percentage, rolling_window)
 
@@ -97,11 +124,18 @@ def visualize_performance_metric_distribution_for_each_forecast_threshold(tradin
     boxplot_df = pd.DataFrame()
     all_score_thresholds = [0.0, 0.2, 0.4, 0.6, 0.8, 1]
     
-    for lower_score_thres, upper_score_thres in zip(all_score_thresholds[:-1], all_score_thresholds[1:]):
-        thres_bool = np.all((
-            trading_simulation_df[f'Score {rolling_window}'] >= lower_score_thres,
-            trading_simulation_df[f'Score {rolling_window}'] < upper_score_thres
-        ), axis=0)
+    threshold_pairs = list(
+        zip(all_score_thresholds[:-1], all_score_thresholds[1:])
+    )
+    for index, (lower_score_thres, upper_score_thres) in enumerate(threshold_pairs):
+        upper_bound = (
+            trading_simulation_df[f'Score {rolling_window}'] <= upper_score_thres
+            if index == len(threshold_pairs) - 1
+            else trading_simulation_df[f'Score {rolling_window}'] < upper_score_thres
+        )
+        thres_bool = (
+            trading_simulation_df[f'Score {rolling_window}'] >= lower_score_thres
+        ) & upper_bound
     
         temp_boxplot_df = trading_simulation_df.loc[thres_bool, [performance_metric]]
         temp_boxplot_df['Score Threshold'] = f'{lower_score_thres} <= x < {upper_score_thres}'
@@ -169,9 +203,9 @@ def visualize_impact_of_threshold_on_performance_metric(trading_simulation_df: p
     fig.add_trace(go.Scatter(x=forecast_threshold, y=average_performance, name=f'Average {performance_metric}', mode='lines'))
     fig.add_trace(go.Scatter(x=forecast_threshold, y=max_performance, name=f'Max {performance_metric}', mode='lines'))
     fig.add_trace(go.Scatter(x=forecast_threshold, y=min_performance, name=f'Min {performance_metric}', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_075_performance, name=f'Quantile 0.25 {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_075_performance, name=f'Quantile 0.75 {performance_metric}', mode='lines'))
     fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_05_performance, name=f'Quantile 0.5 {performance_metric}', mode='lines'))
-    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_025_performance, name=f'Quantile 0.75 {performance_metric}', mode='lines'))
+    fig.add_trace(go.Scatter(x=forecast_threshold, y=quantile_025_performance, name=f'Quantile 0.25 {performance_metric}', mode='lines'))
 
     fig.add_hrect(y0=min_performance[0]-10, y1=0, fillcolor="red", opacity=0.1, line_width=0)
     fig.add_hrect(y0=0, y1=max_performance[0]+10, fillcolor="green", opacity=0.1, line_width=0)
