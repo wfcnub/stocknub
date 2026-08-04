@@ -152,7 +152,7 @@ def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
         temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}'])
         _, _, _, test_mask, _ = get_split_masks(temp_score_df, splits)
         
-        temp_test_score_df = temp_score_df.loc[test_mask]
+        temp_test_score_df = temp_score_df.loc[test_mask].copy()
         temp_test_score_df['Ticker'] = ticker
     
         test_score_df = pd.concat((test_score_df, temp_test_score_df))

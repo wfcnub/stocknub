@@ -93,14 +93,17 @@ def get_all_performances() -> pd.DataFrame:
     )
 
 @st.cache_data
-def get_daily_recommendations(rolling_window: str) -> (pd.DataFrame, str):
+def get_daily_recommendations(
+    rolling_window: str,
+    market_date: str | None = None,
+) -> tuple[pd.DataFrame, str]:
     """
     Get the daily recommendations
 
     Returns:
         (pd.DataFrame, str): A tuple containing the daily recommendations dataframe and the forecast date
     """
-    score_df, score_date = _generate_score_data(rolling_window)
+    score_df, score_date = _generate_score_data(rolling_window, market_date)
     all_close_df = _generate_close_data(as_of_date=score_date)
     buy_percentage, sell_percentage = _generate_buy_sell_percentage_data(rolling_window)
     recommendation_df = _generate_recommendation_data(score_df, all_close_df, buy_percentage, sell_percentage, rolling_window)

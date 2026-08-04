@@ -91,7 +91,10 @@ def _apply_bin_scores(val):
             return i
     return len(bin_scores)
 
-def _generate_score_data(rolling_window: str) -> (pd.DataFrame, str):
+def _generate_score_data(
+    rolling_window: str,
+    market_date: str | None = None,
+) -> tuple[pd.DataFrame, str]:
     """
     (Internal Helper) Generate the score data for daily recommendations
     """
@@ -104,12 +107,30 @@ def _generate_score_data(rolling_window: str) -> (pd.DataFrame, str):
     
     score_df = pd.DataFrame()
     for ticker, file in zip(all_ticker, score_paths):
-        temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}']).tail(1)
+        temp_score_df = pd.read_csv(
+            file,
+            usecols=['Date', f'Score {rolling_window}'],
+        )
+        temp_score_df['Date'] = temp_score_df['Date'].astype(str)
+        if market_date is not None:
+            temp_score_df = temp_score_df.loc[
+                temp_score_df['Date'] == market_date
+            ]
+        else:
+            temp_score_df = temp_score_df.tail(1)
+        if temp_score_df.empty:
+            continue
+        temp_score_df = temp_score_df.tail(1).copy()
         temp_score_df['Ticker'] = ticker
         score_df = pd.concat((score_df, temp_score_df), ignore_index=True)
-    
-    score_date = score_df['Date'].max()
-    
+
+    if score_df.empty:
+        requested_date = market_date or "the latest available date"
+        raise ValueError(
+            f"No score data found for {requested_date} in the {rolling_window} window"
+        )
+
+    score_date = market_date or score_df['Date'].max()
     score_df = score_df[score_df['Date'] == score_date]
     score_df.set_index('Ticker', inplace=True)
     score_df.drop(columns=['Date'], inplace=True)
@@ -131,7 +152,9 @@ def _generate_close_data(as_of_date: str | None = None) -> pd.DataFrame:
     for ticker, file in zip(all_tickers, label_paths):
         close_df = pd.read_csv(file, usecols=['Date', 'Close'])
         if as_of_date is not None:
-            close_df = close_df[close_df['Date'].astype(str) <= str(as_of_date)]
+            close_df = close_df[
+                close_df['Date'].astype(str) == str(as_of_date)
+            ]
         close_df = close_df.tail(1)
         if close_df.empty:
             continue
@@ -140,7 +163,7 @@ def _generate_close_data(as_of_date: str | None = None) -> pd.DataFrame:
 
     if all_close_df.empty:
         raise ValueError(
-            f"No close prices are available on or before {as_of_date}"
+            f"No close prices are available for {as_of_date}"
         )
 
     all_close_df.drop(columns=['Date'], inplace=True)

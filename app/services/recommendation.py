@@ -1,6 +1,9 @@
+from datetime import date, timedelta
+import math
+
 from app.repositories.recommendation import RecommendationRepository
 from app.schemas.recommendation import DailyRecommendationResponse, RecommendationItem
-import math
+
 
 class RecommendationService:
     """
@@ -9,8 +12,29 @@ class RecommendationService:
     def __init__(self, repository: RecommendationRepository):
         self.repository = repository
 
+    def _get_latest_market_date(self) -> str:
+        today = date.today()
+
+        if today.weekday() == 0:
+            selected_date = today - timedelta(days=3)
+        elif 1 <= today.weekday() <= 5:
+            selected_date = today - timedelta(days=1)
+        else:
+            selected_date = today - timedelta(days=2)
+
+        return selected_date.strftime('%Y-%m-%d')
+
     def get_daily_recommendations(self, rolling_window: str) -> DailyRecommendationResponse:
-        df, score_date = self.repository.get_daily_recommendations(rolling_window)
+        selected_date = self._get_latest_market_date()
+        df, score_date = self.repository.get_daily_recommendations(
+            rolling_window,
+            selected_date,
+        )
+
+        if str(score_date) != selected_date:
+            raise ValueError(
+                f"Expected recommendations for {selected_date}, got {score_date}"
+            )
         
         df = df.reset_index()
         records = df.to_dict('records')

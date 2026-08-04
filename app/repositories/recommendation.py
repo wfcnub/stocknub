@@ -14,5 +14,9 @@ class RecommendationRepository:
     """
     Acts as a repository to fetch data from the analyticsHub logic.
     """
-    def get_daily_recommendations(self, rolling_window: str) -> Tuple[pd.DataFrame, str]:
-        return get_daily_recommendations(rolling_window)
+    def get_daily_recommendations(
+        self,
+        rolling_window: str,
+        market_date: str,
+    ) -> Tuple[pd.DataFrame, str]:
+        return get_daily_recommendations(rolling_window, market_date)
