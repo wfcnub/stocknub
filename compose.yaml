@@ -4,7 +4,7 @@ services:
     image: dotnet-8-python-310
     volumes:
       - .:/app
-    shm_size: '4gb'
+    shm_size: '6gb'
   initialize-jupyter-lab:
     build: .
     image: dotnet-8-python-310
