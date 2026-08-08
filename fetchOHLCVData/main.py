@@ -18,7 +18,7 @@ def fetch_ticker_data(args_tuple):
     ticker, start_date, end_date = args_tuple
 
     try:
-        for _ in range(3):
+        for _ in range(10):
             try:
                 df = _fetch_ticker_data(ticker, start_date=start_date, end_date=end_date)
             
@@ -33,7 +33,7 @@ def fetch_ticker_data(args_tuple):
             except:
                 time.sleep(10)
             
-            raise Exception(f"Failed to fetch {ticker} ticker data after 3 attempts")
+            raise Exception(f"Failed to fetch {ticker} ticker data after 10 attempts")
             
     except Exception as e:
         return (
