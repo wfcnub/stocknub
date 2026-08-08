@@ -221,33 +221,56 @@ def main():
         default=min(PIPELINE_STEPS),
         help="Pipeline step to start from (default: %(default)s)",
     )
+    parser.add_argument(
+        "--end_step",
+        dest="end_step",
+        type=int,
+        choices=sorted(PIPELINE_STEPS),
+        default=max(PIPELINE_STEPS),
+        help="Pipeline step to end at, inclusive (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--skip_prod_sync",
+        dest="bypass_copy_from_prod",
+        action="store_true",
+        help="Keep the existing data/dev directory instead of recreating it from data/prod",
+    )
 
     parser.set_defaults(with_docker=False)
 
     args = parser.parse_args()
 
+    if args.end_step < args.start_step:
+        parser.error("--end_step must be greater than or equal to --start_step")
+
     prod_dir = Path('data/prod')
     dev_dir = Path('data/dev')
     base_dir = Path('data/base')
-    
-    # print("\n" + "=" * 80)
-    # print("SYNCING DEV DIRECTORY FROM PROD")
-    # print("=" * 80)
-    
-    # if dev_dir.exists():
-    #     shutil.rmtree(dev_dir)
-        
-    # if prod_dir.exists():
-    #     shutil.copytree(prod_dir, dev_dir)
-    #     print("Successfully copied data/prod to data/dev")
-    # else:
-    #     shutil.copytree(base_dir, dev_dir)
-    #     print("Warning: data/prod does not exist. copied data/base to data/dev")
+
+    if args.bypass_copy_from_prod:
+        print("\n" + "=" * 80)
+        print("BYPASSING DEV DIRECTORY SYNC FROM PROD")
+        print("=" * 80)
+        print("Keeping the existing data/dev directory")
+    else:
+        print("\n" + "=" * 80)
+        print("SYNCING DEV DIRECTORY FROM PROD")
+        print("=" * 80)
+
+        if dev_dir.exists():
+            shutil.rmtree(dev_dir)
+
+        if prod_dir.exists():
+            shutil.copytree(prod_dir, dev_dir)
+            print("Successfully copied data/prod to data/dev")
+        else:
+            shutil.copytree(base_dir, dev_dir)
+            print("Warning: data/prod does not exist. copied data/base to data/dev")
 
     steps_to_run = [
         step_num
         for step_num in sorted(PIPELINE_STEPS)
-        if step_num >= args.start_step
+        if args.start_step <= step_num <= args.end_step
     ]
 
     print("\n" + "=" * 80)

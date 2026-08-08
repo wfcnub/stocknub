@@ -35,7 +35,19 @@ Resume from a numbered step:
 python model_development_pipeline.py --start_step 5
 ```
 
-`--start_step` accepts 0–15 and runs that step and every later step; it does not run only one step.
+Run only an inclusive range of steps:
+
+```bash
+python model_development_pipeline.py --start_step 5 --end_step 10
+```
+
+Keep the current `data/dev` workspace instead of recreating it from production:
+
+```bash
+python model_development_pipeline.py --bypass_copy_from_prod
+```
+
+`--start_step` and `--end_step` accept 0–15. The end step must be greater than or equal to the start step. `--bypass_copy_from_prod` (also available as `--skip_prod_sync`) leaves the existing development directory untouched before executing the selected steps.
 
 ## Ordered execution
 
@@ -56,8 +68,8 @@ python model_development_pipeline.py --start_step 5
 ## Workspace lifecycle
 
 1. The script sets `APP_ENV=dev`, so all `utils.paths` calls target `data/dev`.
-2. Before any selected step runs, existing `data/dev` is deleted.
-3. `data/prod` is copied to `data/dev`; if production does not exist, `data/base` is copied instead.
+2. Before any selected step runs, existing `data/dev` is deleted unless `--bypass_copy_from_prod` is set.
+3. `data/prod` is copied to `data/dev`; if production does not exist, `data/base` is copied instead. This synchronization is skipped in bypass mode.
 4. Each pipeline module runs in a new Python subprocess using the current interpreter.
 5. Execution stops when a subprocess returns non-zero.
 6. If all requested steps return zero, existing `data/prod` is deleted and the completed `data/dev` tree is copied into its place.
@@ -106,4 +118,3 @@ Before treating a promoted run as healthy, confirm:
 3. Every requested model performance CSV exists and any `failures.csv` is understood.
 4. Forecast success totals and combined-dataset ticker counts match expectations.
 5. V4 performance and final 5-day/10-day forecast directories are populated.
-
