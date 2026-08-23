@@ -9,7 +9,7 @@ services:
     build: .
     image: dotnet-8-python-310
     ports:
-      - "8888:8888"
+      - "127.0.0.1:8888:8888"
     volumes:
       - .:/app
     tty: true
