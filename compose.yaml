@@ -23,3 +23,12 @@ services:
       - .:/app
     tty: true
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  initialize-analytics-hub:
+    build: .
+    image: dotnet-8-python-310
+    ports:
+      - "127.0.0.1:8501:8501"
+    volumes:
+      - .:/app
+    tty: true
+    command: streamlit run analytics_hub.py --server.address=0.0.0.0 --server.port=8501
