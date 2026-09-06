@@ -93,6 +93,7 @@ def run_step(step_num, args):
         
     if step_num == 0:
         cmd.extend(["--start_date", '2020-01-01'])
+        cmd.extend("--process_selected_ticker")
 
     elif step_num == 1:
         pass
