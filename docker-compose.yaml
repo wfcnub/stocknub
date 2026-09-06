@@ -22,11 +22,11 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${API_PORT:-8002}:${API_PORT:-8002}"
+      - "127.0.0.1:${API_PORT:-8002}:8000"
     volumes:
       - .:/app
     tty: true
-    command: uvicorn main:app --host 0.0.0.0 --port ${API_PORT:-8002} --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
   initialize-analytics-hub:
     build: .
     image: dotnet-8-python-310
