@@ -15,3 +15,5 @@ experiments/
 
 data/split_dates_*.json
 data/selected_ticker_and_industry_list.csv
+
+.env

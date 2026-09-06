@@ -2,6 +2,8 @@ services:
   pipeline-service:
     build: .
     image: dotnet-8-python-310
+    env_file:
+      - .env
     volumes:
       - .:/app
     shm_size: '6gb'
@@ -17,12 +19,14 @@ services:
   initialize-fastapi:
     build: .
     image: dotnet-8-python-310
+    env_file:
+      - .env
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${API_PORT:-8002}:${API_PORT:-8002}"
     volumes:
       - .:/app
     tty: true
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port ${API_PORT:-8002} --reload
   initialize-analytics-hub:
     build: .
     image: dotnet-8-python-310
