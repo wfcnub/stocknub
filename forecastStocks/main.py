@@ -1,6 +1,7 @@
 import pickle
 import pandas as pd
 from utils.pipeline import get_label_config
+from trainModels.features import add_cross_sectional_features, attach_ticker_metadata
 
 def process_single_ticker(args_tuple):
     """
@@ -24,7 +25,7 @@ def process_single_ticker(args_tuple):
 
         if not model_path.exists():
             return (
-                identifier,
+                ticker,
                 label_type,
                 window,
                 False,
@@ -72,7 +73,14 @@ def process_single_ticker(args_tuple):
                 None,
             )
 
-        missing_features = [col for col in feature_columns if col not in csv_data.columns]
+        prediction_data = csv_data
+        if model_version in [1, 2, 3]:
+            prediction_data = attach_ticker_metadata(csv_data, ticker)
+            prediction_data, _ = add_cross_sectional_features(prediction_data)
+        expected_features = list(getattr(model, "feature_names_", feature_columns))
+        missing_features = [
+            col for col in expected_features if col not in prediction_data.columns
+        ]
         if missing_features:
             return (
                 ticker,
@@ -86,7 +94,7 @@ def process_single_ticker(args_tuple):
         forecast_column_name = f"Forecast {positive_label} {window}dd"
         positive_label_index = list(model.classes_).index(positive_label)
 
-        forecast_proba = model.predict_proba(csv_data[feature_columns].values) \
+        forecast_proba = model.predict_proba(prediction_data[expected_features]) \
                                 [:, positive_label_index]
 
         csv_data[forecast_column_name] = forecast_proba

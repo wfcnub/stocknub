@@ -1,5 +1,6 @@
 import shutil
 import pickle
+import json
 import numpy as np
 import pandas as pd
 
@@ -13,6 +14,12 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
     model_version (int): The version of model currently being developed
     label_types (list): A list containing all the types of label
     """
+    failure_path = (
+        paths.get_model_performance_base_dir(model_version) / "failures.csv"
+    )
+    if failure_path.exists():
+        failure_path.unlink()
+
     for label_type in label_types:
         model_pkl_folder_path = paths.get_model_dir(model_version, label_type)
         model_performance_folder_path = paths.get_model_performance_dir(model_version, label_type)
@@ -21,6 +28,9 @@ def _ensure_directories_exist(model_version: int, label_types: list) -> None:
             shutil.rmtree(model_pkl_folder_path)
 
         model_pkl_folder_path.mkdir(parents=True, exist_ok=True)
+        paths.get_model_artifact_dir(model_version, label_type).mkdir(
+            parents=True, exist_ok=True
+        )
         
         if model_performance_folder_path.exists():
             shutil.rmtree(model_performance_folder_path)
@@ -46,7 +56,37 @@ def _save_model(model: any, model_version: int, label_type: str, identifier: str
     
     return
 
-def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFrame, test_metrics: pd.DataFrame, threshold_col: str) -> pd.DataFrame:
+
+def _save_training_artifacts(
+    artifacts: dict,
+    model_version: int,
+    label_type: str,
+    identifier: str,
+    window: int,
+) -> None:
+    artifact_dir = paths.get_model_artifact_dir(model_version, label_type)
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    for name, value in artifacts.items():
+        if isinstance(value, pd.DataFrame):
+            filepath = paths.get_model_artifact_path(
+                model_version, label_type, identifier, window, name, "csv"
+            )
+            value.to_csv(filepath, index=False)
+        else:
+            filepath = paths.get_model_artifact_path(
+                model_version, label_type, identifier, window, name, "json"
+            )
+            with open(filepath, "w") as file:
+                json.dump(value, file, indent=2, default=str)
+
+def _combine_metrics(
+    ticker: str,
+    model_version: int,
+    train_metrics: pd.DataFrame,
+    test_metrics: pd.DataFrame,
+    threshold_col: str,
+    validation_metrics: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """
     (Internal Helper) Combine train and test metrics into a single DataFrame row.
 
@@ -66,26 +106,45 @@ def _combine_metrics(ticker: str, model_version: int, train_metrics: pd.DataFram
     test_df = pd.DataFrame(test_metrics)
     test_df.columns = [f"Test - {col}" for col in test_df.columns]
 
-    result = pd.concat([train_df, test_df], axis=1)
+    frames = [train_df]
+    if validation_metrics is not None:
+        validation_df = pd.DataFrame(validation_metrics)
+        validation_df.columns = [f"Validation - {col}" for col in validation_df.columns]
+        frames.append(validation_df)
+    frames.append(test_df)
+    result = pd.concat(frames, axis=1)
 
     if model_version == 1:
         result.insert(0, "Ticker", ticker)
 
-        threshold_value = pd.read_csv(paths.get_label_path(ticker))[threshold_col].iloc[0]
+        threshold_value = pd.read_csv(
+            paths.get_label_path(ticker), usecols=[threshold_col], nrows=1
+        )[threshold_col].iloc[0]
         result["Threshold"] = threshold_value
 
     elif model_version in [2, 3, 4]:
-        Ticker_column = [col for col in result.columns if 'Ticker' in col]
-        threshold_column = [col for col in result.columns if 'Threshold' in col]
-
-        assert len(Ticker_column) == 2
-        assert len(threshold_column) == 2
-
-        assert np.all(result[Ticker_column[0]].values == result[Ticker_column[1]].values, axis=0)
-        assert np.all(result[threshold_column[0]].values == result[threshold_column[1]].values, axis=0)
-
-        result.insert(0, "Ticker", result[Ticker_column[0]].values)
-        result["Threshold"] = result[threshold_column[0]].values
-        result.drop(columns=Ticker_column + threshold_column, inplace=True)
+        ticker_columns = [
+            col for col in result.columns if col.split(" - ", 1)[-1] == "Ticker"
+        ]
+        threshold_columns = [
+            col for col in result.columns if col.split(" - ", 1)[-1] == "Threshold"
+        ]
+        if not ticker_columns or not threshold_columns:
+            raise ValueError("Pooled metrics must include Ticker and Threshold")
+        canonical_ticker = result[ticker_columns[0]].values
+        canonical_threshold = result[threshold_columns[0]].values
+        for column in ticker_columns[1:]:
+            if not np.array_equal(canonical_ticker, result[column].values):
+                raise ValueError("Metric rows are not aligned by ticker")
+        for column in threshold_columns[1:]:
+            if not np.allclose(
+                canonical_threshold.astype(float),
+                result[column].values.astype(float),
+                equal_nan=True,
+            ):
+                raise ValueError("Metric thresholds are not aligned")
+        result.insert(0, "Ticker", canonical_ticker)
+        result["Threshold"] = canonical_threshold
+        result.drop(columns=ticker_columns + threshold_columns, inplace=True)
     
     return result

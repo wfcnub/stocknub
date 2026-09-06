@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from generateLabels.thresholds import get_purged_training_labels
+
 def _generate_median_loss(data: pd.DataFrame, target_column: str, rolling_window: int, test_length: int = 80, val_length: int = 40) -> (np.array, float):
     """
     (Internal Helper) Calculates the median loss of a target column based on a rolling window
@@ -24,9 +26,17 @@ def _generate_median_loss(data: pd.DataFrame, target_column: str, rolling_window
     if np.isnan(median_loss).all():
         threshold = np.nan
     else:
-        test_median_loss_length = test_length
-        test_median_loss = median_loss[-1 * (test_median_loss_length + rolling_window): -rolling_window]
-        threshold = np.nanquantile(test_median_loss, 0.1)
+        training_median_loss = get_purged_training_labels(
+            median_loss,
+            rolling_window,
+            test_length,
+            val_length,
+        )
+        threshold = (
+            np.nan
+            if len(training_median_loss) == 0
+            else np.nanquantile(training_median_loss, 0.1)
+        )
 
     return (median_loss, threshold)
 

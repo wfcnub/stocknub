@@ -21,7 +21,7 @@ def check_technical_availability(
     controller: TechnicalController = Depends(get_technical_controller)
 ):
     """
-    Check if technical indicators for a given ticker are available for the lagged date (today - 1 day).
+    Check if technical indicators for a given ticker are available for the lagged date.
     """
     return controller.check_availability(ticker.upper())
 

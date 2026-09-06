@@ -93,13 +93,12 @@ def run_step(step_num, args):
         
     if step_num == 0:
         cmd.extend(["--start_date", '2020-01-01'])
-        cmd.extend(["--process_selected_ticker"])
 
     elif step_num == 1:
-        cmd.extend(["--process_selected_ticker"])
+        pass
     
     elif step_num == 2:
-        cmd.extend(["--process_selected_ticker"])
+        pass
 
     elif step_num == 3:
         cmd.extend(["--windows", '5,10'])
@@ -112,21 +111,21 @@ def run_step(step_num, args):
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 5:
         cmd.extend(["--model_version", '2'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 6:
         cmd.extend(["--model_version", '3'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 7:
         cmd.extend(["--model_versions", '1,2,3'])
@@ -143,14 +142,14 @@ def run_step(step_num, args):
         cmd.extend(["--windows", '5'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(5))])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
 
     elif step_num == 10:
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(10))])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 11:
         pass
@@ -179,12 +178,24 @@ def main():
         action='store_true',
         help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
     )
+    parser.add_argument(
+        "--start_step",
+        dest="start_step",
+        type=int,
+        choices=sorted(PIPELINE_STEPS),
+        default=min(PIPELINE_STEPS),
+        help="Pipeline step to start from (default: %(default)s)",
+    )
 
     parser.set_defaults(with_docker=False)
     
     args = parser.parse_args()
 
-    steps_to_run = sorted(PIPELINE_STEPS.keys())
+    steps_to_run = [
+        step_num
+        for step_num in sorted(PIPELINE_STEPS)
+        if step_num >= args.start_step
+    ]
 
     print("\n" + "=" * 80)
     print("STOCKNUB DATA PIPELINE")

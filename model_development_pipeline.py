@@ -27,7 +27,7 @@ PIPELINE_STEPS = {
     2: {
         "name": "Select Ticker to Process",
         "module": "pipeline.select_ticker_to_process",
-        "description": "Select Ticker to Process Based on The Recent Average Valuation",
+        "description": "Select a model-development universe using fundamental and OHLCV strength",
     },    
     3: {
         "name": "Prepare Technical Indicators",
@@ -147,21 +147,21 @@ def run_step(step_num, args):
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 9:
         cmd.extend(["--model_version", '2'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 10:
         cmd.extend(["--model_version", '3'])
         cmd.extend(["--windows", '5,10'])
         cmd.extend(["--label_types", 'median_gain,median_loss'])
         cmd.extend(["--csv_folder_path", str(paths.get_label_dir())])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 11:
         cmd.extend(["--model_versions", '1,2,3'])
@@ -183,14 +183,14 @@ def run_step(step_num, args):
         cmd.extend(["--windows", '5'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(5))])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
 
     elif step_num == 15:
         cmd.extend(["--model_version", '4'])
         cmd.extend(["--windows", '10'])
         cmd.extend(["--label_types", 'median_gain'])
         cmd.extend(["--csv_folder_path", str(paths.get_combined_forecasts_window_dir(10))])
-        cmd.extend(["--min_test_gini", '0'])
+        cmd.extend(["--min_validation_gini", '0'])
 
     try:
         subprocess.run(cmd, check=True)
@@ -213,30 +213,65 @@ def main():
         action='store_true',
         help="A boolean for stating whether the system uses docker. If True, than the program wouldn't us multiprocessing"
     )
+    parser.add_argument(
+        "--start_step",
+        dest="start_step",
+        type=int,
+        choices=sorted(PIPELINE_STEPS),
+        default=min(PIPELINE_STEPS),
+        help="Pipeline step to start from (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--end_step",
+        dest="end_step",
+        type=int,
+        choices=sorted(PIPELINE_STEPS),
+        default=max(PIPELINE_STEPS),
+        help="Pipeline step to end at, inclusive (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--skip_prod_sync",
+        dest="bypass_copy_from_prod",
+        action="store_true",
+        help="Keep the existing data/dev directory instead of recreating it from data/prod",
+    )
 
     parser.set_defaults(with_docker=False)
 
     args = parser.parse_args()
 
+    if args.end_step < args.start_step:
+        parser.error("--end_step must be greater than or equal to --start_step")
+
     prod_dir = Path('data/prod')
     dev_dir = Path('data/dev')
     base_dir = Path('data/base')
-    
-    print("\n" + "=" * 80)
-    print("SYNCING DEV DIRECTORY FROM PROD")
-    print("=" * 80)
-    
-    if dev_dir.exists():
-        shutil.rmtree(dev_dir)
-        
-    if prod_dir.exists():
-        shutil.copytree(prod_dir, dev_dir)
-        print("Successfully copied data/prod to data/dev")
-    else:
-        shutil.copytree(prod_dir, base_dir)
-        print("Warning: data/prod does not exist. copied data/base to data/dev")
 
-    steps_to_run = sorted(PIPELINE_STEPS.keys())
+    if args.bypass_copy_from_prod:
+        print("\n" + "=" * 80)
+        print("BYPASSING DEV DIRECTORY SYNC FROM PROD")
+        print("=" * 80)
+        print("Keeping the existing data/dev directory")
+    else:
+        print("\n" + "=" * 80)
+        print("SYNCING DEV DIRECTORY FROM PROD")
+        print("=" * 80)
+
+        if dev_dir.exists():
+            shutil.rmtree(dev_dir)
+
+        if prod_dir.exists():
+            shutil.copytree(prod_dir, dev_dir)
+            print("Successfully copied data/prod to data/dev")
+        else:
+            shutil.copytree(base_dir, dev_dir)
+            print("Warning: data/prod does not exist. copied data/base to data/dev")
+
+    steps_to_run = [
+        step_num
+        for step_num in sorted(PIPELINE_STEPS)
+        if args.start_step <= step_num <= args.end_step
+    ]
 
     print("\n" + "=" * 80)
     print("STOCKNUB DATA PIPELINE")

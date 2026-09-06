@@ -24,7 +24,7 @@ def _ensure_directories_exist(model_version: int, label_types: str, windows: int
         
     return
 
-def _load_model_performance(model_version: int, label_type: str, window: int, min_test_gini: float = None) -> list:
+def _load_model_performance(model_version: int, label_type: str, window: int, min_validation_gini: float = None) -> list:
     """
     (Internal Helper) Load model performance data and filter by minimum Gini.
 
@@ -32,7 +32,7 @@ def _load_model_performance(model_version: int, label_type: str, window: int, mi
         model_version (int): The version of model being developed
         label_type (str): The label used to develop the model
         window (int): The rolling window used to create the label
-        min_test_gini (float): Minimum test Gini threshold (None to include all)
+        min_validation_gini (float): Minimum OOF validation Gini threshold
 
     Returns:
         list: List of ticker codes that meet the criteria
@@ -45,15 +45,24 @@ def _load_model_performance(model_version: int, label_type: str, window: int, mi
 
     performance_df = pd.read_csv(performance_path)
 
-    if min_test_gini is not None:
-        filtered_df = performance_df[performance_df["Test - Gini"] >= min_test_gini]
-        filtered_df = filtered_df.sort_values("Test - Gini", ascending=False)
+    if min_validation_gini is not None:
+        metric_column = "Validation - Gini"
+        if metric_column not in performance_df:
+            print(
+                f"WARNING: {performance_path} predates validation metrics; "
+                "retrain before applying a performance filter"
+            )
+            return []
+        filtered_df = performance_df[
+            performance_df[metric_column] >= min_validation_gini
+        ]
+        filtered_df = filtered_df.sort_values(metric_column, ascending=False)
         return filtered_df["Ticker"].unique().tolist()
     else:
         return performance_df["Ticker"].unique().tolist()
 
 
-def _get_filtered_ticker_list(model_version: int, label_types: str, windows: int, min_test_gini: float = None) -> list:
+def _get_filtered_ticker_list(model_version: int, label_types: str, windows: int, min_validation_gini: float = None) -> list:
     """
     (Internal Helper) Get intersection of ticker codes that meet criteria across all label types and windows.
 
@@ -61,7 +70,7 @@ def _get_filtered_ticker_list(model_version: int, label_types: str, windows: int
         model_version (int): The version of model being developed
         label_types (str): The label used to develop the model
         windows (int): The rolling window used to create the label
-        min_test_gini (float): Minimum test Gini threshold (None to include all)
+        min_validation_gini (float): Minimum OOF validation Gini threshold
 
     Returns:
         list: List of ticker codes that have models meeting criteria for all combinations
@@ -70,7 +79,9 @@ def _get_filtered_ticker_list(model_version: int, label_types: str, windows: int
 
     for label_type in label_types:
         for window in windows:
-            ticker_list = _load_model_performance(model_version, label_type, window, min_test_gini)
+            ticker_list = _load_model_performance(
+                model_version, label_type, window, min_validation_gini
+            )
             if ticker_list:
                 all_ticker_sets.append(set(ticker_list))
 

@@ -25,4 +25,5 @@ dependencies:
     - yfinance==0.2.66
     - openpyxl==3.1.5
     - jupyterlab==4.5.4
+    - optuna==4.8.0
 prefix: /Users/ariabagusmustikoatmodjo/miniconda3/envs/base_310

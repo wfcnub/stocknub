@@ -36,10 +36,12 @@ def main():
     )
 
     parser.add_argument(
+        "--min_validation_gini",
         "--min_test_gini",
+        dest="min_validation_gini",
         type=float,
         default=None,
-        help="Minimum test Gini coefficient for model filtering (default: None, use all models)",
+        help="Minimum OOF validation Gini for filtering; --min_test_gini is a deprecated alias",
     )
 
     parser.add_argument(
@@ -59,8 +61,8 @@ def main():
     parser.add_argument(
         "--workers",
         type=int,
-        default=cpu_count(),
-        help="Number of parallel workers (default: CPU count)",
+        default=min(4, cpu_count()),
+        help="Number of parallel workers (default: min(4, CPU count))",
     )
 
     args = parser.parse_args()
@@ -88,12 +90,17 @@ def main():
         print(f"Using {len(feature_columns)} forecasts as features")
 
     print("\nFinding ticker with models meeting criteria...")
-    if args.min_test_gini is not None:
-        print(f"   Min Test Gini: {args.min_test_gini}")
+    if args.min_validation_gini is not None:
+        print(f"   Min Validation Gini: {args.min_validation_gini}")
     else:
-        print("   Min Test Gini: None (using all available models)")
+        print("   Min Validation Gini: None (using all available models)")
 
-    ticker_list = _get_filtered_ticker_list(args.model_version, label_types, windows, args.min_test_gini)
+    ticker_list = _get_filtered_ticker_list(
+        args.model_version,
+        label_types,
+        windows,
+        args.min_validation_gini,
+    )
 
     if not ticker_list:
         print("ERROR: No ticker found meeting the criteria")

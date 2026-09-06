@@ -64,6 +64,41 @@ python model_development_pipeline.py
 docker compose run --rm pipeline-service python model_development_pipeline.py --with_docker
 ```
 
+CatBoost V1-V3 development uses a locked final test period. Hyperparameters are
+selected by one seeded Optuna study over purged expanding-window folds; the test
+period is scored only after selection. Each fitted model also stores out-of-fold
+calibration, a validation-tuned decision threshold, its selected features, and
+the exact fold/trial history under the model's `artifacts` directory.
+Optuna checkpoints studies under `stock/tuning_studies`; an interrupted run or
+an identical rerun resumes instead of discarding completed trials.
+
+For a focused training run, the principal compute controls are:
+
+```bash
+python -m pipeline.train_models \
+  --model_version 1 \
+  --n_trials 80 \
+  --cv_folds 4 \
+  --validation_dates 120 \
+  --max_iterations 3000 \
+  --early_stopping_rounds 100 \
+  --ensemble_size 3 \
+  --workers 4
+```
+
+The pipeline automatically limits CatBoost threads per worker so that outer
+multiprocessing does not oversubscribe the machine. Forecast filtering uses
+`Validation - Gini`; `--min_test_gini` remains only as a deprecated CLI alias
+for `--min_validation_gini`.
+
+Technical features include the current session's OHLCV bar, so V1-V3 forecasts
+are explicitly **after-close** signals. A pre-market deployment must use the
+previous completed bar (shift those features by one session) before training and
+inference. Every run records the ticker-universe snapshot date; until historical
+selection snapshots accumulate, the artifact marks point-in-time universe
+validation as unavailable rather than presenting the current universe as a
+historically unbiased one.
+
 ### 2. Daily Forecasts
 To generate new forecasts using the latest available data, run the daily forecast script. This is intended to be executed on a regular, daily basis:
 
@@ -75,6 +110,42 @@ python daily_forecasts.py
 **Using Docker:**
 ```bash
 docker compose run --rm pipeline-service python daily_forecasts.py --with_docker
+```
+
+### Ticker selection
+
+The model-development pipeline selects a configurable universe using four stages:
+historical OHLCV/data-quality gates, local traded-value gates, industry-relative
+fundamental scoring, and cross-sectional technical scoring. The default is 75
+model-development tickers plus a 25-name tactical shortlist.
+
+The selector writes:
+
+- `selected_ticker_and_industry_list.csv`: stable model-development universe;
+- `tactical_ticker_list.csv`: technically strongest current subset;
+- `ticker_selection_audit.csv`: every ticker, score component, and rejection reason;
+- `ticker_selection_history.csv`: dated snapshots for prospective validation;
+- `fundamental_history.csv`: cached, dated provider snapshots;
+- `ticker_selection_forward_returns.csv`: per-ticker forward validation detail;
+- `ticker_selection_validation_summary.csv`: aggregate return, drawdown, and stability metrics.
+
+Important thresholds are CLI options:
+
+```bash
+python -m pipeline.select_ticker_to_process \
+  --top_n 75 \
+  --tactical_top_n 25 \
+  --min_adv_60 5000000000 \
+  --min_history_rows 504
+```
+
+Run the model-universe selection on a quarterly schedule to avoid unnecessary
+per-ticker retraining. The tactical shortlist can be regenerated more frequently.
+Once selection history has accumulated future observations, evaluate it with:
+
+```bash
+python -m pipeline.evaluate_ticker_selection \
+  --benchmark_path path/to/ihsg.csv
 ```
 
 ### 3. Analytics Hub

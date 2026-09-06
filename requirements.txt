@@ -17,3 +17,4 @@ uvicorn==0.51.0
 yfinance==0.2.66
 openpyxl==3.1.5
 jupyterlab==4.5.4
+optuna==4.8.0

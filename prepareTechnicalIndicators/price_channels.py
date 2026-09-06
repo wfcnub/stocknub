@@ -21,7 +21,7 @@ def calculate_bollinger_bands(data, prepared_data):
     result_df['Width Bollinger Increasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_up=True)
     result_df['Width Bollinger Decreasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_down=True)
     
-    result_df.dropna(subset=['Upper Band', 'Lower Band', 'Width'], inplace=True)
+    result_df['Bollinger Width'] = result_df['Width']
     result_df.drop(columns=['Upper Band', 'Lower Band', 'Width'], inplace=True)
 
     return result_df.set_index('Date')
@@ -43,7 +43,7 @@ def calculate_keltner(data, prepared_data):
     result_df['Width Keltner Increasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_up=True)
     result_df['Width Keltner Decreasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_down=True)
 
-    result_df.dropna(subset=['Upper Band', 'Lower Band', 'Width'], inplace=True)
+    result_df['Keltner Width'] = result_df['Width']
     result_df.drop(columns=['Upper Band', 'Lower Band', 'Width'], inplace=True)
 
     return result_df.set_index('Date')
@@ -65,7 +65,7 @@ def calculate_donchian(data, prepared_data):
     result_df['Width Donchian Increasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_up=True)
     result_df['Width Donchian Decreasing'] = identify_historical_trends(result_df, 'Width', 5, make_bool_down=True)
 
-    result_df.dropna(subset=['Upper Band', 'Lower Band', 'Width'], inplace=True)
+    result_df['Donchian Width'] = result_df['Width']
     result_df.drop(columns=['Upper Band', 'Lower Band', 'Width'], inplace=True)
 
     return result_df.set_index('Date')

@@ -51,21 +51,21 @@ def _prepare_data(window: str):
     
     joined_train_data = pd.merge(
         train_data,
-        model_performance[['Ticker', 'Train - Gini']],
+        model_performance[['Ticker', 'Validation - Gini']],
         on='Ticker',
         how='inner'
     )
 
     joined_test_data = pd.merge(
         test_data,
-        model_performance[['Ticker', 'Test - Gini']],
+        model_performance[['Ticker', 'Validation - Gini']],
         on='Ticker',
         how='inner'
     )
 
     joined_forecast_data = pd.merge(
         forecast_data,
-        model_performance[['Ticker', 'Test - Gini']],
+        model_performance[['Ticker', 'Validation - Gini']],
         on='Ticker',
         how='inner'
     )
@@ -87,7 +87,7 @@ def _train_model(joined_train_data: pd.DataFrame, feature_col: str, target_col: 
     """
     model = LogisticRegression()
     
-    train_feature = joined_train_data[[feature_col, 'Train - Gini']].values
+    train_feature = joined_train_data[[feature_col, 'Validation - Gini']].values
     train_target = joined_train_data[target_col]
 
     model.fit(train_feature, train_target)
@@ -113,14 +113,14 @@ def _infer_and_export(model: LogisticRegression, joined_test_data: pd.DataFrame,
         score_col (str): The resulting predicted score column name.
         window (str): The rolling window configuration, dictating the saving path.
     """
-    test_feature = joined_test_data[[feature_col, 'Test - Gini']].values
+    test_feature = joined_test_data[[feature_col, 'Validation - Gini']].values
     joined_test_data[score_col] = model.predict_proba(test_feature)[:, 0]
 
-    forecast_feature = joined_forecast_data[[feature_col, 'Test - Gini']].values
+    forecast_feature = joined_forecast_data[[feature_col, 'Validation - Gini']].values
     joined_forecast_data[score_col] = model.predict_proba(forecast_feature)[:, 0]
 
-    joined_test_data.drop(columns=[feature_col, target_col, 'Test - Gini'], inplace=True)
-    joined_forecast_data.drop(columns=[feature_col, target_col, 'Test - Gini'], inplace=True)
+    joined_test_data.drop(columns=[feature_col, target_col, 'Validation - Gini'], inplace=True)
+    joined_forecast_data.drop(columns=[feature_col, target_col, 'Validation - Gini'], inplace=True)
 
     joined_test_forecast_data = pd.concat([joined_test_data, joined_forecast_data], ignore_index=True)
 
@@ -152,7 +152,7 @@ def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
         temp_score_df = pd.read_csv(file, usecols=['Date', f'Score {rolling_window}'])
         _, _, _, test_mask, _ = get_split_masks(temp_score_df, splits)
         
-        temp_test_score_df = temp_score_df.loc[test_mask]
+        temp_test_score_df = temp_score_df.loc[test_mask].copy()
         temp_test_score_df['Ticker'] = ticker
     
         test_score_df = pd.concat((test_score_df, temp_test_score_df))
@@ -161,7 +161,7 @@ def _generate_score_data_on_test_data(rolling_window: str) -> pd.DataFrame:
     
     test_score_df = pd.merge(
         test_score_df,
-        final_performance[['Ticker', 'Test - Gini']],
+        final_performance[['Ticker', 'Validation - Gini']],
         on='Ticker',
         how='inner'
     )

@@ -1,16 +1,30 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from skopt.space import Real
 from skopt import BayesSearchCV
-from catboost import CatBoostClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import PredefinedSplit
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    brier_score_loss,
+    log_loss,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 from prepareTechnicalIndicators.helper import get_all_technical_indicators
 from combineForecasts.helper import _get_combined_forecasts_features_target_threshold
+from trainModels.features import add_cross_sectional_features, attach_ticker_metadata
+from trainModels.splits import (
+    purge_development_test_boundary,
+    purge_overlapping_label_periods,
+)
 from utils.pipeline import get_split_dates, get_split_masks
 from utils import paths
 
@@ -31,7 +45,14 @@ def _combine_multiple_ticker_in_industry(industry: str) -> pd.DataFrame:
     
     selected_ticker = selected_ticker_industry_df['Ticker'].values
     
-    selected_ticker_df = pd.concat((pd.read_csv(paths.get_label_path(ticker)) for ticker in selected_ticker)) \
+    selected_ticker_df = pd.concat(
+                            (
+                                attach_ticker_metadata(
+                                    pd.read_csv(paths.get_label_path(ticker)), ticker
+                                )
+                                for ticker in selected_ticker
+                            )
+                        ) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
@@ -46,14 +67,39 @@ def _combine_multiple_ticker(csv_folder_path) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A pandas dataframe containing all the selected ticker
     """
+    csv_folder_path = Path(csv_folder_path)
     all_ticker_path = csv_folder_path.rglob("*.csv")
     
-    selected_ticker_df = pd.concat((pd.read_csv(ticker_path) for ticker_path in all_ticker_path)) \
+    selected_ticker_df = pd.concat(
+                            (
+                                attach_ticker_metadata(
+                                    pd.read_csv(ticker_path), ticker_path.stem
+                                )
+                                for ticker_path in all_ticker_path
+                            )
+                        ) \
                             .sort_values('Date', ascending=True) \
                             .reset_index(drop=True)
 
 
     return selected_ticker_df
+
+
+def _split_development_and_locked_test(
+    data: pd.DataFrame,
+    target_column: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return pre-test development data and a test set that tuning never sees."""
+    splits = get_split_dates(target_column)
+    train_val_mask, _, _, test_mask, _ = get_split_masks(data, splits)
+    development_mask = purge_development_test_boundary(
+        data, train_val_mask, target_column
+    )
+    development_data = data.loc[development_mask].copy().reset_index(drop=True)
+    test_data = data.loc[test_mask].copy().reset_index(drop=True)
+    if development_data.empty or test_data.empty:
+        raise ValueError("Development or locked test split is empty")
+    return development_data, test_data
 
 def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: list, target_column: str) -> (pd.DataFrame, pd.Series, pd.DataFrame, pd.Series, PredefinedSplit):
     """
@@ -80,6 +126,13 @@ def _split_data_to_train_val_test_single(data: pd.DataFrame, feature_columns: li
     """
     splits = get_split_dates(target_column)
     train_val_mask, train_mask, val_mask, test_mask, _ = get_split_masks(data, splits)
+    train_val_mask, val_mask = purge_overlapping_label_periods(
+        data,
+        train_val_mask,
+        train_mask,
+        val_mask,
+        target_column,
+    )
 
     train_data = data[train_val_mask].copy()
     test_data = data[test_mask].copy()
@@ -123,6 +176,13 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
 
     splits = get_split_dates(target_column)
     train_val_mask, train_mask, val_mask, test_mask, _ = get_split_masks(data, splits)
+    train_val_mask, val_mask = purge_overlapping_label_periods(
+        data,
+        train_val_mask,
+        train_mask,
+        val_mask,
+        target_column,
+    )
 
     train_data = data[train_val_mask].copy()
     test_data = data[test_mask].copy()
@@ -140,67 +200,12 @@ def _split_data_to_train_val_test_multiple(data: pd.DataFrame, feature_columns: 
     
     return train_feature, train_target, test_feature, test_target, predefined_split_index
 
-def _initializes_fit_tune_catboost_with_bayesian_optimization(train_feature: np.array, train_target: np.array, predefined_split_index: PredefinedSplit, search_spaces: dict) -> any:
-    """
-    (Internal Helper) Initializes, fits, and tunes a CatBoost Classifier using Bayesian Optimization
-
-    This function uses BayesSearchCV to efficiently search for the optimal
-    hyperparameters for a CatBoost model. It validates performance using a
-    predefined time-series split and fits the best-found model on the entire
-    training dataset
-
-    Args:
-        train_feature (np.array): The feature set for training
-        train_target (np.array): The target variable for training
-        predefined_split_index (PredefinedSplit): The cross-validation strategy
-        search_spaces (dict): A dictionary containing hyperparameters to be tuned
-
-    Returns:
-        CatBoostClassifier: The best-performing model found by the search
-    """    
-    val_indices = np.where(predefined_split_index.test_fold == 0)[0]
-    train_indices = np.where(predefined_split_index.test_fold != 0)[0]
-
-    if len(np.unique(train_target[train_indices])) == 1:
-        raise ValueError("The train target contains only one unique value")
-    
-    if len(np.unique(train_target[val_indices])) == 1:
-        scoring_method = 'accuracy'
-    else:
-        scoring_method = 'roc_auc'
-
-    model = CatBoostClassifier(
-        loss_function='Logloss',
-        eval_metric='AUC',
-        logging_level='Silent',
-        thread_count=-1,
-    )
-
-    hyper_tune_search = BayesSearchCV(
-        estimator=model,
-        search_spaces=search_spaces,
-        n_iter=30,
-        cv=predefined_split_index,
-        scoring=scoring_method,
-        n_jobs=1,
-        verbose=0
-    )
-
-    retries = 3
-    while True:
-        try:
-            hyper_tune_search.fit(train_feature, train_target)
-            best_model = hyper_tune_search.best_estimator_
-            break
-        except Exception as e:
-            print(e)
-            retries -= 1
-            if retries == 0:
-                raise e
-
-    return best_model
-
-def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_feature: np.array, train_target: np.array, predefined_split_index: PredefinedSplit) -> any:
+def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(
+    train_feature: np.array,
+    train_target: np.array,
+    predefined_split_index: PredefinedSplit,
+    return_search: bool = False,
+) -> any:
     """
     (Internal Helper) Initializes, fits, and tunes a Logistic Regression model using Bayesian Optimization.
 
@@ -219,14 +224,18 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
     """
     val_indices = np.where(predefined_split_index.test_fold == 0)[0]
     train_indices = np.where(predefined_split_index.test_fold != 0)[0]
+    # PredefinedSplit exposes row positions.  V4 training data is assembled by
+    # concatenating ticker frames, so its pandas index is not guaranteed to be
+    # a zero-based RangeIndex.  Convert the target to an ndarray before using
+    # split positions to avoid pandas interpreting them as index labels.
+    target_values = np.asarray(train_target)
 
-    if len(np.unique(train_target[train_indices])) == 1:
+    if len(np.unique(target_values[train_indices])) == 1:
         raise ValueError("The train target contains only one unique value.")
 
-    if len(np.unique(train_target[val_indices])) == 1:
-        scoring_method = 'accuracy'
-    else:
-        scoring_method = 'roc_auc'
+    if len(np.unique(target_values[val_indices])) == 1:
+        raise ValueError("The validation target contains only one unique value")
+    scoring_method = 'roc_auc'
 
     base_model = LogisticRegression(
         solver='saga',
@@ -252,51 +261,15 @@ def _initializes_fit_tune_logistic_regression_with_bayesian_optimization(train_f
         n_iter=30,
         cv=predefined_split_index,
         scoring=scoring_method,
-        n_jobs=-1,
+        n_jobs=1,
         random_state=10120024,
         verbose=0
     )
 
-    retries = 3
-    while True:
-        try:
-            hyper_tune_search.fit(train_feature, train_target)
-            best_model = hyper_tune_search.best_estimator_
-            break
-        except Exception as e:
-            print(e)
-            retries -= 1
-            if retries == 0:
-                raise e
+    hyper_tune_search.fit(train_feature, train_target)
+    best_model = hyper_tune_search.best_estimator_
 
-    return best_model
-
-def _initializes_fit_catboost(train_feature: np.array, train_target: np.array, best_params: dict) -> any:
-    """
-    (Internal Helper) Initializes and fits a CatBoost Classifier using given parameters
-
-    Args:
-        train_feature (np.array): The feature set for training
-        train_target (np.array): The target variable for training
-        best_params (dict): The hyperparameters identified from previous tuning
-
-    Returns:
-        CatBoostClassifier: The fitted model
-    """
-    model = CatBoostClassifier(**best_params)
-
-    retries = 3
-    while True:
-        try:
-            model.fit(train_feature, train_target, verbose=False)
-            break
-        except Exception as e:
-            print(e)
-            retries -= 1
-            if retries == 0:
-                raise e
-    
-    return model
+    return hyper_tune_search if return_search else best_model
 
 def _initializes_fit_logistic_regression(train_feature: np.array, train_target: np.array, best_params: dict) -> any:
     """
@@ -323,16 +296,7 @@ def _initializes_fit_logistic_regression(train_feature: np.array, train_target: 
     ])
     model.set_params(**best_params)
 
-    retries = 3
-    while True:
-        try:
-            model.fit(train_feature, train_target)
-            break
-        except Exception as e:
-            print(e)
-            retries -= 1
-            if retries == 0:
-                raise e
+    model.fit(train_feature, train_target)
     
     return model
 
@@ -383,9 +347,67 @@ def _calculate_gini(model: any, target_true: np.array, target_pred_proba: np.arr
         gini = 2 * auc - 1
 
     except (ValueError, IndexError):
-        gini = 0.0
+        gini = np.nan
 
     return gini
+
+def _metrics_from_probability(
+    target: pd.Series | np.ndarray,
+    probability: np.ndarray,
+    positive_label: str,
+    negative_label: str,
+    decision_threshold: float,
+    top_fraction: float = 0.10,
+) -> dict:
+    target_array = np.asarray(target)
+    binary_target = (target_array == positive_label).astype(int)
+    target_pred = np.where(
+        probability >= decision_threshold, positive_label, negative_label
+    )
+    accuracy, prec_positive, prec_negative, rec_positive, rec_negative = (
+        _calculate_classification_metrics(
+            target_array, target_pred, positive_label, negative_label
+        )
+    )
+    if len(np.unique(binary_target)) < 2:
+        auc = np.nan
+        average_precision = np.nan
+        gini = np.nan
+    else:
+        auc = float(roc_auc_score(binary_target, probability))
+        average_precision = float(
+            average_precision_score(binary_target, probability)
+        )
+        gini = 2 * auc - 1
+
+    prevalence = float(np.mean(binary_target))
+    top_count = max(1, int(np.ceil(len(probability) * top_fraction)))
+    top_indices = np.argsort(probability)[-top_count:]
+    top_precision = float(np.mean(binary_target[top_indices]))
+    lift = np.nan if prevalence == 0 else top_precision / prevalence
+    clipped_probability = np.clip(probability, 1e-7, 1 - 1e-7)
+    return {
+        'Accuracy': [accuracy],
+        f'Precision {positive_label}': [prec_positive],
+        f'Precision {negative_label}': [prec_negative],
+        f'Recall {positive_label}': [rec_positive],
+        f'Recall {negative_label}': [rec_negative],
+        'ROC AUC': [auc],
+        'Average Precision': [average_precision],
+        'Gini': [gini],
+        f'Precision Top {int(top_fraction * 100)}%': [top_precision],
+        f'Lift Top {int(top_fraction * 100)}%': [lift],
+        'Brier Score': [brier_score_loss(binary_target, clipped_probability)],
+        'Log Loss': [
+            log_loss(binary_target, clipped_probability, labels=[0, 1])
+        ],
+        'Positive Rate': [prevalence],
+        'Predicted Positive Rate': [float(np.mean(target_pred == positive_label))],
+        'Decision Threshold': [float(decision_threshold)],
+        'Observations': [len(target_array)],
+        'Positive Observations': [int(binary_target.sum())],
+    }
+
 
 def _measure_model_performance(model: any, feature: np.array, target: np.array, positive_label: str, negative_label: str) -> dict:
     """
@@ -401,22 +423,72 @@ def _measure_model_performance(model: any, feature: np.array, target: np.array, 
     Returns:
         dict: A dictionary containing all calculated performance metrics.
     """
-    target_pred = model.predict(feature)
     target_pred_proba = model.predict_proba(feature)
+    positive_class_index = np.where(model.classes_ == positive_label)[0][0]
+    decision_threshold = float(getattr(model, "decision_threshold", 0.5))
+    return _metrics_from_probability(
+        target,
+        target_pred_proba[:, positive_class_index],
+        positive_label,
+        negative_label,
+        decision_threshold,
+    )
 
-    accuracy, prec_positive, prec_negative, rec_positive, rec_negative = _calculate_classification_metrics(target, target_pred, positive_label, negative_label)
-    gini = _calculate_gini(model, target, target_pred_proba, positive_label)
 
-    all_metrics = {
-        'Accuracy': [accuracy],
-        f'Precision {positive_label}': [prec_positive],
-        f'Precision {negative_label}': [prec_negative],
-        f'Recall {positive_label}': [rec_positive],
-        f'Recall {negative_label}': [rec_negative],
-        'Gini': [gini]
-    }
-    
-    return all_metrics
+def _measure_oof_predictions(
+    predictions: pd.DataFrame,
+    target_column: str,
+    positive_label: str,
+    negative_label: str,
+    decision_threshold: float,
+) -> dict:
+    metrics = _metrics_from_probability(
+        predictions[target_column],
+        predictions["Probability"].to_numpy(),
+        positive_label,
+        negative_label,
+        decision_threshold,
+    )
+    unique_dates = predictions["Date"].astype(str).unique()
+    bootstrap_gini = []
+    if len(unique_dates) >= 20:
+        date_values = predictions["Date"].astype(str).to_numpy()
+        binary_target = (
+            predictions[target_column].to_numpy() == positive_label
+        ).astype(int)
+        probability = predictions["Probability"].to_numpy()
+        random = np.random.default_rng(10120024)
+        positions_by_date = {
+            date: np.flatnonzero(date_values == date) for date in unique_dates
+        }
+        for _ in range(200):
+            sampled_dates = random.choice(
+                unique_dates, size=len(unique_dates), replace=True
+            )
+            sampled_positions = np.concatenate(
+                [positions_by_date[date] for date in sampled_dates]
+            )
+            sampled_target = binary_target[sampled_positions]
+            if len(np.unique(sampled_target)) < 2:
+                continue
+            auc = roc_auc_score(sampled_target, probability[sampled_positions])
+            bootstrap_gini.append(2 * auc - 1)
+    metrics["Gini CI 95% Lower"] = [
+        float(np.quantile(bootstrap_gini, 0.025)) if bootstrap_gini else np.nan
+    ]
+    metrics["Gini CI 95% Upper"] = [
+        float(np.quantile(bootstrap_gini, 0.975)) if bootstrap_gini else np.nan
+    ]
+    return metrics
+
+
+def _prepare_ticker_data_for_model(
+    prepared_data: pd.DataFrame,
+    ticker: str,
+) -> pd.DataFrame:
+    enriched = attach_ticker_metadata(prepared_data, ticker)
+    enriched, _ = add_cross_sectional_features(enriched)
+    return enriched
 
 def _measure_model_performance_on_single_ticker(prepared_data: pd.DataFrame, model: any, feature_columns: str, target_column: str, positive_label: str, negative_label: str) -> (pd.DataFrame, pd.DataFrame):
     """
@@ -433,8 +505,9 @@ def _measure_model_performance_on_single_ticker(prepared_data: pd.DataFrame, mod
     Returns:
         Tuple: A tuple containing the model's performance on trainings and testing data, stored as a pandas dataframe
     """
+    model_features = list(getattr(model, "feature_names_", feature_columns))
     train_feature, train_target, test_feature, test_target, cv_split = _split_data_to_train_val_test_multiple(
-        prepared_data.dropna(subset=[target_column]), feature_columns, target_column
+        prepared_data.dropna(subset=[target_column]), model_features, target_column
     )
 
     train_metrics = _measure_model_performance(model, train_feature, train_target, positive_label, negative_label)
@@ -467,10 +540,13 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
     all_ticker_test_metrics_df = pd.DataFrame()
 
     feature_columns = get_all_technical_indicators()
+    failures = []
 
     for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(paths.get_label_path(ticker))
+            prepared_data = _prepare_ticker_data_for_model(
+                pd.read_csv(paths.get_label_path(ticker)), ticker
+            )
             ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
 
             ticker_train_metrics_df['Ticker'] = ticker
@@ -482,8 +558,12 @@ def _measure_model_performance_for_all_ticker_in_industry(industry: str, model: 
             all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
             all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
-            print(e)
-            pass
+            failures.append(f"{ticker}: {e}")
+
+    if failures:
+        raise RuntimeError(
+            "Industry evaluation failed for ticker(s): " + "; ".join(failures[:10])
+        )
 
     all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
     all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
@@ -511,10 +591,13 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
     all_ticker_test_metrics_df = pd.DataFrame()
 
     feature_columns = get_all_technical_indicators()
+    failures = []
 
     for ticker in all_tickers:
         try:
-            prepared_data = pd.read_csv(paths.get_label_path(ticker))
+            prepared_data = _prepare_ticker_data_for_model(
+                pd.read_csv(paths.get_label_path(ticker)), ticker
+            )
             ticker_train_metrics_df, ticker_test_metrics_df = _measure_model_performance_on_single_ticker(prepared_data, model, feature_columns, target_column, positive_label, negative_label)
     
             ticker_train_metrics_df['Ticker'] = ticker
@@ -526,8 +609,12 @@ def _measure_model_performance_for_all_ticker(model: any, target_column: str, po
             all_ticker_train_metrics_df = pd.concat((all_ticker_train_metrics_df, ticker_train_metrics_df))
             all_ticker_test_metrics_df = pd.concat((all_ticker_test_metrics_df, ticker_test_metrics_df))
         except Exception as e:
-            print(e)
-            pass
+            failures.append(f"{ticker}: {e}")
+
+    if failures:
+        raise RuntimeError(
+            "Market evaluation failed for ticker(s): " + "; ".join(failures[:10])
+        )
 
     all_ticker_train_metrics = all_ticker_train_metrics_df.to_dict(orient='list')
     all_ticker_test_metrics = all_ticker_test_metrics_df.to_dict(orient='list')
