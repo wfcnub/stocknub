@@ -7,6 +7,8 @@ services:
     volumes:
       - .:/app
     shm_size: '6gb'
+    networks:
+      - stock-backend
   initialize-jupyter-lab:
     build: .
     image: dotnet-8-python-310
@@ -27,6 +29,10 @@ services:
       - .:/app
     tty: true
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      stock-backend:
+        aliases:
+          - ml-api
   initialize-analytics-hub:
     build: .
     image: dotnet-8-python-310
@@ -36,3 +42,8 @@ services:
       - .:/app
     tty: true
     command: streamlit run analytics_hub.py --server.address=0.0.0.0 --server.port=8501
+
+networks:
+  stock-backend:
+    external: true
+    name: stock-analysis-backend
