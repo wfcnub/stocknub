@@ -4,144 +4,34 @@ import streamlit as st
 from analyticsHub.main import (
     get_all_performances,
     get_daily_recommendations,
-    get_pre_market_outlook,
     visualize_performance_metric_distribution_for_each_forecast_threshold,
     visualize_impact_of_threshold_on_performance_metric
 )
 
 from analyticsHub.helper import (
     _get_available_score_windows,
-    _get_chosen_performance_df,
-    _visualize_micro_outlook_boxplot
+    _get_chosen_performance_df
 )
 
 from utils.pipeline import get_split_dates
 from utils import paths
 
 all_df = get_all_performances()
-pre_market_outlook = get_pre_market_outlook()
 
 st.sidebar.title("Analytics Hub")
 app_mode = st.sidebar.radio(
     "Menu", 
     [
-        "1. Pre-Market Outlook",
-        "2. Model Performance", 
-        "3. Trading Simulation",
-        "4. Daily Recommendation",
+        "1. Model Performance", 
+        "2. Trading Simulation",
+        "3. Daily Recommendation",
     ]
 )
 
 st.sidebar.markdown("---")
 st.sidebar.info("The Model Used for __Daily Recommendations__ and __Trading Simulation__ is the __Ensemble of Specific Ticker, Specific Industry, and IHSG Model__")
 
-if app_mode == "1. Pre-Market Outlook":
-    st.title("Pre-Market Outlook")
-    if not pre_market_outlook:
-        st.warning(
-            "Pre-market outlook data is not available. Run the pre-market "
-            "outlook pipeline stage and refresh this page."
-        )
-        st.stop()
-    st.markdown(f"**Generated at:** {pre_market_outlook['timestamp']}")
-
-    overall = pre_market_outlook["overall_outlook"]
-    outlook_label = overall["outlook"]
-
-    outlook_colors = {
-        "Bullish": "🟢",
-        "Neutral-to-Bullish": "🟡",
-        "Neutral-to-Bearish": "🟠",
-        "Bearish": "🔴",
-    }
-    outlook_icon = outlook_colors.get(outlook_label, "⚪")
-
-    st.markdown(f"### 🇮🇩 IHSG Macro Outlook: **{outlook_icon} {outlook_label}** (Score: {overall['composite_score']:+.2f})")
-    st.caption(overall["rationale"])
-
-    st.markdown("---")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        vix = pre_market_outlook["vix"]
-        st.markdown("#### 📊 VIX")
-        st.metric(
-            label="VIX Level",
-            value=f"{vix['value']:.2f}",
-        )
-        st.markdown(f"**Tier:** {vix['classification']['tier']}")
-        st.markdown(f"**Sentiment:** {vix['classification']['sentiment']}")
-        st.markdown(f"**Percentile:** {vix['percentile_rank']:.1f}th")
-        st.caption(vix["classification"]["description"])
-
-    with col2:
-        usdidr = pre_market_outlook["usdidr"]
-        st.markdown("#### 💱 USD/IDR")
-        st.metric(
-            label="Exchange Rate",
-            value=f"{usdidr['value']:,.2f}",
-            delta=f"{usdidr['classification']['change_pct']:+.2f}%",
-            delta_color="inverse",
-        )
-        st.markdown(f"**Tier:** {usdidr['classification']['tier']}")
-        st.markdown(f"**Sentiment:** {usdidr['classification']['sentiment']}")
-        st.markdown(f"**vs 20-day SMA:** {usdidr['classification']['vs_sma_20_pct']:+.2f}%")
-        st.caption(usdidr["classification"]["description"])
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        sp500 = pre_market_outlook["sp500"]
-        st.markdown("#### 🇺🇸 S&P 500")
-        st.metric(
-            label="Previous Close",
-            value=f"{sp500['value']:,.2f}",
-            delta=f"{sp500['classification']['change_pct']:+.2f}%",
-        )
-        st.markdown(f"**Tier:** {sp500['classification']['tier']}")
-        st.markdown(f"**Sentiment:** {sp500['classification']['sentiment']}")
-        st.markdown(f"**Percentile:** {sp500['percentile_rank']:.1f}th")
-        st.caption(sp500["classification"]["description"])
-
-    with col4:
-        nikkei = pre_market_outlook["nikkei"]
-        data_label = "Live Intraday" if nikkei["is_live"] else "Previous Close"
-        st.markdown(f"#### 🇯🇵 Nikkei 225 ({data_label})")
-        st.metric(
-            label=data_label,
-            value=f"{nikkei['value']:,.2f}",
-            delta=f"{nikkei['classification']['change_pct']:+.2f}%",
-        )
-        st.markdown(f"**Tier:** {nikkei['classification']['tier']}")
-        st.markdown(f"**Sentiment:** {nikkei['classification']['sentiment']}")
-        st.markdown(f"**Percentile:** {nikkei['percentile_rank']:.1f}th")
-        st.caption(nikkei["classification"]["description"])
-
-    st.markdown("---")
-    st.markdown("### 🇮🇩 IHSG Micro Outlook")
-    
-    col_micro1, col_micro2 = st.columns(2)
-    
-    with col_micro1:
-        st.markdown("#### ⏳ 5-Day Window")
-        mo_5dd = pre_market_outlook.get("micro_outlook_5dd", {})
-        if mo_5dd:
-            fig_5dd = _visualize_micro_outlook_boxplot(mo_5dd, "5-Day Window", "royalblue")
-            st.plotly_chart(fig_5dd, use_container_width=True)
-        else:
-            st.info("Data not available.")
-            
-    with col_micro2:
-        st.markdown("#### ⌛ 10-Day Window")
-        mo_10dd = pre_market_outlook.get("micro_outlook_10dd", {})
-        if mo_10dd:
-            fig_10dd = _visualize_micro_outlook_boxplot(mo_10dd, "10-Day Window", "indianred")
-            st.plotly_chart(fig_10dd, use_container_width=True)
-        else:
-            st.info("Data not available.")
-
-elif app_mode == "2. Model Performance":
+if app_mode == "1. Model Performance":
     st.title("Model Performance")
     st.markdown("Inspect The Performance for Each Variations of the Model")
 
@@ -161,7 +51,7 @@ elif app_mode == "2. Model Performance":
         st.write(f"### {model_identifier}")
         st.dataframe(performance_df)
 
-elif app_mode == "3. Trading Simulation":
+elif app_mode == "2. Trading Simulation":
     st.title("Trading Simulation")
 
     trading_windows = _get_available_score_windows(
@@ -200,7 +90,7 @@ elif app_mode == "3. Trading Simulation":
     st.plotly_chart(fig_2_profit)
     st.plotly_chart(fig_2_loss)
 
-elif app_mode == "4. Daily Recommendation":
+elif app_mode == "3. Daily Recommendation":
     st.title("Daily Recommendation")
 
     recommendation_windows = _get_available_score_windows(

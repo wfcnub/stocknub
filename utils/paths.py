@@ -85,9 +85,6 @@ def get_split_dates_path(window: Union[int, str]) -> Path:
     window_str = str(window).replace("dd", "")
     return BASE_DIR / f"split_dates_{window_str}.json"
 
-def get_pre_market_outlook_path() -> Path:
-    return BASE_DIR / "pre_market_outlook.json"
-
 def get_combined_forecasts_columns_information_path(window: Union[int, str]) -> Path:
     return BASE_DIR / f"combined_forecasts_columns_information_{_format_window(window)}.yaml"
 

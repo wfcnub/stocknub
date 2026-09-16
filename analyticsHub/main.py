@@ -15,24 +15,6 @@ from analyticsHub.helper import (
 from utils import paths
 
 @st.cache_data
-def get_pre_market_outlook() -> dict | None:
-    """
-    Load the most recent pre-market outlook JSON from data/pre_market_outlook/.
-
-    Returns:
-        dict | None: The parsed outlook dictionary, or None if no file exists
-    """
-    json_file_path = paths.get_pre_market_outlook_path()
-    if not json_file_path.is_file():
-        return None
-
-    try:
-        with open(json_file_path, "r") as f:
-            return json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return None
-
-@st.cache_data
 def get_all_performances() -> pd.DataFrame:
     """
     Get the overview of the model performance

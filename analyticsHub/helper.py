@@ -12,7 +12,6 @@ def _window_sort_key(window: str) -> tuple[int, str]:
         window,
     )
 
-
 def _get_available_score_windows(
     require_simulation: bool = False,
     require_split: bool = False,
@@ -59,24 +58,6 @@ def _get_chosen_performance_df(all_df: pd.DataFrame, chosen_model_versions: list
     selected_performance_df = all_df.loc[filter_bool, 'performance_df'].values.tolist()
     
     return selected_model_identifier, selected_performance_df
-
-def _visualize_micro_outlook_boxplot(mo_data: dict, xaxis_title: str, color: str) -> go.Figure:
-    """
-    (Internal Helper) Generate a boxplot for the Micro Outlook statistics
-    """
-    fig = go.Figure(go.Box(
-        name="Median Gain",
-        q1=[mo_data.get("25%", 0)],
-        median=[mo_data.get("50%", 0)],
-        q3=[mo_data.get("75%", 0)],
-        lowerfence=[mo_data.get("min", 0)],
-        upperfence=[mo_data.get("max", 0)],
-        mean=[mo_data.get("mean", 0)],
-        marker_color=color
-    ))
-    fig.update_layout(height=280, margin=dict(l=20, r=20, t=30, b=20), yaxis_title="Gain (%)", xaxis_title=xaxis_title)
-    
-    return fig
 
 def _apply_bin_scores(val):
     """
