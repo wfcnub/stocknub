@@ -67,11 +67,6 @@ PIPELINE_STEPS = {
         "description": "Generate stock forecasts using the trained models",
     },
     11: {
-        "name": "Pre-Market Outlook",
-        "module": "pipeline.pre_market_outlook",
-        "description": "Generate pre-market outlook for all tickers",
-    },
-    12: {
         "name": "Generate Scores",
         "module": "pipeline.generate_score",
         "description": "Generate composite score using score card models",
@@ -93,9 +88,10 @@ def run_step(step_num, args):
         
     if step_num == 0:
         cmd.extend(["--start_date", '2020-01-01'])
+        cmd.extend(["--process_selected_ticker"])
 
     elif step_num == 1:
-        pass
+        cmd.extend(["--process_selected_ticker"])
     
     elif step_num == 2:
         pass
@@ -152,9 +148,6 @@ def run_step(step_num, args):
         cmd.extend(["--min_validation_gini", '0'])
     
     elif step_num == 11:
-        pass
-
-    elif step_num == 12:
         cmd.extend(["--windows", '5,10'])
 
     try:
