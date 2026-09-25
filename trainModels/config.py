@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass
 class CatBoostTrainingConfig:
     """Reproducible defaults for CatBoost model development."""
 
-    n_trials: int = 80
+    n_trials: int = 60
     n_folds: int = 4
     validation_dates: int = 120
     min_train_dates: int = 252
