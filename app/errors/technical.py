@@ -22,6 +22,12 @@ class NoEligibleSessions(TechnicalError):
     message = "No sessions before the market request date are available."
 
 
+class OHLCVDataMissing(TechnicalError):
+    status_code = 409
+    code = "ohlcv_data_missing"
+    message = "Required OHLCV columns are missing from the technical data."
+
+
 class InsufficientSessions(TechnicalError):
     status_code = 409
     code = "insufficient_sessions"

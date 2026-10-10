@@ -29,7 +29,9 @@ def dataset(tmp_path, monkeypatch):
         "Date": dates, "Gain": [1.123456789012345] * 7, "Loss": range(7),
         "Shared": [1, 0, np.inf, -np.inf, np.nan, 1, 1], "TenLoss": range(10, 17),
         "TenGain": range(20, 27), "Zero": [0] * 7, "Null": [np.nan] * 7,
-        "Flag": [0, 1, 1, 0, 1, 0, 1], "Open": [100] * 7, "Case": [2] * 7,
+        "Flag": [0, 1, 1, 0, 1, 0, 1], "Open": range(100, 107), "High": range(110, 117),
+        "Low": range(90, 97), "Close": range(105, 112),
+        "Volume": range(1000, 1007), "Case": [2] * 7,
     })
     technical_path = paths.get_technical_path("AALI")
     technical_path.parent.mkdir(parents=True)
@@ -92,8 +94,14 @@ def test_union_contract_and_serialization(dataset, monkeypatch, caplog, forecast
     payload = response.json()
     assert payload["ticker"] == "AALI"
     assert payload["forecast_type"] == forecast
-    assert payload["schema_version"] == "2.0"
+    assert payload["schema_version"] == "2.1"
     assert payload["dates"] == ["2026-09-22", "2026-09-23", "2026-09-24"]
+    assert payload["ohlcv"] == {"open": [102, 103, 104], "high": [112, 113, 114],
+                                "low": [92, 93, 94], "close": [107, 108, 109],
+                                "volume": [1002, 1003, 1004]}
+    assert payload["quality"]["ohlcv_null_counts_by_session"] == [0, 0, 0]
+    assert payload["ohlcv_metadata"] == {"source": "technical_csv", "price_currency": "unknown",
+                                          "volume_unit": "unknown", "price_adjustment": "unknown"}
     assert payload["data_as_of"] == payload["dates"][-1]
     assert payload["requested_sessions"] == payload["returned_sessions"] == 3
     assert payload["quality"]["data_age_calendar_days"] == 16
@@ -115,9 +123,9 @@ def test_union_contract_and_serialization(dataset, monkeypatch, caplog, forecast
     assert counts["included_count"] == len(names)
     assert counts["selected_union_count"] == len(names) + 2
     assert counts["selected_unavailable_count"] == 2
-    assert counts["excluded_not_selected_count"] == 10 - len(names)
+    assert counts["excluded_not_selected_count"] == 14 - len(names)
     assert reader.call_args_list == [(("AALI", label, window),) for label, window in metadata_sources(forecast)]
-    assert "sha256=" in caplog.text and "Unavailable" in caplog.text
+    assert "sha256=" in caplog.text and "ohlcv_null_counts" in caplog.text
     json.dumps(payload, allow_nan=False)
 
 
@@ -126,6 +134,7 @@ def test_five_day_does_not_require_ten_day_metadata_and_subset(dataset):
     five = service.get_technical_indicators("AALI", "5dd")
     ten = service.get_technical_indicators("AALI", "10dd")
     assert set(five.indicators) < set(ten.indicators)
+    assert five.ohlcv == ten.ohlcv
     for label in ("median_loss", "median_gain"):
         metadata_path(label, "10dd").unlink()
     assert request(client, "5dd").status_code == 200
@@ -205,14 +214,16 @@ def test_history_length(dataset, count, status, code, forecast):
         assert len(response.json()["dates"]) == 3
 
 
-def test_jakarta_date_at_utc_boundary_and_weekend_gap(dataset):
+@pytest.mark.parametrize("forecast", ["5dd", "10dd"])
+def test_jakarta_date_at_utc_boundary_and_weekend_gap(dataset, forecast):
     frame, repo, _, _ = dataset
     frame = frame.iloc[:4].copy()
     frame["Date"] = ["2026-10-05", "2026-10-07", "2026-10-09", "2026-10-10"]
     frame.to_csv(paths.get_technical_path("AALI"), index=False)
     # UTC is still October 9, but the Jakarta date is October 10.
     service = TechnicalService(repo, lambda: datetime(2026, 10, 9, 17, 1, tzinfo=timezone.utc))
-    result = service.get_technical_indicators("AALI", "5dd")
+    result = service.get_technical_indicators("AALI", forecast)
+    assert result.ohlcv.open == [100, 101, 102]
     assert result.dates == ["2026-10-05", "2026-10-07", "2026-10-09"]
     assert result.quality.request_date == "2026-10-10"
 
@@ -437,3 +448,171 @@ def test_invalid_direct_service_inputs_do_not_access_repository(dataset, monkeyp
     with pytest.raises(ValueError):
         service.get_technical_indicators("AALI", "../5dd")
     read.assert_not_called()
+
+
+@pytest.mark.parametrize("header", ["Open", "High", "Low", "Close", "Volume"])
+@pytest.mark.parametrize("forecast", ["5dd", "10dd"])
+def test_missing_ohlcv_header_readiness(dataset, header, forecast):
+    frame, _, _, client = dataset
+    frame.drop(columns=header).to_csv(paths.get_technical_path("AALI"), index=False)
+    result = request(client, forecast)
+    assert result.status_code == 409
+    assert result.json()["detail"]["code"] == "ohlcv_data_missing"
+    ready = client.get("/technical/check-availability", params={"ticker": "AALI", "forecast_type": forecast}).json()
+    assert ready["reason_code"] == "ohlcv_data_missing" and ready["failure_status_code"] == 409
+    assert str(paths.STOCK_DIR) not in result.text
+
+
+@pytest.mark.parametrize("header,value", [
+    ("Volume", -1), ("Volume", 1.5), ("Volume", "oops"), ("Volume", True),
+    ("Open", -1), ("High", -1), ("Low", -1), ("Close", -1),
+    ("High", 80), ("Open", 120), ("Open", 80), ("Close", 120), ("Close", 80),
+])
+def test_invalid_ohlcv_readiness(dataset, header, value):
+    frame, _, _, client = dataset
+    frame[header] = frame[header].astype(object)
+    frame.loc[3, header] = value
+    frame.to_csv(paths.get_technical_path("AALI"), index=False)
+    result = request(client)
+    assert result.status_code == 500
+    assert result.json()["detail"]["code"] == "invalid_technical_data"
+    ready = client.get("/technical/check-availability", params={"ticker": "AALI", "forecast_type": "5dd"}).json()
+    assert ready["reason_code"] == "invalid_technical_data" and ready["failure_status_code"] == 500
+
+
+@pytest.mark.parametrize("forecast", ["5dd", "10dd"])
+def test_partial_ohlcv_nulls_zero_and_integral_volume(dataset, forecast):
+    frame, _, _, client = dataset
+    frame = frame.astype({name: float for name in ("Open", "High", "Low", "Close", "Volume")})
+    frame.loc[2, ["Open", "High", "Low", "Close", "Volume"]] = [np.nan, np.inf, -np.inf, np.nan, np.inf]
+    frame.loc[3, ["Open", "High", "Low", "Close", "Volume"]] = [0, 0, 0, 0, 0]
+    frame.loc[4, "Volume"] = 1234567.0
+    frame.to_csv(paths.get_technical_path("AALI"), index=False)
+    result = request(client, forecast)
+    assert result.status_code == 200, result.text
+    data = result.json()
+    assert data["dates"] == ["2026-09-22", "2026-09-23", "2026-09-24"]
+    assert all(values[:2] == [None, 0] for values in data["ohlcv"].values())
+    assert data["ohlcv"]["volume"] == [None, 0, 1234567]
+    assert data["quality"]["ohlcv_null_counts_by_session"] == [5, 0, 0]
+    assert data["quality"]["null_counts_by_session"] == [2, 2, 2]
+    json.dumps(data, allow_nan=False)
+    ready = client.get("/technical/check-availability", params={"ticker": "AALI", "forecast_type": forecast}).json()
+    assert ready["available"] and ready["quality"] == data["quality"]
+    assert "ohlcv" not in ready
+
+
+@pytest.mark.parametrize("high,low,close,valid", [
+    (None, 100, 99, False), (100, None, 101, False),
+    (None, None, 500, True), (100, 100, 100, True),
+])
+def test_partial_bar_comparisons(dataset, high, low, close, valid):
+    frame, _, _, client = dataset
+    frame.loc[3, ["Open", "High", "Low", "Close"]] = [np.nan, high, low, close]
+    frame.to_csv(paths.get_technical_path("AALI"), index=False)
+    assert request(client).status_code == (200 if valid else 500)
+
+
+def test_selected_ohlcv_preserves_indicator_membership_and_counts(dataset):
+    _, _, service, _ = dataset
+    before = service.get_technical_indicators("AALI", "5dd")
+    path = metadata_path()
+    metadata = json.loads(path.read_text())
+    metadata["selected_features"].append("Open")
+    path.write_text(json.dumps(metadata))
+    result = service.get_technical_indicators("AALI", "5dd")
+    assert result.ohlcv == before.ohlcv
+    assert result.indicators["Open"] == result.ohlcv.open
+    assert result.feature_filter.included_count == before.feature_filter.included_count + 1
+    assert result.feature_filter.selected_union_count == before.feature_filter.selected_union_count + 1
+    assert result.feature_filter.excluded_not_selected_count == before.feature_filter.excluded_not_selected_count - 1
+
+
+@pytest.mark.parametrize("mutation", ["missing", "extra", "length", "bool", "string", "infinity",
+                                      "negative_price", "bar", "float_volume", "negative_volume", "bool_volume", "string_volume",
+                                      "counts", "count_range", "version"])
+def test_ohlcv_schema_rejects_invalid_contract(dataset, mutation):
+    _, _, service, _ = dataset
+    payload = service.get_technical_indicators("AALI", "5dd").model_dump()
+    bars = payload["ohlcv"]
+    if mutation == "missing":
+        del bars["low"]
+    elif mutation == "extra":
+        bars["other"] = [1, 2, 3]
+    elif mutation == "length":
+        bars["open"].pop()
+    elif mutation in ("bool", "string", "infinity", "negative_price", "bar"):
+        bars["open"][0] = {"bool": True, "string": "102", "infinity": np.inf, "negative_price": -1, "bar": 500}[mutation]
+    elif mutation in ("float_volume", "negative_volume", "bool_volume", "string_volume"):
+        bars["volume"][0] = {"float_volume": 1002.0, "negative_volume": -1,
+                             "bool_volume": True, "string_volume": "1002"}[mutation]
+    elif mutation in ("counts", "count_range"):
+        payload["quality"]["ohlcv_null_counts_by_session"][0] = 1 if mutation == "counts" else 6
+    else:
+        payload["schema_version"] = "2.0"
+    with pytest.raises(ValidationError):
+        TechnicalResponse.model_validate(payload)
+
+
+def test_ohlcv_single_read_and_numpy_serialization(dataset, monkeypatch):
+    frame, repo, service, _ = dataset
+    reader = Mock(return_value=frame)
+    monkeypatch.setattr(repo, "get_technical_indicators", reader)
+    result = service.get_technical_indicators("AALI", "5dd")
+    reader.assert_called_once_with("AALI")
+    assert all(type(value) is int for value in result.ohlcv.volume)
+    json.loads(result.model_dump_json())
+
+
+def test_openapi_ohlcv_contract(dataset):
+    _, _, _, client = dataset
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    assert {"ohlcv", "ohlcv_metadata"} <= set(schemas["TechnicalResponse"]["required"])
+    bars = schemas["OHLCVSeries"]
+    assert set(bars["required"]) == set(bars["properties"]) == {"open", "high", "low", "close", "volume"}
+    assert bars["additionalProperties"] is False
+    for field in bars["properties"].values():
+        assert field["minItems"] == field["maxItems"] == 3
+    volume = bars["properties"]["volume"]["items"]["anyOf"]
+    assert {"minimum": 0, "type": "integer"} in volume
+
+
+def test_audit_equivalent_formats_and_representative_cases(dataset):
+    from scripts.audit_technical_api import audit_artifact, compare_formats, representative_comparisons
+
+    _, _, service, _ = dataset
+    for forecast in ("5dd", "10dd"):
+        response = service.get_technical_indicators("AALI", forecast)
+        result = compare_formats(response)
+        assert result["measurement"] == "bytes_only"
+        assert result["deterministic_extraction"]["status"] == "passed"
+        assert result["added_ohlcv_bytes"] > 0
+        assert set(result["candidates"]) == {"shared_date_series", "chronological_row_objects", "labeled_table"}
+        assert result["full_response_bytes"] == len(response.model_dump_json().encode())
+        cases = representative_comparisons(response)
+        assert set(cases) == {"small_union", "large_union", "null_heavy"}
+        assert cases["null_heavy"]["deterministic_extraction"]["ohlcv_null_counts_by_session"] == [5, 0, 5]
+    metadata_path().unlink()
+    assert audit_artifact(service, "AALI")["status"] == "valid"
+
+
+def test_bar_validation_uses_returned_window_but_numeric_integrity_uses_whole_csv(dataset):
+    frame, _, _, client = dataset
+    # These bars are outside the selected window and do not affect retrieval.
+    frame.loc[[0, 5, 6], "Volume"] = -1
+    frame.loc[[0, 5, 6], "Close"] = -1
+    frame.to_csv(paths.get_technical_path("AALI"), index=False)
+    assert request(client).status_code == 200
+    frame["Volume"] = frame["Volume"].astype(object)
+    frame.loc[0, "Volume"] = "bad numeric data"
+    frame.to_csv(paths.get_technical_path("AALI"), index=False)
+    assert request(client).json()["detail"]["code"] == "invalid_technical_data"
+
+
+@pytest.mark.parametrize("value", [True, np.bool_(True)])
+def test_mixed_boolean_observations_do_not_coerce_to_numbers(dataset, monkeypatch, value):
+    frame, repo, _, client = dataset
+    frame["Volume"] = frame["Volume"].astype(object)
+    frame.loc[3, "Volume"] = value
+    monkeypatch.setattr(repo, "get_technical_indicators", lambda ticker: frame)
+    assert request(client).json()["detail"]["code"] == "invalid_technical_data"

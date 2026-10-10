@@ -1,4 +1,4 @@
-"""Selected model features over exactly three observed historical sessions."""
+"""Historical OHLCV and selected model features over one three-session window."""
 import logging
 import math
 import re
@@ -7,19 +7,26 @@ from numbers import Integral, Real
 from typing import Callable
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pandas as pd
+from pydantic import ValidationError
 
 from app.errors.technical import (
     InsufficientSessions, InvalidModelMetadata, InvalidTechnicalData,
-    NoEligibleIndicators, NoEligibleSessions, TechnicalError,
+    NoEligibleIndicators, NoEligibleSessions, OHLCVDataMissing, TechnicalError,
 )
 from app.repositories.technical import TechnicalRepository
 from app.schemas.technical import (
-    ForecastType, TechnicalAvailability, TechnicalResponse, metadata_sources,
+    ForecastType, OHLCVSeries, TechnicalAvailability, TechnicalResponse, metadata_sources,
 )
 
 logger = logging.getLogger(__name__)
 MARKET_TIMEZONE = ZoneInfo("Asia/Jakarta")
+OHLCV_HEADERS = {"Open": "open", "High": "high", "Low": "low", "Close": "close", "Volume": "volume"}
+# Persisted CSVs contain no unit or adjustment provenance. Yahoo .JK source
+# alone is not evidence for the units/basis of every existing artifact.
+OHLCV_METADATA = {"source": "technical_csv", "price_currency": "unknown",
+                  "volume_unit": "unknown", "price_adjustment": "unknown"}
 
 
 def market_clock() -> datetime:
@@ -68,7 +75,9 @@ class TechnicalService:
                 if name == "Date":
                     continue
                 # Validate all source columns, including those outside the union.
-                if pd.api.types.is_bool_dtype(validated[name]):
+                if (pd.api.types.is_bool_dtype(validated[name])
+                        or (pd.api.types.is_object_dtype(validated[name])
+                            and any(isinstance(value, (bool, np.bool_)) for value in validated[name]))):
                     raise ValueError("Boolean text is not a numeric observation")
                 validated[name] = pd.to_numeric(validated[name], errors="raise")
         except (ValueError, TypeError, OverflowError) as exc:
@@ -77,6 +86,8 @@ class TechnicalService:
 
     @staticmethod
     def _json_number(value):
+        if isinstance(value, bool):
+            raise InvalidTechnicalData()
         if pd.isna(value):
             return None
         if isinstance(value, Integral):
@@ -84,6 +95,20 @@ class TechnicalService:
         if isinstance(value, Real):
             return float(value) if math.isfinite(value) else None
         raise InvalidTechnicalData()
+
+    @classmethod
+    def _ohlcv(cls, window: pd.DataFrame) -> OHLCVSeries:
+        observations = {key: [cls._json_number(value) for value in window[header].tolist()]
+                        for header, key in OHLCV_HEADERS.items()}
+        for index, value in enumerate(observations["volume"]):
+            if value is not None:
+                if value < 0 or value != int(value):
+                    raise InvalidTechnicalData()
+                observations["volume"][index] = int(value)
+        try:
+            return OHLCVSeries.model_validate(observations)
+        except ValidationError as exc:
+            raise InvalidTechnicalData() from exc
 
     def get_technical_indicators(self, ticker: str, forecast_type: ForecastType) -> TechnicalResponse:
         ticker = self._validate_ticker(ticker)
@@ -94,12 +119,15 @@ class TechnicalService:
         request_date = now.astimezone(MARKET_TIMEZONE).date()
         try:
             validated = self._validate_technical(self.repository.get_technical_indicators(ticker))
+            if not set(OHLCV_HEADERS).issubset(validated.columns):
+                raise OHLCVDataMissing()
             eligible = validated.loc[validated["Date"] < request_date]
             if eligible.empty:
                 raise NoEligibleSessions()
             if len(eligible) < 3:
                 raise InsufficientSessions()
             window = eligible.tail(3)
+            ohlcv = self._ohlcv(window)
             selected = set()
             with self.repository.metadata_snapshot(ticker, sources):
                 for label, source_window in sources:
@@ -121,10 +149,14 @@ class TechnicalService:
             response = TechnicalResponse.model_validate({
                 "ticker": ticker, "forecast_type": forecast_type,
                 "dates": dates, "data_as_of": dates[-1],
+                "ohlcv": ohlcv, "ohlcv_metadata": OHLCV_METADATA,
                 "quality": {
                     "request_date": request_date.isoformat(),
                     "data_age_calendar_days": (request_date - window["Date"].iloc[-1]).days,
                     "null_counts_by_session": null_counts,
+                    "ohlcv_null_counts_by_session": [
+                        sum(values[index] is None for values in ohlcv.model_dump().values())
+                        for index in range(3)],
                 },
                 "feature_filter": {
                     "sources": [{"label_type": "medianLoss" if label == "median_loss" else "medianGain",
@@ -136,9 +168,10 @@ class TechnicalService:
                 "indicators": indicators,
             }, context={"selected_features": selected, "csv_columns": csv_columns})
             logger.info("technical_result ticker=%s forecast_type=%s dates=%s union=%s included=%s "
-                        "unavailable=%s excluded=%s null_counts=%s age_days=%s outcome=ready",
-                        ticker, forecast_type, dates, len(selected), len(included), unavailable,
-                        excluded, null_counts, response.quality.data_age_calendar_days)
+                        "unavailable=%s excluded=%s null_counts=%s ohlcv_null_counts=%s age_days=%s outcome=ready",
+                        ticker, forecast_type, dates, len(selected), len(included), len(unavailable),
+                        len(excluded), null_counts, response.quality.ohlcv_null_counts_by_session,
+                        response.quality.data_age_calendar_days)
             return response
         except TechnicalError as exc:
             logger.warning("technical_result ticker=%s forecast_type=%s outcome=%s",

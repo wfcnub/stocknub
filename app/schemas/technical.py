@@ -1,4 +1,4 @@
-"""Version 2 technical API contract; dates index every indicator series."""
+"""Version 2.1 contract; dates index every OHLCV and indicator series."""
 from datetime import date
 from typing import Annotated, Literal
 
@@ -20,6 +20,8 @@ ISODate = Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$"), AfterValidator(v
 Count = Annotated[int, Field(strict=True, ge=0)]
 Number = StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)] | None
 Series = Annotated[list[Number], Field(min_length=3, max_length=3)]
+Volume = Annotated[int, Field(strict=True, ge=0)] | None
+VolumeSeries = Annotated[list[Volume], Field(min_length=3, max_length=3)]
 
 
 def metadata_sources(forecast_type: ForecastType) -> tuple[tuple[str, str], ...]:
@@ -33,6 +35,40 @@ def metadata_sources(forecast_type: ForecastType) -> tuple[tuple[str, str], ...]
 
 class ContractModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class OHLCVSeries(ContractModel):
+    """Historical observations aligned with dates, oldest to newest; null is unavailable."""
+
+    open: Series
+    high: Series
+    low: Series
+    close: Series
+    volume: VolumeSeries = Field(description="Nonnegative integer or null, aligned with dates; zero is an observation.")
+
+    @model_validator(mode="after")
+    def validate_bars(self):
+        for index in range(3):
+            prices = [self.open[index], self.high[index], self.low[index], self.close[index]]
+            if any(value is not None and value < 0 for value in prices):
+                raise ValueError("Prices must be nonnegative")
+            high, low = self.high[index], self.low[index]
+            if high is not None and low is not None and high < low:
+                raise ValueError("High must be at least low")
+            for value in (self.open[index], self.close[index]):
+                if value is not None and ((high is not None and value > high)
+                                          or (low is not None and value < low)):
+                    raise ValueError("Open/close must lie within observed bounds")
+        return self
+
+
+class OHLCVMetadata(ContractModel):
+    """Unknown units/basis must not be inferred from ticker names or future downloads."""
+
+    source: Literal["technical_csv"]
+    price_currency: Literal["IDR", "unknown"]
+    volume_unit: Literal["shares", "unknown"]
+    price_adjustment: Literal["unknown", "adjusted", "unadjusted"]
 
 
 class FeatureSource(ContractModel):
@@ -62,12 +98,17 @@ class TechnicalQuality(ContractModel):
     request_date: ISODate
     data_age_calendar_days: Annotated[int, Field(strict=True, ge=1)]
     freshness_status: Literal["unverified_without_exchange_calendar"] = "unverified_without_exchange_calendar"
-    null_counts_by_session: Annotated[list[Count], Field(min_length=3, max_length=3)]
+    null_counts_by_session: Annotated[list[Count], Field(min_length=3, max_length=3,
+        description="Counts unavailable indicators only, aligned with dates.")]
+    ohlcv_null_counts_by_session: Annotated[
+        list[Annotated[int, Field(strict=True, ge=0, le=5)]], Field(min_length=3, max_length=3,
+            description="Counts unavailable OHLCV observations only, aligned with dates; not a freshness guarantee.")
+    ]
 
 
 class TechnicalResponse(ContractModel):
     model_config = ConfigDict(extra="forbid", json_schema_extra={"examples": [{
-        "schema_version": "2.0", "ticker": "AALI", "forecast_type": "5dd",
+        "schema_version": "2.1", "ticker": "AALI", "forecast_type": "5dd",
         "market_timezone": "Asia/Jakarta",
         "selection_policy": "latest_available_before_request_date",
         "requested_sessions": 3, "returned_sessions": 3,
@@ -75,7 +116,13 @@ class TechnicalResponse(ContractModel):
         "order": "oldest_to_newest", "data_as_of": "2026-09-24",
         "quality": {"request_date": "2026-10-10", "data_age_calendar_days": 16,
                     "freshness_status": "unverified_without_exchange_calendar",
-                    "null_counts_by_session": [0, 0, 1]},
+                    "null_counts_by_session": [0, 0, 1],
+                    "ohlcv_null_counts_by_session": [0, 0, 1]},
+        "ohlcv_metadata": {"source": "technical_csv", "price_currency": "unknown",
+                           "volume_unit": "unknown", "price_adjustment": "unknown"},
+        "ohlcv": {"open": [7000, 7050, 7100], "high": [7100, 7150, 7200],
+                  "low": [6950, 7000, 7050], "close": [7050, 7100, 7150],
+                  "volume": [1200000, 1300000, None]},
         "feature_filter": {
             "source": "model_metadata", "key": "selected_features", "strategy": "union",
             "model_version": 1,
@@ -88,17 +135,20 @@ class TechnicalResponse(ContractModel):
         "indicators": {"RSI Value": [42.7, 42.7, None], "RSI Up Trend": [0, 0, 0]},
     }]})
 
-    schema_version: Literal["2.0"] = "2.0"
+    schema_version: Literal["2.1"] = "2.1"
     ticker: Ticker
     forecast_type: ForecastType
     market_timezone: Literal["Asia/Jakarta"] = "Asia/Jakarta"
     selection_policy: Literal["latest_available_before_request_date"] = "latest_available_before_request_date"
     requested_sessions: Literal[3] = 3
     returned_sessions: Literal[3] = 3
-    dates: Annotated[list[ISODate], Field(min_length=3, max_length=3)]
+    dates: Annotated[list[ISODate], Field(min_length=3, max_length=3,
+        description="Shared session axis: dates[i], every OHLCV series[i], and every indicator[i] describe the same historical session. Forecast horizon does not change history length.")]
     order: Literal["oldest_to_newest"] = "oldest_to_newest"
     data_as_of: ISODate
     quality: TechnicalQuality
+    ohlcv: OHLCVSeries
+    ohlcv_metadata: OHLCVMetadata
     feature_filter: FeatureFilter
     feature_catalog_version: Literal["1.0"] = "1.0"
     indicators: dict[str, Series]
@@ -130,6 +180,10 @@ class TechnicalResponse(ContractModel):
                        for index in range(3)]
         if self.quality.null_counts_by_session != null_counts:
             raise ValueError("Null counts must agree with filtered observations")
+        ohlcv_counts = [sum(values[index] is None for values in self.ohlcv.model_dump().values())
+                       for index in range(3)]
+        if self.quality.ohlcv_null_counts_by_session != ohlcv_counts:
+            raise ValueError("OHLCV null counts must agree with observations")
         # Source membership is validated while constructing the response. The
         # source vectors stay out of ordinary agent context.
         if info.context:
