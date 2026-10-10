@@ -175,3 +175,25 @@ uvicorn main:app --reload
 ```bash
 docker compose up initialize-fastapi
 ```
+
+The technical API requires an explicit forecast horizon:
+
+```text
+GET /technical/?ticker=AALI&forecast_type=5dd
+GET /technical/?ticker=BBCA&forecast_type=10dd
+GET /technical/check-availability?ticker=AALI&forecast_type=5dd
+```
+
+Both horizons return the latest three available historical sessions before today
+in Jakarta, with all five OHLCV series and indicators selected by the required
+model-v1 metadata unions. Schema 2.1 includes separate OHLCV null counts and
+explicitly unknown OHLCV units/adjustment provenance for existing artifacts.
+The response uses a shared date axis, aligned numeric series, and provenance,
+missingness, and source-age information. This changes the previous response
+contract; see the [technical API and migration guide](documentations/technical_api.md).
+The referenced feature catalog 1.0 (`documentations/technical_feature_catalog_v1.json`)
+is currently missing from this checkout; its restoration is tracked separately.
+
+Run API tests with `python -m pip install -r requirements-dev.txt` followed by
+`python -m pytest -q`. Audit local artifact coverage and compare response formats
+with `python -m scripts.audit_technical_api`.

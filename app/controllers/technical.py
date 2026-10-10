@@ -1,35 +1,35 @@
+import logging
+
 from fastapi import HTTPException
+
+from app.errors.technical import TechnicalError
+from app.schemas.technical import ForecastType, TechnicalAvailability, TechnicalResponse
 from app.services.technical import TechnicalService
-from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+
 
 class TechnicalController:
-    """
-    Controller layer for technical indicators.
-    """
     def __init__(self, service: TechnicalService):
         self.service = service
-        
-    def get_technical_indicators(self, ticker: str) -> Dict[str, Any]:
-        try:
-            return self.service.get_lagged_technical_indicators(ticker)
-        except FileNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e))
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        except Exception as e:
-            import traceback
-            trace = traceback.format_exc()
-            print(trace)
-            raise HTTPException(status_code=500, detail=f"Failed to fetch technical indicators. Error: {str(e)}")
 
-    def check_availability(self, ticker: str) -> Dict[str, Any]:
+    def _call(self, method, ticker, forecast_type):
         try:
-            is_available = self.service.check_lagged_availability(ticker)
-            return {"ticker": ticker, "available": is_available}
-        except FileNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e))
-        except Exception as e:
-            import traceback
-            trace = traceback.format_exc()
-            print(trace)
-            raise HTTPException(status_code=500, detail=f"Failed to check availability. Error: {str(e)}")
+            return method(ticker, forecast_type)
+        except TechnicalError as exc:
+            raise HTTPException(status_code=exc.status_code, detail={
+                "code": exc.code, "message": exc.message,
+                "ticker": ticker, "forecast_type": forecast_type,
+            }) from exc
+        except Exception as exc:
+            logger.exception("Unexpected technical API failure ticker=%s forecast_type=%s", ticker, forecast_type)
+            raise HTTPException(status_code=500, detail={
+                "code": "internal_error", "message": "Technical indicators could not be loaded.",
+                "ticker": ticker, "forecast_type": forecast_type,
+            }) from exc
+
+    def get_technical_indicators(self, ticker: str, forecast_type: ForecastType) -> TechnicalResponse:
+        return self._call(self.service.get_technical_indicators, ticker, forecast_type)
+
+    def check_availability(self, ticker: str, forecast_type: ForecastType) -> TechnicalAvailability:
+        return self._call(self.service.check_availability, ticker, forecast_type)
